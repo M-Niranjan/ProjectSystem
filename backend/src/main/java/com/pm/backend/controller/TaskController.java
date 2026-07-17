@@ -38,6 +38,11 @@ public class TaskController {
         this.directMessageRepository = directMessageRepository;
     }
 
+    @GetMapping
+    public ResponseEntity<List<Task>> getAllTasks() {
+        return ResponseEntity.ok(taskRepository.findAll());
+    }
+
     @GetMapping("/project/{projectId}")
     public ResponseEntity<List<Task>> getProjectTasks(@PathVariable Long projectId) {
         Project project = projectRepository.findById(projectId)

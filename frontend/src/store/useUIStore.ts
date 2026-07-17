@@ -13,6 +13,7 @@ interface UIState {
   preselectedStatus: string | null;
   isTaskEditMode: boolean;
   editingTask: any | null;
+  chatContactId: number | null;
   toggleSidebar: () => void;
   toggleTheme: () => void;
   initTheme: () => void;
@@ -22,6 +23,7 @@ interface UIState {
   setView: (view: string, projectId?: number | null) => void;
   setProjectModalOpen: (isOpen: boolean) => void;
   setTaskModalOpen: (isOpen: boolean, status?: string | null, isEdit?: boolean, task?: any | null) => void;
+  setChatContactId: (id: number | null) => void;
 }
 
 export const useUIStore = create<UIState>((set, get) => ({
@@ -37,6 +39,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   preselectedStatus: null,
   isTaskEditMode: false,
   editingTask: null,
+  chatContactId: null,
 
   toggleSidebar: () => set((state) => ({ sidebarExpanded: !state.sidebarExpanded })),
 
@@ -78,5 +81,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     preselectedStatus: status, 
     isTaskEditMode: isEdit, 
     editingTask: task 
-  })
+  }),
+
+  setChatContactId: (id) => set({ chatContactId: id })
 }));

@@ -21,7 +21,7 @@ interface Channel {
 
 export default function Messages() {
   const { user } = useAuthStore();
-  const { selectedProjectId } = useUIStore();
+  const { selectedProjectId, chatContactId, setChatContactId } = useUIStore();
   
   const [activeTab, setActiveTab] = useState<'channels' | 'dms'>('channels');
   
@@ -35,10 +35,6 @@ export default function Messages() {
   const [activeContactId, setActiveContactId] = useState<number | null>(null);
   const [dmMessages, setDmMessages] = useState<Message[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<number, number>>({});
-  
-  // Tasks link dropdown
-  const [allTasks, setAllTasks] = useState<any[]>([]);
-  const [selectedTaskId, setSelectedTaskId] = useState<number | null>(null);
   
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -80,18 +76,11 @@ export default function Messages() {
       const filtered = res.data.filter((u: any) => u.id !== user?.id);
       setContacts(filtered);
       if (filtered.length > 0) {
-        setActiveContactId(filtered[0].id);
+        const targetId = chatContactId !== null ? chatContactId : filtered[0].id;
+        setActiveContactId(targetId);
       }
     } catch (err) {
       console.log('Failed to fetch teams contacts');
-    }
-
-    // Fetch tasks
-    try {
-      const res = await api.get('/api/tasks');
-      setAllTasks(res.data || []);
-    } catch (err) {
-      console.log('Failed to load tasks');
     }
 
     // Fetch unread messages
@@ -149,6 +138,14 @@ export default function Messages() {
     }
   }, [activeContactId, activeTab]);
 
+  useEffect(() => {
+    if (chatContactId !== null) {
+      setActiveTab('dms');
+      setActiveContactId(chatContactId);
+      setChatContactId(null);
+    }
+  }, [chatContactId]);
+
   // Scroll to bottom
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -188,13 +185,12 @@ export default function Messages() {
         content: chatInput
       };
 
-      const url = selectedTaskId ? `/api/messages?taskId=${selectedTaskId}` : '/api/messages';
+      const url = '/api/messages';
 
       try {
         const res = await api.post(url, payload);
         setDmMessages(prev => [...prev, res.data]);
         setChatInput('');
-        setSelectedTaskId(null);
       } catch (err) {
         console.log('Failed to send DM message');
       }
@@ -362,32 +358,32 @@ export default function Messages() {
             {activeMessages.map((msg) => {
               const isMe = user && msg.sender.id === user.id;
               return (
-                <div key={msg.id} className={`flex gap-3 text-xs ${isMe ? 'flex-row-reverse' : ''}`}>
+                <div key={msg.id} className={`flex gap-3 text-xs ${!isMe ? 'flex-row-reverse' : ''}`}>
                   <img
                     src={msg.sender.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${msg.sender.name}`}
                     alt="avatar"
                     className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/10 flex-shrink-0"
                   />
-                  <div className={`max-w-md ${isMe ? 'text-right' : 'text-left'}`}>
-                    <div className="flex items-center gap-2 mb-1 justify-start">
+                  <div className={`max-w-md flex flex-col ${!isMe ? 'items-end' : 'items-start'}`}>
+                    <div className={`flex items-center gap-2 mb-1 ${!isMe ? 'flex-row-reverse' : ''}`}>
                       <span className="font-black text-slate-800 dark:text-slate-200">{msg.sender.name}</span>
                       <span className="text-[9px] text-slate-400 font-bold">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     
-                    <div className="space-y-1">
+                    <div className="space-y-1 w-full">
                       <div className={`p-3 rounded-2xl border border-slate-200/50 dark:border-white/5 font-bold ${
                         isMe 
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none' 
-                          : 'bg-white/10 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-tl-none'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tl-none' 
+                          : 'bg-white/10 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-tr-none'
                       }`}>
                         {msg.content}
                       </div>
 
                       {/* Referenced Task Badge */}
                       {msg.task && (
-                        <div className="flex items-center justify-start mt-1">
+                        <div className={`flex items-center mt-1 ${!isMe ? 'justify-end' : 'justify-start'}`}>
                           <button
                             onClick={() => triggerTaskInspector(msg.task)}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/10 transition-colors text-[9px] font-black cursor-pointer"
@@ -404,26 +400,8 @@ export default function Messages() {
             <div ref={messagesEndRef} />
           </div>
 
-          {/* Form input with linked task selector */}
-          <div className="p-4 border-t border-slate-200/30 dark:border-white/5 space-y-3 flex-shrink-0 bg-slate-500/5">
-            {activeTab === 'dms' && (
-              <div className="flex items-center gap-2 text-xs">
-                <span className="text-slate-400 font-bold flex items-center gap-1">
-                  <Link className="w-3.5 h-3.5 text-blue-500" /> Link message to task:
-                </span>
-                <select
-                  value={selectedTaskId || ''}
-                  onChange={(e) => setSelectedTaskId(e.target.value ? Number(e.target.value) : null)}
-                  className="bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-lg px-2 py-1 text-[11px] font-bold text-slate-700 dark:text-slate-300 outline-none"
-                >
-                  <option className="dark:bg-slate-800 text-slate-700" value="">-- None --</option>
-                  {allTasks.map(t => (
-                    <option key={t.id} className="dark:bg-slate-800 text-slate-700" value={t.id}>{t.title}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
+          {/* Form input */}
+          <div className="p-4 border-t border-slate-200/30 dark:border-white/5 flex-shrink-0 bg-slate-500/5">
             <form onSubmit={handleSendMessage} className="flex gap-3 items-center">
               <button
                 type="button"

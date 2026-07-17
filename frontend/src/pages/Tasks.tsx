@@ -18,6 +18,7 @@ interface Task {
   commentsCount?: number;
   dependenciesCount?: number;
   assignee?: { id: number; name: string; profilePhoto?: string };
+  project?: { id: number; name: string };
 }
 
 export default function Tasks() {
@@ -52,14 +53,11 @@ export default function Tasks() {
   };
 
   const fetchTasks = async () => {
-    if (!activeProjectId) return;
     try {
-      const res = await api.get(`/api/tasks/project/${activeProjectId}`);
-      if (res.data && res.data.length > 0) {
-        setTasks(res.data);
-      } else {
-        setTasks([]);
-      }
+      const res = activeProjectId 
+        ? await api.get(`/api/tasks/project/${activeProjectId}`)
+        : await api.get('/api/tasks');
+      setTasks(res.data || []);
     } catch (err) {
       setTasks([]);
     }
@@ -75,7 +73,11 @@ export default function Tasks() {
 
   useEffect(() => {
     window.addEventListener('task-created', fetchTasks);
-    return () => window.removeEventListener('task-created', fetchTasks);
+    window.addEventListener('task-status-updated', fetchTasks);
+    return () => {
+      window.removeEventListener('task-created', fetchTasks);
+      window.removeEventListener('task-status-updated', fetchTasks);
+    };
   }, [activeProjectId]);
 
   const handleStatusChange = async (taskId: number, newStatus: string) => {
@@ -112,6 +114,37 @@ export default function Tasks() {
     }
   };
 
+  const handleAcceptTask = async (taskId: number) => {
+    try {
+      const taskRes = await api.get(`/api/tasks/${taskId}`);
+      const taskData = taskRes.data;
+      taskData.status = 'TO_DO';
+      await api.put(`/api/tasks/${taskId}`, taskData);
+      fetchTasks();
+    } catch (err) {
+      console.error('Failed to accept task', err);
+    }
+  };
+
+  const handleDeclineTask = async (taskId: number) => {
+    const reason = prompt("Enter reason for declining the task:") || "Declined via Workspace Tasks";
+    try {
+      const commentPayload = {
+        content: `🚨 [System Log] Task Declined. Reason: ${reason}`
+      };
+      await api.post(`/api/tasks/${taskId}/comments`, commentPayload);
+
+      const taskRes = await api.get(`/api/tasks/${taskId}`);
+      const taskData = taskRes.data;
+      taskData.status = 'BACKLOG';
+      taskData.assignee = null;
+      await api.put(`/api/tasks/${taskId}`, taskData);
+      fetchTasks();
+    } catch (err) {
+      console.error('Failed to decline task', err);
+    }
+  };
+
   const openTaskDetail = (task: Task) => {
     window.dispatchEvent(new CustomEvent('open-task-detail', { detail: task }));
   };
@@ -120,7 +153,13 @@ export default function Tasks() {
   const filteredTasks = tasks.filter(t => {
     const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || t.status === statusFilter;
-    const matchesAssignee = !showMyTasksOnly || (t.assignee && t.assignee.id === user?.id);
+    
+    // If the logged-in user is an employee, show ONLY their assigned tasks.
+    // Otherwise (manager/admin), respect the showMyTasksOnly filter.
+    const matchesAssignee = user?.role === 'ROLE_EMPLOYEE'
+      ? (t.assignee && t.assignee.id === user?.id)
+      : (!showMyTasksOnly || (t.assignee && t.assignee.id === user?.id));
+
     return matchesSearch && matchesStatus && matchesAssignee;
   });
 
@@ -139,7 +178,7 @@ export default function Tasks() {
 
         {/* Search, toggle, and Action Button */}
         <div className="flex items-center gap-3">
-          {user?.role === 'ROLE_EMPLOYEE' && (
+          {user?.role !== 'ROLE_EMPLOYEE' && (
             <label className="flex items-center gap-2 text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl px-3.5 py-2">
               <input
                 type="checkbox"
@@ -162,12 +201,14 @@ export default function Tasks() {
             />
           </div>
 
-          <button
-            onClick={() => setTaskModalOpen(true)}
-            className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add Task
-          </button>
+          {isTeamLeader && (
+            <button
+              onClick={() => setTaskModalOpen(true)}
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add Task
+            </button>
+          )}
         </div>
       </div>
 
@@ -211,6 +252,25 @@ export default function Tasks() {
           {/* Floating Dropdown Suggestion List */}
           {isProjectDropdownOpen && (
             <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto glass-panel border border-slate-200/50 dark:border-white/5 shadow-2xl z-40 rounded-xl py-1">
+              <button
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => {
+                  setActiveProjectId(null);
+                  setIsProjectDropdownOpen(false);
+                  setIsProjectFocused(false);
+                  setProjectSearchQuery('');
+                }}
+                className={`w-full text-left px-4 py-2.5 text-xs font-black uppercase transition-colors flex items-center gap-2 cursor-pointer ${
+                  activeProjectId === null
+                    ? 'bg-blue-600 text-white'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                <span>📁</span>
+                <span className="truncate">All Projects</span>
+                {activeProjectId === null && <span className="ml-auto">✓</span>}
+              </button>
+
               {projectsList.filter(p => p.name.toLowerCase().includes(projectSearchQuery.toLowerCase())).length === 0 ? (
                 <div className="px-4 py-2.5 text-xs text-slate-400">No projects found</div>
               ) : (
@@ -271,17 +331,19 @@ export default function Tasks() {
               <tr className="bg-slate-500/5 border-b border-slate-200/30 dark:border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                 <th className="p-4 w-12 text-center">Inspect</th>
                 <th className="p-4">Task Name</th>
+                <th className="p-4">Project</th>
                 <th className="p-4">Status</th>
                 <th className="p-4">Priority</th>
                 <th className="p-4">Due Date</th>
+                <th className="p-4">Completion Time</th>
                 <th className="p-4">Assignee</th>
-                <th className="p-4">Budget log</th>
+                <th className="p-4">Budget Log</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200/20 dark:divide-white/5">
               {filteredTasks.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-slate-400 font-bold">
+                  <td colSpan={9} className="p-12 text-center text-slate-400 font-bold">
                     No tasks found matching current filters.
                   </td>
                 </tr>
@@ -301,7 +363,7 @@ export default function Tasks() {
                             <Eye className="w-4 h-4" />
                           </button>
                           
-                          {canEdit ? (
+                          {isTeamLeader ? (
                             <button
                               onClick={() => setTaskModalOpen(true, null, true, task)}
                               className="p-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
@@ -310,7 +372,7 @@ export default function Tasks() {
                               <Pencil className="w-4 h-4" />
                             </button>
                           ) : (
-                            <span className="p-1.5 text-slate-400 cursor-not-allowed" title="Only the assigned member can update this task.">
+                            <span className="p-1.5 text-slate-400 cursor-not-allowed" title="Only Team Leaders can edit this task.">
                               🔒
                             </span>
                           )}
@@ -323,26 +385,54 @@ export default function Tasks() {
                         </div>
                       </td>
                       <td className="p-4">
-                        <select
-                          disabled={!canEdit}
-                          value={task.status}
-                          onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                          className={`bg-transparent border-none font-bold text-xs text-blue-500 outline-none ${!canEdit ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                        >
-                          <option className="dark:bg-slate-800" value="BACKLOG">Backlog</option>
-                          <option className="dark:bg-slate-800" value="TO_DO">To Do</option>
-                          <option className="dark:bg-slate-800" value="IN_PROGRESS">In Progress</option>
-                          <option className="dark:bg-slate-800" value="TESTING">Testing</option>
-                          <option className="dark:bg-slate-800" value="REVIEW">Review</option>
-                          <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
-                        </select>
+                        <span className="font-black text-[10px] uppercase text-blue-500">
+                          {task.project ? task.project.name : 'General'}
+                        </span>
+                      </td>
+                      <td className="p-4">
+                        {task.status === 'PENDING_ACCEPTANCE' ? (
+                          isAssignee ? (
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAcceptTask(task.id)}
+                                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer text-center"
+                              >
+                                Accept
+                              </button>
+                              <button
+                                onClick={() => handleDeclineTask(task.id)}
+                                className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer text-center"
+                              >
+                                Unaccept
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase rounded animate-pulse">
+                              Pending Acceptance
+                            </span>
+                          )
+                        ) : (
+                          <select
+                            disabled={!isTeamLeader && !isAssignee}
+                            value={task.status}
+                            onChange={(e) => handleStatusChange(task.id, e.target.value)}
+                            className={`bg-transparent border-none font-bold text-xs text-blue-500 outline-none ${(!isTeamLeader && !isAssignee) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
+                          >
+                            <option className="dark:bg-slate-800" value="BACKLOG">Backlog</option>
+                            <option className="dark:bg-slate-800" value="TO_DO">To Do</option>
+                            <option className="dark:bg-slate-800" value="IN_PROGRESS">In Progress</option>
+                            <option className="dark:bg-slate-800" value="TESTING">Testing</option>
+                            <option className="dark:bg-slate-800" value="REVIEW">Review</option>
+                            <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
+                          </select>
+                        )}
                       </td>
                       <td className="p-4">
                         <select
-                          disabled={!canEdit}
+                          disabled={!isTeamLeader}
                           value={task.priority}
                           onChange={(e) => handlePriorityChange(task.id, e.target.value)}
-                          className={`bg-transparent border-none font-black text-[10px] uppercase outline-none ${!canEdit ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${
+                          className={`bg-transparent border-none font-black text-[10px] uppercase outline-none ${!isTeamLeader ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${
                             task.priority === 'CRITICAL' ? 'text-red-500' :
                             task.priority === 'HIGH' ? 'text-amber-500' :
                             'text-slate-400'
@@ -357,6 +447,11 @@ export default function Tasks() {
                       <td className="p-4 text-slate-500 dark:text-slate-400">
                         <span className="flex items-center gap-1.5">
                           <Calendar className="w-3.5 h-3.5 text-slate-400" /> {task.dueDate}
+                        </span>
+                      </td>
+                      <td className="p-4 text-slate-500 dark:text-slate-400">
+                        <span className="flex items-center gap-1">
+                          ⏱️ {task.estimatedTime || 0} hrs
                         </span>
                       </td>
                       <td className="p-4">

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, User, Shield, Clock, Play, Pause, Square, Sparkles, MessageSquare, Send, Paperclip, CheckSquare, ListTodo, Plus, Info, Link, AlertCircle, UserCheck } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 
 interface Task {
   id: number;
@@ -40,6 +41,13 @@ export default function TaskDetailModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
   const { user } = useAuthStore();
+  const { setChatContactId, setView } = useUIStore();
+
+  const startChatWithMember = (memberId: number) => {
+    setChatContactId(memberId);
+    setView('messages');
+    setIsOpen(false);
+  };
 
   // Comments & Attachments
   const [comments, setComments] = useState<Comment[]>([]);
@@ -437,6 +445,15 @@ export default function TaskDetailModal() {
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-blue-500/10"
                       />
                       <span className="font-black text-slate-800 dark:text-slate-200">{task.assignee.name}</span>
+                      {task.assignee.id !== user?.id && (
+                        <button
+                          onClick={() => startChatWithMember(task.assignee!.id)}
+                          className="p-1 hover:bg-white/10 rounded-lg text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
+                          title={`Send personal message to ${task.assignee.name}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   ) : (
                     <span className="text-slate-400 italic">Unassigned</span>
@@ -455,6 +472,15 @@ export default function TaskDetailModal() {
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-purple-500/10"
                       />
                       <span className="font-black text-slate-800 dark:text-slate-200">{task.reviewer.name}</span>
+                      {task.reviewer.id !== user?.id && (
+                        <button
+                          onClick={() => startChatWithMember(task.reviewer!.id)}
+                          className="p-1 hover:bg-white/10 rounded-lg text-purple-500 hover:text-purple-400 transition-colors cursor-pointer"
+                          title={`Send personal message to ${task.reviewer.name}`}
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 )}

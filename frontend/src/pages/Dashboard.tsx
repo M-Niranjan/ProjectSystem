@@ -3,11 +3,13 @@ import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cel
 import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 
 const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
 
 export default function Dashboard() {
   const { user } = useAuthStore();
+  const { setView } = useUIStore();
   const [time, setTime] = useState(new Date());
   
   // Shared state
@@ -105,6 +107,13 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
+    const handleUpdate = () => {
+      loadDashboardData();
+    };
+    window.addEventListener('task-status-updated', handleUpdate);
+    return () => {
+      window.removeEventListener('task-status-updated', handleUpdate);
+    };
   }, [user]);
 
   // Accept Task Flow
@@ -269,12 +278,12 @@ export default function Dashboard() {
                 <p><strong>Experience:</strong> {user?.experience || '2'} Years</p>
                 <p><strong>Skills:</strong> {user?.skills || 'React, Java'}</p>
               </div>
-              <a
-                href="/profile"
+              <button
+                onClick={() => setView('profile')}
                 className="w-full text-center py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-black text-xs uppercase tracking-wider transition-colors cursor-pointer"
               >
                 Go to Profile Settings
-              </a>
+              </button>
             </div>
 
             {/* Workload summary details */}
@@ -491,82 +500,84 @@ export default function Dashboard() {
             </div>
 
             {/* Assign Task Panel Form */}
-            <div className="glass-panel p-5">
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                <Plus className="w-4.5 h-4.5 text-blue-500" /> Assign Task Panel
-              </h4>
-              <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5 mt-3.5">
-                <div>
-                  <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Task Title</label>
-                  <input
-                    type="text"
-                    placeholder="Fix login UI bug..."
-                    value={newTaskTitle}
-                    onChange={(e) => setNewTaskTitle(e.target.value)}
-                    className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none focus:border-blue-500/50 transition-all font-semibold"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-2 gap-2">
+            {!isEmployee && (
+              <div className="glass-panel p-5">
+                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
+                  <Plus className="w-4.5 h-4.5 text-blue-500" /> Assign Task Panel
+                </h4>
+                <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5 mt-3.5">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Project</label>
-                    <select
-                      value={newTaskProjectId}
-                      onChange={(e) => setNewTaskProjectId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
-                    >
-                      {projectsList.map(p => (
-                        <option className="dark:bg-slate-800 text-slate-700" key={p.id} value={p.id}>{p.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Assignee</label>
-                    <select
-                      value={newTaskAssigneeId}
-                      onChange={(e) => setNewTaskAssigneeId(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
-                    >
-                      <option className="dark:bg-slate-800 text-slate-700" value="">-- Select --</option>
-                      {employeeDirectory.filter(u => u.role === 'ROLE_EMPLOYEE').map(emp => (
-                        <option className="dark:bg-slate-800 text-slate-700" key={emp.id} value={emp.id}>{emp.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-2">
-                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Due Date</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Task Title</label>
                     <input
-                      type="date"
-                      value={newTaskDueDate}
-                      onChange={(e) => setNewTaskDueDate(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
+                      type="text"
+                      placeholder="Fix login UI bug..."
+                      value={newTaskTitle}
+                      onChange={(e) => setNewTaskTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none focus:border-blue-500/50 transition-all font-semibold"
                     />
                   </div>
-                  <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Hours</label>
-                    <input
-                      type="number"
-                      value={newTaskHours}
-                      onChange={(e) => setNewTaskHours(e.target.value)}
-                      className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
-                    />
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Project</label>
+                      <select
+                        value={newTaskProjectId}
+                        onChange={(e) => setNewTaskProjectId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                      >
+                        {projectsList.map(p => (
+                          <option className="dark:bg-slate-800 text-slate-700" key={p.id} value={p.id}>{p.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Assignee</label>
+                      <select
+                        value={newTaskAssigneeId}
+                        onChange={(e) => setNewTaskAssigneeId(e.target.value)}
+                        className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                      >
+                        <option className="dark:bg-slate-800 text-slate-700" value="">-- Select --</option>
+                        {employeeDirectory.filter(u => u.role === 'ROLE_EMPLOYEE').map(emp => (
+                          <option className="dark:bg-slate-800 text-slate-700" key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                </div>
 
-                {formSuccess && <p className="text-[10px] text-green-500 font-bold">{formSuccess}</p>}
-                {formError && <p className="text-[10px] text-red-500 font-bold">{formError}</p>}
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="col-span-2">
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Due Date</label>
+                      <input
+                        type="date"
+                        value={newTaskDueDate}
+                        onChange={(e) => setNewTaskDueDate(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Hours</label>
+                      <input
+                        type="number"
+                        value={newTaskHours}
+                        onChange={(e) => setNewTaskHours(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
+                      />
+                    </div>
+                  </div>
 
-                <button
-                  type="submit"
-                  className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
-                >
-                  Send Task (Pending Acceptance)
-                </button>
-              </form>
-            </div>
+                  {formSuccess && <p className="text-[10px] text-green-500 font-bold">{formSuccess}</p>}
+                  {formError && <p className="text-[10px] text-red-500 font-bold">{formError}</p>}
+
+                  <button
+                    type="submit"
+                    className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                  >
+                    Send Task (Pending Acceptance)
+                  </button>
+                </form>
+              </div>
+            )}
           </div>
 
           {/* Acceptance Tracker & Cumulative progress rows */}

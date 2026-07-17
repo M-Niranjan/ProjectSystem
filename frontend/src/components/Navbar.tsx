@@ -102,6 +102,43 @@ export default function Navbar() {
     }
   };
 
+  const handleNotificationAction = async (n: any, action: 'accept' | 'decline', e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const tasksRes = await api.get('/api/tasks');
+      const allTasks = tasksRes.data || [];
+      
+      let searchTitle = n.message.replace('You have been assigned: ', '').trim();
+      
+      const matchingTask = allTasks.find(
+        (t: any) => t.title.toLowerCase() === searchTitle.toLowerCase() && t.status === 'PENDING_ACCEPTANCE'
+      );
+      
+      if (matchingTask) {
+        if (action === 'accept') {
+          matchingTask.status = 'TO_DO';
+          await api.put(`/api/tasks/${matchingTask.id}`, matchingTask);
+        } else {
+          const reason = prompt("Enter reason for declining the task:") || "Declined via Alerts Inbox";
+          const commentPayload = {
+            content: `🚨 [System Log] Task Declined via Alerts Inbox. Reason: ${reason}`
+          };
+          await api.post(`/api/tasks/${matchingTask.id}/comments`, commentPayload);
+
+          matchingTask.status = 'BACKLOG';
+          matchingTask.assignee = null;
+          await api.put(`/api/tasks/${matchingTask.id}`, matchingTask);
+        }
+      }
+      
+      await api.put(`/api/notifications/${n.id}/read`);
+      setNotifications(notifications.filter(item => item.id !== n.id));
+      window.dispatchEvent(new Event('task-status-updated'));
+    } catch (err) {
+      console.error('Failed to perform task action from notification', err);
+    }
+  };
+
   const markAllAsRead = async () => {
     try {
       await api.put('/api/notifications/read-all');
@@ -155,43 +192,45 @@ export default function Navbar() {
       {/* Right Navbar Items */}
       <div className="flex items-center gap-4">
         {/* Quick Create Dropdown */}
-        <div className="relative">
-          <button
-            ref={quickCreateButtonRef}
-            onClick={() => setShowQuickCreate(!showQuickCreate)}
-            className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 transition-all cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span className="hidden md:inline">Quick Create</span>
-          </button>
-          
-          {showQuickCreate && (
-            <div 
-              ref={quickCreateRef}
-              className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-1.5 shadow-xl z-50"
+        {user?.role !== 'ROLE_EMPLOYEE' && (
+          <div className="relative">
+            <button
+              ref={quickCreateButtonRef}
+              onClick={() => setShowQuickCreate(!showQuickCreate)}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 transition-all cursor-pointer"
             >
-              <button
-                onClick={() => triggerQuickAction('project')}
-                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+              <Plus className="w-3.5 h-3.5" />
+              <span className="hidden md:inline">Quick Create</span>
+            </button>
+            
+            {showQuickCreate && (
+              <div 
+                ref={quickCreateRef}
+                className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl py-1.5 shadow-xl z-50"
               >
-                + Create New Project
-              </button>
-              <button
-                onClick={() => triggerQuickAction('task')}
-                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
-              >
-                + Create New Task
-              </button>
-              <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
-              <button
-                onClick={() => setPomodoroTimer(true)}
-                className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
-              >
-                ⏱️ Open Focus Timer
-              </button>
-            </div>
-          )}
-        </div>
+                <button
+                  onClick={() => triggerQuickAction('project')}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                >
+                  + Create New Project
+                </button>
+                <button
+                  onClick={() => triggerQuickAction('task')}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 transition-colors cursor-pointer"
+                >
+                  + Create New Task
+                </button>
+                <div className="border-t border-slate-200 dark:border-slate-800 my-1"></div>
+                <button
+                  onClick={() => setPomodoroTimer(true)}
+                  className="w-full text-left px-4 py-2 hover:bg-slate-100 dark:hover:bg-white/10 text-xs font-bold text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                >
+                  ⏱️ Open Focus Timer
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Theme Switcher Toggle */}
         <button
@@ -280,12 +319,29 @@ export default function Navbar() {
                         <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{n.title}</p>
                         <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-2">{n.message}</p>
                       </div>
-                      <button
-                        onClick={(e) => markAsRead(n.id, e)}
-                        className="text-slate-400 hover:text-blue-500 p-0.5 rounded cursor-pointer transition-colors"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                      </button>
+                      {n.type === 'TASK_ASSIGNED' ? (
+                        <div className="flex flex-col gap-1.5 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={(e) => handleNotificationAction(n, 'accept', e)}
+                            className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded-md text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer text-center"
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={(e) => handleNotificationAction(n, 'decline', e)}
+                            className="px-2.5 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded-md text-[10px] font-black uppercase tracking-wider transition-colors cursor-pointer text-center"
+                          >
+                            Unaccept
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          onClick={(e) => markAsRead(n.id, e)}
+                          className="text-slate-400 hover:text-blue-500 p-0.5 rounded cursor-pointer transition-colors"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   ))
                 )}

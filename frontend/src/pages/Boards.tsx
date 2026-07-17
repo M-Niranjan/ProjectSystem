@@ -56,6 +56,7 @@ const COLUMNS: Column[] = [
 export default function Boards() {
   const { selectedProjectId, setView, setTaskModalOpen } = useUIStore();
   const { user } = useAuthStore();
+  const isTeamLeader = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
   
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
@@ -139,7 +140,11 @@ export default function Boards() {
 
   useEffect(() => {
     window.addEventListener('task-created', fetchTasks);
-    return () => window.removeEventListener('task-created', fetchTasks);
+    window.addEventListener('task-status-updated', fetchTasks);
+    return () => {
+      window.removeEventListener('task-created', fetchTasks);
+      window.removeEventListener('task-status-updated', fetchTasks);
+    };
   }, [activeProjectId]);
 
   // Validation function checks constraints step-by-step
@@ -392,12 +397,14 @@ export default function Boards() {
             />
           </div>
 
-          <button
-            onClick={() => setTaskModalOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors"
-          >
-            <Plus className="w-4 h-4" /> Add Task
-          </button>
+          {isTeamLeader && (
+            <button
+              onClick={() => setTaskModalOpen(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors"
+            >
+              <Plus className="w-4 h-4" /> Add Task
+            </button>
+          )}
         </div>
       </div>
 
@@ -500,6 +507,7 @@ export default function Boards() {
                 onCardClick={openTaskDetail} 
                 onActionClick={handleActionClick}
                 onSendBackClick={handleSendBack}
+                isTeamLeader={isTeamLeader}
               />
             );
           })}
@@ -648,9 +656,10 @@ interface ColumnProps {
   onCardClick: (task: Task) => void;
   onActionClick: (task: Task) => void;
   onSendBackClick: (task: Task) => void;
+  isTeamLeader: boolean;
 }
 
-function KanbanColumn({ column, tasks, onCardClick, onActionClick, onSendBackClick }: ColumnProps) {
+function KanbanColumn({ column, tasks, onCardClick, onActionClick, onSendBackClick, isTeamLeader }: ColumnProps) {
   const { setNodeRef } = useDroppable({
     id: column.id,
   });
@@ -672,14 +681,16 @@ function KanbanColumn({ column, tasks, onCardClick, onActionClick, onSendBackCli
         </div>
 
         {/* Quick Add Task Button for Column */}
-        <button
-          type="button"
-          onClick={() => setTaskModalOpen(true, column.id)}
-          className="w-5.5 h-5.5 flex items-center justify-center rounded-lg border border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-          title={`Add task directly to ${column.title}`}
-        >
-          <Plus className="w-3.5 h-3.5" />
-        </button>
+        {isTeamLeader && (
+          <button
+            type="button"
+            onClick={() => setTaskModalOpen(true, column.id)}
+            className="w-5.5 h-5.5 flex items-center justify-center rounded-lg border border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+            title={`Add task directly to ${column.title}`}
+          >
+            <Plus className="w-3.5 h-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Cards Stack */}
@@ -793,7 +804,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
             </button>
 
             {/* Edit icon */}
-            {canEdit ? (
+            {isTeamLeader ? (
               <button 
                 type="button" 
                 className="text-slate-400 hover:text-blue-500 p-0.5 transition-colors cursor-pointer"
@@ -806,7 +817,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
                 <Pencil className="w-3.5 h-3.5" />
               </button>
             ) : (
-              <span className="text-slate-400 cursor-not-allowed p-0.5" title="Only the assigned member can update this task.">
+              <span className="text-slate-400 cursor-not-allowed p-0.5" title="Only Team Leaders can edit this task.">
                 🔒
               </span>
             )}
