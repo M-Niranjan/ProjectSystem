@@ -134,8 +134,7 @@ function AppContent() {
 
         {/* Content Wrapper */}
         <div 
-          className="flex-1 flex flex-col min-h-screen transition-all duration-400"
-          style={{ paddingLeft: sidebarExpanded ? '260px' : '76px' }}
+          className={`flex-1 flex flex-col min-h-screen transition-all duration-400 ${sidebarExpanded ? 'md:pl-[260px]' : 'md:pl-[76px]'} pl-0`}
         >
           {/* Header Frosted Navbar */}
           <Navbar />

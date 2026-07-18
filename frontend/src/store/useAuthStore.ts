@@ -99,7 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         return true;
       } catch (err: any) {
         // Fallback to Demo Mode if backend is unreachable
-        if (err.code === 'ERR_NETWORK' || !err.response) {
+        if (err.code === 'ERR_NETWORK' || !err.response || err.response.status === 404 || (typeof err.response.data === 'string' && err.response.data.includes('<!DOCTYPE html>'))) {
           console.warn('Backend server unreachable. Logging into client-side Demo Mode.');
           const mockToken = 'mock-jwt-token-prologue';
           const mockUser: User = {
@@ -119,7 +119,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           return true;
         }
 
-        const message = err.response?.data || 'Failed to authenticate user';
+        let message = err.response?.data || 'Failed to authenticate user';
+        if (typeof message === 'string' && (message.includes('<!DOCTYPE html>') || message.includes('<html>'))) {
+          message = 'Backend server returned a 404 Not Found HTML page. Please verify your VITE_API_BASE_URL environment variable in Netlify settings, and make sure your backend is running.';
+        }
         set({ error: typeof message === 'string' ? message : JSON.stringify(message), loading: false });
         return false;
       }
@@ -136,7 +139,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         return true;
       } catch (err: any) {
         // Fallback to Demo Mode if backend is unreachable
-        if (err.code === 'ERR_NETWORK' || !err.response) {
+        if (err.code === 'ERR_NETWORK' || !err.response || err.response.status === 404 || (typeof err.response.data === 'string' && err.response.data.includes('<!DOCTYPE html>'))) {
           console.warn('Backend server unreachable. Logging into client-side Demo Mode.');
           const mockToken = 'mock-jwt-token-prologue';
           const mockUser: User = {
@@ -156,7 +159,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           return true;
         }
 
-        const message = err.response?.data || 'Registration failed';
+        let message = err.response?.data || 'Registration failed';
+        if (typeof message === 'string' && (message.includes('<!DOCTYPE html>') || message.includes('<html>'))) {
+          message = 'Backend server returned a 404 Not Found HTML page. Please verify your VITE_API_BASE_URL environment variable in Netlify settings, and make sure your backend is running.';
+        }
         set({ error: typeof message === 'string' ? message : JSON.stringify(message), loading: false });
         return false;
       }
@@ -181,7 +187,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
           set({ user: updatedUser, loading: false });
           return true;
         }
-        const message = err.response?.data || 'Failed to update profile';
+        let message = err.response?.data || 'Failed to update profile';
+        if (typeof message === 'string' && (message.includes('<!DOCTYPE html>') || message.includes('<html>'))) {
+          message = 'Backend server returned a 404 Not Found HTML page. Please verify your VITE_API_BASE_URL environment variable in Netlify settings, and make sure your backend is running.';
+        }
         set({ error: typeof message === 'string' ? message : JSON.stringify(message), loading: false });
         return false;
       }

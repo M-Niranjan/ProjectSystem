@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight } from 'lucide-react';
+import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight, Menu } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
@@ -23,7 +23,9 @@ export default function Navbar() {
     setVoiceOverlay, 
     setPomodoroTimer,
     setProjectModalOpen,
-    setTaskModalOpen
+    setTaskModalOpen,
+    sidebarExpanded,
+    toggleSidebar
   } = useUIStore();
   const { user } = useAuthStore();
 
@@ -163,9 +165,18 @@ export default function Navbar() {
   };
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-20 h-16 glass-navbar flex items-center justify-between px-6 pl-[88px] md:pl-[272px] transition-all duration-400">
+    <header className={`fixed top-0 right-0 left-0 z-20 h-16 glass-navbar flex items-center justify-between px-6 ${sidebarExpanded ? 'md:pl-[272px]' : 'md:pl-[88px]'} pl-6 transition-all duration-400`}>
       {/* Search Input bar */}
-      <div className="flex items-center gap-4 flex-1 max-w-md">
+      <div className="flex items-center gap-3 flex-1 max-w-md">
+        {/* Mobile menu hamburger toggle button */}
+        <button
+          onClick={toggleSidebar}
+          className="md:hidden p-2 rounded-xl bg-slate-100/50 dark:bg-white/5 text-slate-500 hover:text-slate-900 dark:hover:text-white border border-slate-200/50 dark:border-white/5 cursor-pointer transition-colors"
+          title="Toggle Navigation Menu"
+        >
+          <Menu className="w-5 h-5" />
+        </button>
+
         <div 
           onClick={triggerSearchPalette}
           className="w-full flex items-center justify-between gap-3 px-4 py-2 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-400 dark:text-slate-500 text-sm font-semibold cursor-pointer hover:border-slate-300 dark:hover:border-white/10 transition-all select-none"
