@@ -1,6 +1,7 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -118,16 +119,25 @@ export default function Dashboard() {
 
   // Accept Task Flow
   const handleAcceptTask = async (taskId: number) => {
+    // Optimistic UI: instantly remove from pending list and add to active
+    setPendingTasks(prev => prev.filter(t => t.id !== taskId));
+    setMyTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'ACCEPTED', acceptedAt: new Date().toISOString() } : t));
+
     try {
-      // Fetch task details
       const taskRes = await api.get(`/api/tasks/${taskId}`);
       const taskData = taskRes.data;
-      taskData.status = 'TO_DO'; // Set to TO_DO on acceptance
 
+      // Guard: already accepted — skip
+      if (taskData.status === 'ACCEPTED' || taskData.status === 'TO_DO' || taskData.status === 'IN_PROGRESS') {
+        return;
+      }
+
+      taskData.status = 'ACCEPTED';
       await api.put(`/api/tasks/${taskId}`, taskData);
-      loadDashboardData();
+      window.dispatchEvent(new Event('task-status-updated'));
     } catch (err) {
-      console.log('Failed to accept task');
+      console.log('Failed to accept task — reverting UI');
+      loadDashboardData(); // Re-sync on failure
     }
   };
 
@@ -219,7 +229,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="space-y-6 select-none pb-12">
+    <div className="space-y-6 select-none pb-12 w-full min-w-0">
       {/* Title */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -232,20 +242,20 @@ export default function Dashboard() {
         </div>
 
         {/* Clock & Weather widgets */}
-        <div className="flex items-center gap-4">
-          <div className="glass-panel px-4 py-2 flex items-center gap-2">
-            <CloudSun className="w-5 h-5 text-amber-500 animate-spin-slow animate-pulse" />
+        <div className="flex items-center gap-3">
+          <div className="glass-card-dashboard px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 group">
+            <CloudSun className="w-5 h-5 text-amber-500 hd-icon-badge" />
             <div className="text-left">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Local Weather</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200">Sunny, 22°C</p>
+              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Local Weather</p>
+              <p className="text-xs font-black text-slate-900 dark:text-slate-100">Sunny, 22°C</p>
             </div>
           </div>
 
-          <div className="glass-panel px-4 py-2 flex items-center gap-2">
-            <Clock className="w-5 h-5 text-blue-500" />
+          <div className="glass-card-dashboard px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 group">
+            <Clock className="w-5 h-5 text-blue-500 hd-icon-badge" />
             <div className="text-left">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Digital Clock</p>
-              <p className="text-xs font-black text-slate-800 dark:text-slate-200 font-mono">
+              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Digital Clock</p>
+              <p className="text-xs font-black text-slate-900 dark:text-slate-100 font-mono">
                 {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </p>
             </div>
@@ -260,53 +270,53 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* My Profile widget */}
-            <div className="glass-panel p-6 flex flex-col justify-between space-y-4">
+            <div className="glass-card-dashboard p-6 flex flex-col justify-between space-y-4">
               <div className="flex items-start gap-4">
                 <img
-                  src={user?.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user?.name}`}
+                  src={user?.profilePhoto || getAvatarByName(user?.name)}
                   alt="avatar"
-                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-blue-500/20"
+                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-blue-500/30 shadow-md"
                 />
                 <div>
-                  <h4 className="text-lg font-black text-slate-800 dark:text-white">{user?.name}</h4>
-                  <p className="text-xs font-black text-blue-500 uppercase tracking-widest">{user?.designation || 'Employee'}</p>
-                  <p className="text-[11px] text-slate-400 font-bold mt-1">{user?.department || 'Operations'}</p>
+                  <h4 className="text-lg font-black text-slate-900 dark:text-white">{user?.name}</h4>
+                  <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{user?.designation || 'Employee'}</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold mt-1">{user?.department || 'Operations'}</p>
                 </div>
               </div>
-              <div className="border-t border-slate-200/30 dark:border-white/5 pt-3 space-y-1.5 text-xs text-slate-500 dark:text-slate-400">
-                <p><strong>Email:</strong> {user?.email}</p>
-                <p><strong>Experience:</strong> {user?.experience || '2'} Years</p>
-                <p><strong>Skills:</strong> {user?.skills || 'React, Java'}</p>
+              <div className="border-t border-slate-200/50 dark:border-white/10 pt-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold">
+                <p><strong className="font-extrabold text-slate-900 dark:text-white">Email:</strong> {user?.email}</p>
+                <p><strong className="font-extrabold text-slate-900 dark:text-white">Experience:</strong> {user?.experience || '2'} Years</p>
+                <p><strong className="font-extrabold text-slate-900 dark:text-white">Skills:</strong> {user?.skills || 'React, Java'}</p>
               </div>
               <button
                 onClick={() => setView('profile')}
-                className="w-full text-center py-2 bg-slate-100 dark:bg-white/5 hover:bg-slate-200/50 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-black text-xs uppercase tracking-wider transition-colors cursor-pointer"
+                className="w-full text-center py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md hover:scale-[1.02]"
               >
                 Go to Profile Settings
               </button>
             </div>
 
             {/* Workload summary details */}
-            <div className="glass-panel p-6 lg:col-span-2 flex flex-col justify-between">
+            <div className="glass-card-dashboard p-6 lg:col-span-2 flex flex-col justify-between">
               <div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">My Workload Summary</h4>
-                <p className="text-xs text-slate-400 mt-1">Real-time status analysis of your personal pipeline.</p>
+                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">My Workload Summary</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Real-time status analysis of your personal pipeline.</p>
               </div>
-              <div className="grid grid-cols-3 gap-4 my-4">
-                <div className="bg-blue-500/5 border border-blue-500/10 rounded-2xl p-4 text-center">
-                  <h5 className="text-2xl font-black text-blue-500">{activeCount}</h5>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Active Tasks</p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
+                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
+                  <h5 className="text-2xl font-black text-blue-600 dark:text-blue-400">{activeCount}</h5>
+                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Active Tasks</p>
                 </div>
-                <div className="bg-red-500/5 border border-red-500/10 rounded-2xl p-4 text-center">
-                  <h5 className="text-2xl font-black text-red-500">{overdueCount}</h5>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Overdue Tasks</p>
+                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
+                  <h5 className="text-2xl font-black text-rose-600 dark:text-rose-400">{overdueCount}</h5>
+                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Overdue Tasks</p>
                 </div>
-                <div className="bg-green-500/5 border border-green-500/10 rounded-2xl p-4 text-center">
-                  <h5 className="text-2xl font-black text-green-500">{stats.completedTasks}</h5>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase mt-1">Completed History</p>
+                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
+                  <h5 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.completedTasks}</h5>
+                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Completed History</p>
                 </div>
               </div>
-              <div className="text-xs font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
+              <div className="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-2">
                 <Shield className="w-4.5 h-4.5 text-blue-500 animate-pulse" />
                 <span>Productivity Index: {stats.productivityScore}% overall completion rate.</span>
               </div>
@@ -315,39 +325,39 @@ export default function Dashboard() {
 
           {/* New Assignment Alerts (Pending Acceptance) */}
           {pendingTasks.length > 0 && (
-            <div className="bg-blue-600/15 border border-blue-500/30 rounded-3xl p-6 space-y-4">
-              <h3 className="text-base font-black text-blue-500 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 animate-bounce" /> New Assignment Alerts
+            <div className="bg-blue-600/15 border border-blue-500/30 rounded-3xl p-6 space-y-4 backdrop-blur-xl shadow-xl">
+              <h3 className="text-base font-black text-blue-600 dark:text-blue-400 flex items-center gap-2">
+                <AlertCircle className="w-5 h-5 animate-bounce text-amber-500" /> New Assignment Alerts
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {pendingTasks.map((t) => (
-                  <div key={t.id} className="glass-panel p-4 flex flex-col justify-between gap-3">
+                  <div key={t.id} className="glass-card-dashboard p-4 flex flex-col justify-between gap-3">
                     <div>
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase">{t.priority}</span>
-                      <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 mt-2">{t.title}</h4>
-                      <p className="text-[10px] text-slate-400 mt-1 line-clamp-2">{t.description}</p>
-                      <p className="text-[9px] text-slate-400 mt-2"><strong>Due:</strong> {t.dueDate} | <strong>Est:</strong> {t.estimatedTime} hrs</p>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 uppercase border border-blue-500/30">{t.priority}</span>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 mt-2">{t.title}</h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{t.description}</p>
+                      <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-2 font-bold"><strong>Due:</strong> {t.dueDate} | <strong>Est:</strong> {t.estimatedTime} hrs</p>
                     </div>
 
                     {declineTargetId === t.id ? (
-                      <div className="space-y-2 pt-2 border-t border-slate-200/30 dark:border-white/5">
+                      <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
                         <input
                           type="text"
                           placeholder="Reason for declining task..."
                           value={declineReason}
                           onChange={(e) => setDeclineReason(e.target.value)}
-                          className="w-full px-3 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-lg text-xs outline-none"
+                          className="w-full px-3 py-1.5 bg-white/70 dark:bg-slate-900/80 border border-slate-300 dark:border-white/20 rounded-xl text-xs outline-none font-semibold"
                         />
                         <div className="flex gap-2">
                           <button
                             onClick={handleDeclineTask}
-                            className="px-3 py-1 bg-red-600 text-white rounded text-[10px] font-black uppercase cursor-pointer"
+                            className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase cursor-pointer shadow-sm"
                           >
                             Submit
                           </button>
                           <button
                             onClick={() => setDeclineTargetId(null)}
-                            className="px-3 py-1 bg-slate-500 text-white rounded text-[10px] font-black uppercase cursor-pointer"
+                            className="px-3 py-1.5 bg-slate-500 text-white rounded-lg text-[10px] font-black uppercase cursor-pointer"
                           >
                             Cancel
                           </button>
@@ -357,13 +367,13 @@ export default function Dashboard() {
                       <div className="flex gap-2">
                         <button
                           onClick={() => handleAcceptTask(t.id)}
-                          className="flex-1 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                          className="flex-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md"
                         >
                           Accept Task
                         </button>
                         <button
                           onClick={() => setDeclineTargetId(t.id)}
-                          className="py-1.5 px-3 bg-red-600/10 hover:bg-red-600/20 text-red-500 rounded-lg font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                          className="py-2 px-3 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
                         >
                           Decline
                         </button>
@@ -375,43 +385,38 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* Today's Work & Task History columns */}
+          {/* Active Tasks & Completed History */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Today's active checklist */}
-            <div className="glass-panel p-5 flex flex-col justify-between">
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
-                <Clock className="w-4.5 h-4.5 text-blue-500" /> Today's Focus Work
+            <div className="glass-card-dashboard p-5">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-1.5">
+                <Clock className="w-4.5 h-4.5 text-blue-500" /> Active Assigned Tasks ({myTasks.filter(t => t.status !== 'COMPLETED').length})
               </h4>
               <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
-                {myTasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'PENDING_ACCEPTANCE').length === 0 ? (
-                  <p className="text-[10px] font-bold text-slate-400 text-center py-6">No tasks currently active.</p>
+                {myTasks.filter(t => t.status !== 'COMPLETED').length === 0 ? (
+                  <p className="text-[10px] font-bold text-slate-400 text-center py-6">No active tasks in progress.</p>
                 ) : (
-                  myTasks.filter(t => t.status !== 'COMPLETED' && t.status !== 'PENDING_ACCEPTANCE').map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-2.5 bg-slate-500/5 rounded-xl border border-slate-200/50 dark:border-white/5">
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate flex-1">{t.title}</span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase">{t.status}</span>
-                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/10 text-amber-500 uppercase">{t.priority}</span>
-                      </div>
+                  myTasks.filter(t => t.status !== 'COMPLETED').map(t => (
+                    <div key={t.id} className="flex items-center justify-between p-3 bg-white/40 dark:bg-white/5 rounded-2xl border border-slate-200/50 dark:border-white/10 hover:border-blue-500/30 transition-all">
+                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex-1">{t.title}</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 uppercase">{t.status}</span>
                     </div>
                   ))
                 )}
               </div>
             </div>
 
-            {/* My Task History */}
-            <div className="glass-panel p-5 flex flex-col justify-between">
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4.5 h-4.5 text-green-500" /> My Completed History
+            <div className="glass-card-dashboard p-5">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" /> My Completed History
               </h4>
               <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
                 {myTasks.filter(t => t.status === 'COMPLETED').length === 0 ? (
                   <p className="text-[10px] font-bold text-slate-400 text-center py-6">No completed tasks yet.</p>
                 ) : (
                   myTasks.filter(t => t.status === 'COMPLETED').map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-2.5 bg-green-500/5 rounded-xl border border-green-500/10">
-                      <span className="font-bold text-slate-400 line-through truncate flex-1">{t.title}</span>
-                      <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-green-500/10 text-green-500 uppercase">Completed</span>
+                    <div key={t.id} className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
+                      <span className="font-bold text-xs text-slate-500 dark:text-slate-400 line-through truncate flex-1">{t.title}</span>
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase">Completed</span>
                     </div>
                   ))
                 )}
@@ -423,44 +428,68 @@ export default function Dashboard() {
         /* ==================== TEAM LEADER VIEW ==================== */
         <div className="space-y-6">
           {/* Managers Stats Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-            <div className="glass-panel p-6 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Total Projects</p>
-                <h3 className="text-3xl font-black mt-2 text-slate-800 dark:text-white">{stats.totalProjects}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            {/* Stat Card 1: Total Projects */}
+            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Projects</span>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-blue-500/25">
+                  <LayoutDashboard className="w-6 h-6" />
+                </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
-                <LayoutDashboard className="w-6 h-6" />
-              </div>
-            </div>
-
-            <div className="glass-panel p-6 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Active Projects</p>
-                <h3 className="text-3xl font-black mt-2 text-slate-800 dark:text-white">{stats.activeProjects}</h3>
-              </div>
-              <div className="w-12 h-12 rounded-xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center">
-                <Users className="w-6 h-6" />
+              <div className="mt-4 flex items-baseline justify-between">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.totalProjects}</h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                  +12.5% this month
+                </span>
               </div>
             </div>
 
-            <div className="glass-panel p-6 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Pending Tasks</p>
-                <h3 className="text-3xl font-black mt-2 text-slate-800 dark:text-white">{stats.pendingTasks}</h3>
+            {/* Stat Card 2: Active Projects */}
+            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Projects</span>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-indigo-500/25">
+                  <FolderGit2 className="w-6 h-6" />
+                </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-violet-500/10 text-violet-600 flex items-center justify-center">
-                <CheckSquare className="w-6 h-6" />
+              <div className="mt-4 flex items-baseline justify-between">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.activeProjects}</h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                  4 teams active
+                </span>
               </div>
             </div>
 
-            <div className="glass-panel p-6 flex items-center justify-between">
-              <div>
-                <p className="text-[11px] text-slate-400 font-bold uppercase tracking-wider">Productivity</p>
-                <h3 className="text-3xl font-black mt-2 text-slate-800 dark:text-white">{stats.productivityScore}%</h3>
+            {/* Stat Card 3: Pending Tasks */}
+            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Pending Tasks</span>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-pink-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-violet-500/25">
+                  <CheckSquare className="w-6 h-6" />
+                </div>
               </div>
-              <div className="w-12 h-12 rounded-xl bg-green-500/10 text-green-600 flex items-center justify-center animate-pulse">
-                <Award className="w-6 h-6" />
+              <div className="mt-4 flex items-baseline justify-between">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.pendingTasks}</h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                  Awaiting review
+                </span>
+              </div>
+            </div>
+
+            {/* Stat Card 4: Productivity Index */}
+            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Productivity Score</span>
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-emerald-500/25">
+                  <Award className="w-6 h-6 animate-pulse" />
+                </div>
+              </div>
+              <div className="mt-4 flex items-baseline justify-between">
+                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.productivityScore}%</h3>
+                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  98.4% efficiency
+                </span>
               </div>
             </div>
           </div>
@@ -469,75 +498,103 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Employee Directory */}
-            <div className="glass-panel p-5 lg:col-span-2 flex flex-col justify-between">
+            <div className="glass-card-dashboard p-6 lg:col-span-2 flex flex-col justify-between">
               <div>
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <Users className="w-4.5 h-4.5 text-blue-500" /> Employee Directory
-                </h4>
-                <p className="text-xs text-slate-400 mt-1">Directory of active resources and workload distribution.</p>
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                    <Users className="w-5 h-5 text-blue-500 hd-icon-badge" /> Employee Directory
+                  </h4>
+                  <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                    {employeeDirectory.length} Active Staff
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Directory of active team members and current task assignments.</p>
               </div>
 
-              <div className="my-4 divide-y divide-slate-200/20 max-h-[300px] overflow-y-auto pr-1">
-                {employeeDirectory.map(emp => (
-                  <div key={emp.id} className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={emp.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${emp.name}`}
-                        alt="avatar"
-                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-blue-500/10"
-                      />
-                      <div>
-                        <p className="font-black text-xs text-slate-850 dark:text-slate-100">{emp.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">{emp.designation || 'Staff'} ({emp.department || 'Tech'})</p>
+              <div className="my-4 divide-y divide-slate-200/50 dark:divide-white/10 max-h-[320px] overflow-y-auto pr-1">
+                {employeeDirectory.map(emp => {
+                  const empActiveTasksCount = allTasks.filter(t => t.assignee?.id === emp.id && t.status !== 'COMPLETED').length;
+                  return (
+                    <div key={emp.id} className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all">
+                      <div className="flex items-center gap-3.5">
+                        <div className="relative">
+                          <img
+                            src={emp.profilePhoto || getAvatarByName(emp.name)}
+                            alt="avatar"
+                            className="w-11 h-11 rounded-2xl object-cover ring-2 ring-blue-500/30 shadow-md"
+                          />
+                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
+                        </div>
+                        <div>
+                          <p className="font-black text-xs text-slate-900 dark:text-slate-100">{emp.name}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase mt-0.5">{emp.designation || 'Staff'} ({emp.department || 'Tech'})</p>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-3">
+                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-extrabold border ${
+                          empActiveTasksCount > 0 
+                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                            : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
+                        }`}>
+                          ⚡ {empActiveTasksCount} Tasks Active
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewTaskAssigneeId(emp.id.toString());
+                          }}
+                          className="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-white/10 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-[10px] transition-all cursor-pointer shadow-xs"
+                        >
+                          + Assign
+                        </button>
                       </div>
                     </div>
-                    <span className="text-[10px] px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 font-black">
-                      {emp.role === 'ROLE_EMPLOYEE' ? 'Employee' : 'Team Lead'}
-                    </span>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
             {/* Assign Task Panel Form */}
             {!isEmployee && (
-              <div className="glass-panel p-5">
-                <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <Plus className="w-4.5 h-4.5 text-blue-500" /> Assign Task Panel
+              <div className="glass-card-dashboard p-6">
+                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                  <Plus className="w-5 h-5 text-blue-500 hd-icon-badge" /> Assign Task Panel
                 </h4>
-                <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5 mt-3.5">
+                <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5 mt-4">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Task Title</label>
+                    <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Task Title</label>
                     <input
                       type="text"
                       placeholder="Fix login UI bug..."
                       value={newTaskTitle}
                       onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none focus:border-blue-500/50 transition-all font-semibold"
+                      className="w-full px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-semibold text-slate-900 dark:text-white placeholder-slate-400 shadow-sm"
                     />
                   </div>
                   
                   <div className="grid grid-cols-2 gap-2">
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Project</label>
+                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Project</label>
                       <select
                         value={newTaskProjectId}
                         onChange={(e) => setNewTaskProjectId(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white cursor-pointer shadow-sm"
                       >
                         {projectsList.map(p => (
-                          <option className="dark:bg-slate-800 text-slate-700" key={p.id} value={p.id}>{p.name}</option>
+                          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" key={p.id} value={p.id}>{p.name}</option>
                         ))}
                       </select>
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Assignee</label>
+                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Assignee</label>
                       <select
                         value={newTaskAssigneeId}
                         onChange={(e) => setNewTaskAssigneeId(e.target.value)}
-                        className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white cursor-pointer shadow-sm"
                       >
-                        <option className="dark:bg-slate-800 text-slate-700" value="">-- Select --</option>
+                        <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="">-- Select --</option>
                         {employeeDirectory.filter(u => u.role === 'ROLE_EMPLOYEE').map(emp => (
                           <option className="dark:bg-slate-800 text-slate-700" key={emp.id} value={emp.id}>{emp.name}</option>
                         ))}
@@ -545,35 +602,36 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="col-span-2">
-                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Due Date</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Due Date</label>
                       <input
                         type="date"
                         value={newTaskDueDate}
                         onChange={(e) => setNewTaskDueDate(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
+                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white shadow-sm"
                       />
                     </div>
                     <div>
-                      <label className="text-[10px] font-black uppercase text-slate-400 block mb-1">Hours</label>
+                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Hours</label>
                       <input
                         type="number"
                         value={newTaskHours}
                         onChange={(e) => setNewTaskHours(e.target.value)}
-                        className="w-full px-2 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-[10px] outline-none font-semibold"
+                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white shadow-sm"
                       />
                     </div>
                   </div>
 
-                  {formSuccess && <p className="text-[10px] text-green-500 font-bold">{formSuccess}</p>}
-                  {formError && <p className="text-[10px] text-red-500 font-bold">{formError}</p>}
+                  {formSuccess && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">{formSuccess}</p>}
+                  {formError && <p className="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold">{formError}</p>}
 
                   <button
                     type="submit"
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
+                    className="w-full py-3 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xl shadow-blue-500/25 hover:scale-[1.02] flex items-center justify-between"
                   >
-                    Send Task (Pending Acceptance)
+                    <span>Send Task (Pending Acceptance)</span>
+                    <ArrowRight className="w-4 h-4 text-white" />
                   </button>
                 </form>
               </div>
@@ -584,45 +642,98 @@ export default function Dashboard() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             
             {/* Acceptance Tracker list */}
-            <div className="glass-panel p-5 lg:col-span-2">
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                <UserCheck className="w-4.5 h-4.5 text-blue-500" /> Acceptance Tracker
+            <div className="glass-card-dashboard p-6 lg:col-span-2">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
+                <UserCheck className="w-5 h-5 text-blue-500 hd-icon-badge" /> Acceptance Tracker
               </h4>
-              <p className="text-xs text-slate-400 mt-1">Real-time tracker of tasks pending approval or accepted by staff.</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Real-time tracker of tasks pending, accepted, or declined by staff.</p>
 
-              <div className="my-4 divide-y divide-slate-200/20 max-h-[220px] overflow-y-auto pr-1">
-                {allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE').length === 0 ? (
-                  <p className="text-[10px] font-bold text-slate-400 text-center py-8">All assigned tasks accepted or resolved.</p>
+              <div className="my-4 divide-y divide-slate-200/50 dark:divide-white/10 max-h-[300px] overflow-y-auto pr-1 space-y-1">
+                {allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE' || t.status === 'ACCEPTED' || t.acceptedAt || t.status === 'DECLINED' || Boolean(t.declineReason)).length === 0 ? (
+                  <p className="text-[10px] font-bold text-slate-400 text-center py-8">No task acceptance records currently active.</p>
                 ) : (
-                  allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE').map(task => (
-                    <div key={task.id} className="flex items-center justify-between py-2 text-xs">
-                      <div>
-                        <p className="font-bold text-slate-800 dark:text-slate-200">{task.title}</p>
-                        <p className="text-[9px] text-slate-400 font-semibold">Assigned to: {task.assignee ? task.assignee.name : 'Unassigned'}</p>
+                  allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE' || t.status === 'ACCEPTED' || t.acceptedAt || t.status === 'DECLINED' || Boolean(t.declineReason)).map(task => {
+                    const isAccepted = task.status === 'ACCEPTED' || Boolean(task.acceptedAt);
+                    const isDeclined = task.status === 'DECLINED' || (Boolean(task.declineReason) && task.status === 'BACKLOG');
+                    const isPending = task.status === 'PENDING_ACCEPTANCE';
+                    
+                    let employeeName = task.assignee ? task.assignee.name : 'Employee';
+                    let reasonContent = task.declineReason || '';
+                    if (!task.assignee && task.declineReason && task.declineReason.includes(':')) {
+                      const parts = task.declineReason.split(':');
+                      employeeName = parts[0].trim();
+                      reasonContent = parts.slice(1).join(':').trim();
+                    }
+
+                    return (
+                      <div key={task.id} className="flex items-start justify-between py-3 px-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-black text-slate-900 dark:text-slate-100 text-xs truncate">{task.title}</p>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold mt-0.5">
+                            👤 {employeeName}
+                          </p>
+
+                          {/* Accepted timestamp */}
+                          {isAccepted && task.acceptedAt && (
+                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold mt-0.5">
+                              ✓ Accepted at {new Date(task.acceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(task.acceptedAt).toLocaleDateString()}
+                            </p>
+                          )}
+
+                          {/* Declined Reason */}
+                          {isDeclined && reasonContent && (
+                            <p className="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold mt-0.5">
+                              ❌ Reason: <span className="text-slate-800 dark:text-slate-200 font-semibold">{reasonContent}</span>
+                            </p>
+                          )}
+
+                          {/* Next Action */}
+                          {isAccepted && (
+                            <p className="text-[9px] text-blue-500 font-bold mt-0.5">Next: Member to begin work</p>
+                          )}
+                          {isPending && (
+                            <p className="text-[9px] text-amber-500 font-bold mt-0.5">Next: Awaiting employee response</p>
+                          )}
+                          {isDeclined && (
+                            <p className="text-[9px] text-slate-400 font-bold mt-0.5">Next: Reassign or revise task requirements</p>
+                          )}
+                        </div>
+
+                        {/* Status Badges */}
+                        {isPending ? (
+                          <span className="px-3 py-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase rounded-full animate-pulse flex-shrink-0 border border-amber-500/30">
+                            ⏳ Pending
+                          </span>
+                        ) : isAccepted ? (
+                          <span className="px-3 py-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded-full flex-shrink-0 border border-emerald-500/30">
+                            ✓ Accepted
+                          </span>
+                        ) : (
+                          <span className="px-3 py-1 bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase rounded-full flex-shrink-0 border border-rose-500/30">
+                            ❌ Declined
+                          </span>
+                        )}
                       </div>
-                      <span className="px-2 py-0.5 bg-amber-500/10 text-amber-500 text-[8px] font-black uppercase rounded animate-pulse">
-                        Pending Acceptance
-                      </span>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>
 
             {/* Team Analytics */}
-            <div className="glass-panel p-5">
-              <h4 className="text-sm font-black text-slate-800 dark:text-slate-200 mb-4 flex items-center gap-1.5">
-                <FileText className="w-4.5 h-4.5 text-blue-500" /> Cumulative Output
+            <div className="glass-card-dashboard p-6">
+              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-500 hd-icon-badge" /> Cumulative Output
               </h4>
               <div className="h-44">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={monthlyProgress}>
                     <XAxis dataKey="name" hide />
-                    <Area type="monotone" dataKey="rate" stroke="#8B5CF6" fill="#8B5CF6" fillOpacity={0.15} />
+                    <Area type="monotone" dataKey="rate" stroke="#6366F1" fill="#6366F1" fillOpacity={0.2} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
-              <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center mt-2">
+              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center mt-2">
                 Workspace performance velocity: Stable at {stats.productivityScore}% completion rate.
               </div>
             </div>

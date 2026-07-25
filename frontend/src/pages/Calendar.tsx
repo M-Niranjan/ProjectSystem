@@ -173,6 +173,8 @@ export default function Calendar() {
         }
         .fc-header-toolbar {
           margin-bottom: 1.5rem !important;
+          flex-wrap: wrap !important;
+          gap: 8px !important;
         }
         .fc-button-primary {
           background-color: rgba(255, 255, 255, 0.05) !important;
@@ -207,7 +209,12 @@ export default function Calendar() {
           padding: 6px !important;
         }
         .fc-day-today {
-          background-color: rgba(59, 130, 246, 0.05) !important;
+          background-color: rgba(59, 130, 246, 0.15) !important;
+          box-shadow: inset 0 0 0 2.5px rgba(59, 130, 246, 0.25) !important;
+        }
+        .dark .fc-day-today {
+          background-color: rgba(59, 130, 246, 0.22) !important;
+          box-shadow: inset 0 0 0 2.5px rgba(59, 130, 246, 0.4) !important;
         }
         .fc-event {
           border: none !important;

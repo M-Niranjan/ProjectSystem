@@ -1,3 +1,4 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, User, Shield, Clock, Play, Pause, Square, Sparkles, MessageSquare, Send, Paperclip, CheckSquare, ListTodo, Plus, Info, Link, AlertCircle, UserCheck } from 'lucide-react';
@@ -95,11 +96,11 @@ export default function TaskDetailModal() {
     try {
       // Fetch comments
       const commRes = await api.get(`/api/tasks/${taskId}/comments`);
-      setComments(commRes.data);
+      setComments(Array.isArray(commRes.data) ? commRes.data : []);
       
       // Fetch attachments
       const attachRes = await api.get(`/api/attachments/task/${taskId}`);
-      setAttachments(attachRes.data);
+      setAttachments(Array.isArray(attachRes.data) ? attachRes.data : []);
     } catch (err) {
       // Mock fallbacks
       setComments([
@@ -355,7 +356,7 @@ export default function TaskDetailModal() {
                     return (
                       <div key={c.id} className="flex gap-3 text-xs">
                         <img
-                          src={c.user.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${c.user.name}`}
+                          src={c.user.profilePhoto || getAvatarByName(c.user.name)}
                           alt="avatar"
                           className="w-7 h-7 rounded-lg object-cover ring-1 ring-blue-500/10 flex-shrink-0"
                         />
@@ -440,7 +441,7 @@ export default function TaskDetailModal() {
                   {task.assignee ? (
                     <div className="flex items-center gap-1.5">
                       <img
-                        src={task.assignee.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${task.assignee.name}`}
+                        src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
                         alt="avatar"
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-blue-500/10"
                       />
@@ -467,7 +468,7 @@ export default function TaskDetailModal() {
                     </span>
                     <div className="flex items-center gap-1.5">
                       <img
-                        src={task.reviewer.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${task.reviewer.name}`}
+                        src={task.reviewer.profilePhoto || getAvatarByName(task.reviewer.name)}
                         alt="avatar"
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-purple-500/10"
                       />

@@ -205,8 +205,10 @@ export default function Projects() {
   };
 
   const filtered = projects.filter(p => {
-    const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          p.description.toLowerCase().includes(searchQuery.toLowerCase());
+    const nameVal = p.name || '';
+    const descVal = p.description || '';
+    const matchesSearch = nameVal.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          descVal.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = statusFilter === 'ALL' || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -249,7 +251,7 @@ export default function Projects() {
           </div>
 
           {/* Status filter selection */}
-          <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl">
+          <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl overflow-x-auto max-w-full">
             {['ALL', 'PLANNING', 'ACTIVE', 'COMPLETED', 'ARCHIVED'].map(statusVal => (
               <button
                 key={statusVal}
@@ -397,22 +399,26 @@ export default function Projects() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-8">
-                  <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase hidden sm:inline-block ${
-                    project.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' : 'bg-blue-500/10 text-blue-500'
-                  }`}>
-                    {project.status}
-                  </span>
+                <div className="flex items-center gap-3 md:gap-5 flex-shrink-0">
+                  <div className="w-[100px] flex justify-center hidden sm:flex flex-shrink-0">
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase text-center min-w-[75px] ${
+                      project.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' :
+                      project.status === 'PLANNING' ? 'bg-slate-500/10 text-slate-400' :
+                      'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      {project.status}
+                    </span>
+                  </div>
 
-                  <span className="text-xs font-bold text-slate-500 hidden md:inline-block">
+                  <span className="w-[160px] text-xs font-bold text-slate-500 hidden md:inline-block text-center truncate flex-shrink-0">
                     Budget: ${project.spent} / ${project.budget}
                   </span>
 
-                  <span className="text-xs font-bold text-slate-500 flex items-center gap-1">
+                  <span className="w-[110px] text-xs font-bold text-slate-500 flex items-center justify-center gap-1 flex-shrink-0">
                     <Calendar className="w-3.5 h-3.5" /> {project.deadline}
                   </span>
 
-                  <div className="flex items-center gap-2">
+                  <div className="w-[90px] flex items-center justify-end gap-1.5 flex-shrink-0">
                     <button
                       onClick={(e) => toggleFavorite(project.id, e)}
                       className={`p-1 rounded hover:bg-white/10 ${project.isFavorite ? 'text-amber-500' : 'text-slate-400'}`}

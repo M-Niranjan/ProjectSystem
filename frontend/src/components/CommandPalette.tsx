@@ -1,6 +1,22 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, Compass, Sun, Moon, Mic, Play, Settings, Sparkles, User, Users } from 'lucide-react';
+import { 
+  Search, 
+  Compass, 
+  Sun, 
+  Moon, 
+  Mic, 
+  Play, 
+  Settings, 
+  Sparkles, 
+  User, 
+  Users,
+  LayoutDashboard,
+  FolderGit2,
+  Kanban,
+  Calendar,
+  Clock
+} from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 
 interface CommandItem {
@@ -22,11 +38,11 @@ export default function CommandPalette() {
 
   const commands: CommandItem[] = [
     // Navigation
-    { id: 'nav-dash', title: 'Go to Dashboard', subtitle: 'View main workspace analytics', icon: Compass, category: 'Navigation', action: () => setView('dashboard') },
-    { id: 'nav-proj', title: 'Go to Projects', subtitle: 'Manage all enterprise projects', icon: Compass, category: 'Navigation', action: () => setView('projects') },
-    { id: 'nav-kanb', title: 'Go to Kanban Board', subtitle: 'Drag & drop tasks between columns', icon: Compass, category: 'Navigation', action: () => setView('boards') },
-    { id: 'nav-cal', title: 'Go to Calendar', subtitle: 'Review task milestones and scheduling', icon: Compass, category: 'Navigation', action: () => setView('calendar') },
-    { id: 'nav-time', title: 'Go to Gantt Timeline', subtitle: 'View project schedule Gantt chart', icon: Compass, category: 'Navigation', action: () => setView('timeline') },
+    { id: 'nav-dash', title: 'Go to Dashboard', subtitle: 'View main workspace analytics', icon: LayoutDashboard, category: 'Navigation', action: () => setView('dashboard') },
+    { id: 'nav-proj', title: 'Go to Projects', subtitle: 'Manage all enterprise projects', icon: FolderGit2, category: 'Navigation', action: () => setView('projects') },
+    { id: 'nav-kanb', title: 'Go to Kanban Board', subtitle: 'Drag & drop tasks between columns', icon: Kanban, category: 'Navigation', action: () => setView('boards') },
+    { id: 'nav-cal', title: 'Go to Calendar', subtitle: 'Review task milestones and scheduling', icon: Calendar, category: 'Navigation', action: () => setView('calendar') },
+    { id: 'nav-time', title: 'Go to Gantt Timeline', subtitle: 'View project schedule Gantt chart', icon: Clock, category: 'Navigation', action: () => setView('timeline') },
     { id: 'nav-team', title: 'Go to Team Hub', subtitle: 'Review member assignments and roles', icon: Users, category: 'Navigation', action: () => setView('teams') },
     { id: 'nav-prof', title: 'Go to Profile Resume', subtitle: 'View your completed achievements and logs', icon: User, category: 'Navigation', action: () => setView('profile') },
     { id: 'nav-sett', title: 'Go to Hub Settings', subtitle: 'Manage workspace configuration options', icon: Settings, category: 'Navigation', action: () => setView('settings') },

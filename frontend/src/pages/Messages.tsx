@@ -1,5 +1,6 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, Paperclip, Smile, Search, Hash, Users, Radio, CheckCheck, Compass, Info, User, Link, HelpCircle } from 'lucide-react';
+import { MessageSquare, Send, Paperclip, Smile, Search, Hash, Users, Radio, CheckCheck, Compass, Info, User, Link, HelpCircle, Plus, X, Briefcase, Award, Globe, Mail, Shield } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -35,9 +36,75 @@ export default function Messages() {
   const [activeContactId, setActiveContactId] = useState<number | null>(null);
   const [dmMessages, setDmMessages] = useState<Message[]>([]);
   const [unreadCounts, setUnreadCounts] = useState<Record<number, number>>({});
-  
+
+  // New member invite modal & form states
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+  const [inviteTab, setInviteTab] = useState<'existing' | 'new'>('existing');
+  const [inviteName, setInviteName] = useState('');
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState('ROLE_EMPLOYEE');
+  const [inviteDesignation, setInviteDesignation] = useState('');
+  const [inviteDept, setInviteDept] = useState('Technology');
+  const [inviteExp, setInviteExp] = useState(2);
+  const [inviteSkills, setInviteSkills] = useState('');
+  const [selectedTeammateId, setSelectedTeammateId] = useState<string>('');
+
   const [chatInput, setChatInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  const handleInviteSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (inviteTab === 'existing') {
+      if (!selectedTeammateId) return;
+      const tId = parseInt(selectedTeammateId);
+      setActiveContactId(tId);
+      setActiveTab('dms');
+      setIsInviteModalOpen(false);
+      setSelectedTeammateId('');
+    } else {
+      if (!inviteName.trim() || !inviteEmail.trim()) return;
+      const payload = {
+        name: inviteName.trim(),
+        email: inviteEmail.trim(),
+        role: inviteRole,
+        designation: inviteDesignation.trim() || 'Teammate',
+        department: inviteDept,
+        experience: Number(inviteExp),
+        skills: inviteSkills.trim()
+      };
+      
+      try {
+        const res = await api.post('/api/teams', payload);
+        const newContact = res.data;
+        setContacts(prev => {
+          if (prev.some(c => c.id === newContact.id)) return prev;
+          return [...prev, newContact];
+        });
+        setActiveContactId(newContact.id);
+        setActiveTab('dms');
+      } catch (err) {
+        console.error('Failed to create new teammate via API, using fallback', err);
+        // Fallback for offline/mock
+        const fallbackContact = {
+          id: Date.now(),
+          ...payload,
+          profilePhoto: getAvatarByName(payload.name)
+        };
+        setContacts(prev => [...prev, fallbackContact]);
+        setActiveContactId(fallbackContact.id);
+        setActiveTab('dms');
+      }
+      
+      setIsInviteModalOpen(false);
+      setInviteName('');
+      setInviteEmail('');
+      setInviteRole('ROLE_EMPLOYEE');
+      setInviteDesignation('');
+      setInviteDept('Technology');
+      setInviteExp(2);
+      setInviteSkills('');
+    }
+  };
 
   // Mock Channels & Messages fallback
   const mockChannels = [
@@ -286,9 +353,18 @@ export default function Messages() {
               </>
             ) : (
               <>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider px-3 mb-1">
-                  Private Chats
-                </p>
+                <div className="flex items-center justify-between px-3 mb-2">
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Private Chats
+                  </p>
+                  <button
+                    onClick={() => setIsInviteModalOpen(true)}
+                    className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-white/10 text-blue-500 hover:text-blue-600 transition-colors cursor-pointer"
+                    title="Add or Create new teammate for chat"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                  </button>
+                </div>
                 {contacts.map((contact) => {
                   const isActive = activeContactId === contact.id;
                   const unread = unreadCounts[contact.id] || 0;
@@ -304,7 +380,7 @@ export default function Messages() {
                     >
                       <div className="flex items-center gap-2 truncate">
                         <img
-                          src={contact.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${contact.name}`}
+                          src={contact.profilePhoto || getAvatarByName(contact.name)}
                           alt="avatar"
                           className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-blue-500/15"
                         />
@@ -358,14 +434,14 @@ export default function Messages() {
             {activeMessages.map((msg) => {
               const isMe = user && msg.sender.id === user.id;
               return (
-                <div key={msg.id} className={`flex gap-3 text-xs ${!isMe ? 'flex-row-reverse' : ''}`}>
+                <div key={msg.id} className={`flex gap-3 text-xs ${isMe ? 'flex-row-reverse' : ''}`}>
                   <img
-                    src={msg.sender.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${msg.sender.name}`}
+                    src={msg.sender.profilePhoto || getAvatarByName(msg.sender.name)}
                     alt="avatar"
                     className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/10 flex-shrink-0"
                   />
-                  <div className={`max-w-md flex flex-col ${!isMe ? 'items-end' : 'items-start'}`}>
-                    <div className={`flex items-center gap-2 mb-1 ${!isMe ? 'flex-row-reverse' : ''}`}>
+                  <div className={`max-w-md flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
+                    <div className={`flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}`}>
                       <span className="font-black text-slate-800 dark:text-slate-200">{msg.sender.name}</span>
                       <span className="text-[9px] text-slate-400 font-bold">
                         {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -373,17 +449,17 @@ export default function Messages() {
                     </div>
                     
                     <div className="space-y-1 w-full">
-                      <div className={`p-3 rounded-2xl border border-slate-200/50 dark:border-white/5 font-bold ${
+                      <div className={`p-3 rounded-2xl border font-bold ${
                         isMe 
-                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tl-none' 
-                          : 'bg-white/10 dark:bg-white/5 text-slate-700 dark:text-slate-300 rounded-tr-none'
+                          ? 'bg-gradient-to-br from-emerald-600 to-teal-600 text-white rounded-tr-none border-emerald-500/10 shadow-sm shadow-emerald-500/5' 
+                          : 'bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 rounded-tl-none border-slate-200/50 dark:border-white/5'
                       }`}>
                         {msg.content}
                       </div>
 
                       {/* Referenced Task Badge */}
                       {msg.task && (
-                        <div className={`flex items-center mt-1 ${!isMe ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`flex items-center mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
                           <button
                             onClick={() => triggerTaskInspector(msg.task)}
                             className="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/10 transition-colors text-[9px] font-black cursor-pointer"
@@ -438,6 +514,177 @@ export default function Messages() {
 
         </div>
       </div>
+
+      {/* Start DM / Invite Modal */}
+      {isInviteModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setIsInviteModalOpen(false)}></div>
+          
+          <div className="glass-panel w-full max-w-md shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-hidden flex flex-col z-10 p-6 space-y-6">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-black text-slate-800 dark:text-white flex items-center gap-1.5">
+                <Users className="w-5 h-5 text-blue-500" /> Start Teammate Query Chat
+              </h3>
+              <button onClick={() => setIsInviteModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Modal Tabs */}
+            <div className="flex p-1 bg-slate-100 dark:bg-white/5 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setInviteTab('existing')}
+                className={`flex-1 py-2 text-center rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                  inviteTab === 'existing'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Select Teammate
+              </button>
+              <button
+                type="button"
+                onClick={() => setInviteTab('new')}
+                className={`flex-1 py-2 text-center rounded-lg font-black text-xs uppercase tracking-wider transition-all cursor-pointer ${
+                  inviteTab === 'new'
+                    ? 'bg-blue-600 text-white shadow'
+                    : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
+                }`}
+              >
+                Create New Member
+              </button>
+            </div>
+
+            <form onSubmit={handleInviteSubmit} className="space-y-4">
+              {inviteTab === 'existing' ? (
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Select Teammate to Query</label>
+                  <select
+                    value={selectedTeammateId}
+                    onChange={(e) => setSelectedTeammateId(e.target.value)}
+                    required
+                    className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                  >
+                    <option value="" disabled className="dark:bg-slate-900">-- Select Teammate --</option>
+                    {contacts.map((c) => (
+                      <option key={c.id} value={c.id} className="dark:bg-slate-900">
+                        {c.name} ({c.designation || 'Staff'} · {c.role === 'ROLE_EMPLOYEE' ? 'Staff' : 'Lead'})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className="space-y-3.5">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                      <User className="w-3 h-3 text-blue-500" /> Full Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. John Doe"
+                      value={inviteName}
+                      onChange={(e) => setInviteName(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                      <Mail className="w-3 h-3 text-blue-500" /> Email Address
+                    </label>
+                    <input
+                      type="email"
+                      placeholder="e.g. john@company.com"
+                      value={inviteEmail}
+                      onChange={(e) => setInviteEmail(e.target.value)}
+                      required
+                      className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Briefcase className="w-3 h-3 text-blue-500" /> Designation
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Frontend dev"
+                        value={inviteDesignation}
+                        onChange={(e) => setInviteDesignation(e.target.value)}
+                        className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      />
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Globe className="w-3 h-3 text-blue-500" /> Department
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Engineering"
+                        value={inviteDept}
+                        onChange={(e) => setInviteDept(e.target.value)}
+                        className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Shield className="w-3 h-3 text-blue-500" /> System Role
+                      </label>
+                      <select
+                        value={inviteRole}
+                        onChange={(e) => setInviteRole(e.target.value)}
+                        className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      >
+                        <option value="ROLE_EMPLOYEE" className="dark:bg-slate-900">Employee / Staff</option>
+                        <option value="ROLE_MANAGER" className="dark:bg-slate-900">Manager / Lead</option>
+                        <option value="ROLE_ADMIN" className="dark:bg-slate-900">Admin</option>
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                        <Award className="w-3 h-3 text-blue-500" /> Experience (Yrs)
+                      </label>
+                      <input
+                        type="number"
+                        min="0"
+                        value={inviteExp}
+                        onChange={(e) => setInviteExp(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Skills (Comma separated)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. React, Java, SQL"
+                      value={inviteSkills}
+                      onChange={(e) => setInviteSkills(e.target.value)}
+                      className="w-full px-3 py-2 bg-white/5 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="w-full py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-colors cursor-pointer text-center shadow shadow-blue-500/10"
+              >
+                {inviteTab === 'existing' ? 'Start DM Chat' : 'Create & Start DM Chat'}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

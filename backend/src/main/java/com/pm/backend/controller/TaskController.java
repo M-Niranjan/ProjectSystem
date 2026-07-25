@@ -90,6 +90,14 @@ public class TaskController {
             task.setEstimatedTime(aiService.estimateDuration(task.getTitle(), task.getDescription(), experience, 0));
         }
 
+        // If assigned to an employee, force status to PENDING_ACCEPTANCE initially (unless completed)
+        if (task.getAssignee() != null) {
+            User assignee = userRepository.findById(task.getAssignee().getId()).orElseThrow();
+            if (assignee.getRole() == Role.ROLE_EMPLOYEE && !"COMPLETED".equals(task.getStatus())) {
+                task.setStatus("PENDING_ACCEPTANCE");
+            }
+        }
+
         Task savedTask = taskRepository.save(task);
 
         // Notify Assignee
@@ -130,6 +138,15 @@ public class TaskController {
         String oldStatus = task.getStatus();
         User oldAssignee = task.getAssignee();
 
+        // DUPLICATE ACCEPTANCE GUARD: If already accepted, reject repeat accepts
+        String incomingStatus = taskDetails.getStatus();
+        if (("ACCEPTED".equals(incomingStatus) || "TO_DO".equals(incomingStatus))
+                && "ACCEPTED".equals(oldStatus)) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body("Task has already been accepted by " +
+                            (oldAssignee != null ? oldAssignee.getName() : "the assignee") + ".");
+        }
+
         task.setTitle(taskDetails.getTitle());
         task.setDescription(taskDetails.getDescription());
         task.setStatus(taskDetails.getStatus());
@@ -139,6 +156,12 @@ public class TaskController {
         task.setActualTime(taskDetails.getActualTime());
         task.setRecurring(taskDetails.getRecurring());
         task.setRecurringPattern(taskDetails.getRecurringPattern());
+        task.setDeclineReason(taskDetails.getDeclineReason());
+
+        // Set acceptedAt timestamp when transitioning to ACCEPTED
+        if ("ACCEPTED".equals(incomingStatus) && "PENDING_ACCEPTANCE".equals(oldStatus)) {
+            task.setAcceptedAt(java.time.LocalDateTime.now());
+        }
 
         if (taskDetails.getAssignee() != null) {
             User assignee = userRepository.findById(taskDetails.getAssignee().getId()).orElseThrow();
@@ -146,6 +169,10 @@ public class TaskController {
             
             // Notify if assignee has changed
             if (oldAssignee == null || !oldAssignee.getId().equals(assignee.getId())) {
+                if (assignee.getRole() == Role.ROLE_EMPLOYEE && !"COMPLETED".equals(taskDetails.getStatus())) {
+                    task.setStatus("PENDING_ACCEPTANCE");
+                }
+
                 createNotification("Task Assigned", "You have been assigned: " + task.getTitle(), "TASK_ASSIGNED", assignee);
 
                 DirectMessage dm = DirectMessage.builder()
@@ -163,8 +190,20 @@ public class TaskController {
 
         Task updatedTask = taskRepository.save(task);
 
-        // If status transitioned from PENDING_ACCEPTANCE to TO_DO (Accept)
-        if ("PENDING_ACCEPTANCE".equals(oldStatus) && "TO_DO".equals(updatedTask.getStatus()) && oldAssignee != null) {
+        // If status transitioned from PENDING_ACCEPTANCE to ACCEPTED or TO_DO (Accept)
+        if ("PENDING_ACCEPTANCE".equals(oldStatus)
+                && ("ACCEPTED".equals(updatedTask.getStatus()) || "TO_DO".equals(updatedTask.getStatus()))
+                && oldAssignee != null) {
+
+            // AUTO-DISMISS: Mark all TASK_ASSIGNED notifications for this task as read on server
+            // This prevents the 10s poll from re-showing ACCEPT button after acceptance
+            List<Notification> assignedNotifs = notificationRepository
+                    .findUnreadByRecipientAndTypeAndMessageContaining(oldAssignee, "TASK_ASSIGNED", task.getTitle());
+            for (Notification notif : assignedNotifs) {
+                notif.setIsRead(true);
+            }
+            notificationRepository.saveAll(assignedNotifs);
+
             DirectMessage dm = DirectMessage.builder()
                     .sender(oldAssignee)
                     .recipient(task.getCreator())
@@ -173,18 +212,33 @@ public class TaskController {
                     .isRead(false)
                     .build();
             directMessageRepository.save(dm);
+
+            // Notify the Team Leader (Creator)
+            createNotification("Task Accepted",
+                    oldAssignee.getName() + " accepted: \"" + task.getTitle() + "\"",
+                    "TASK_ACCEPTED", task.getCreator());
         }
 
         // If status transitioned from PENDING_ACCEPTANCE to BACKLOG with unassigning (Decline)
-        if ("PENDING_ACCEPTANCE".equals(oldStatus) && "BACKLOG".equals(updatedTask.getStatus()) && taskDetails.getAssignee() == null && oldAssignee != null) {
+        if ("PENDING_ACCEPTANCE".equals(oldStatus) && ("BACKLOG".equals(updatedTask.getStatus()) || "DECLINED".equals(updatedTask.getStatus())) && oldAssignee != null) {
+            String reason = taskDetails.getDeclineReason() != null ? taskDetails.getDeclineReason() : "No reason provided.";
+            if (!reason.startsWith(oldAssignee.getName())) {
+                reason = oldAssignee.getName() + ": " + reason;
+            }
+            updatedTask.setDeclineReason(reason);
+            updatedTask = taskRepository.save(updatedTask);
+
             DirectMessage dm = DirectMessage.builder()
                     .sender(oldAssignee)
                     .recipient(task.getCreator())
-                    .content("I have declined the task: \"" + task.getTitle() + "\". Please check the task comments for my explanation.")
+                    .content("I have declined the task: \"" + task.getTitle() + "\". Reason: " + reason)
                     .task(task)
                     .isRead(false)
                     .build();
             directMessageRepository.save(dm);
+
+            // Also create a system notification for the Team Leader (Creator) with the reason
+            createNotification("Task Declined", oldAssignee.getName() + " declined: \"" + task.getTitle() + "\". Reason: " + reason, "TASK_DECLINED", task.getCreator());
         }
 
         // Notify if task completed

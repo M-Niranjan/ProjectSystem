@@ -58,15 +58,16 @@ export const useAuthStore = create<AuthState>((set, get) => {
       }
       // Check if utilizing client-side mock token
       if (token === 'mock-jwt-token-prologue') {
-        const mockUser: User = {
+        const storedUser = localStorage.getItem('mock_user');
+        const mockUser: User = storedUser ? JSON.parse(storedUser) : {
           id: 999,
-          name: 'Demo Admin',
-          email: 'demo@pm.com',
+          name: 'Niranjan',
+          email: 'niranjan@pm.com',
           role: 'ROLE_ADMIN',
-          designation: 'Workspace Manager',
-          department: 'Product & Design',
-          experience: 8,
-          skills: 'React, TypeScript, Tailwind, Figma, Spring Boot',
+          designation: 'Engineering',
+          department: 'CSE',
+          experience: 10,
+          skills: 'java html css react git github sql etc',
           createdAt: new Date().toISOString()
         };
         set({ user: mockUser, loading: false });
@@ -102,18 +103,64 @@ export const useAuthStore = create<AuthState>((set, get) => {
         if (err.code === 'ERR_NETWORK' || !err.response || err.response.status === 404 || (typeof err.response.data === 'string' && err.response.data.includes('<!DOCTYPE html>'))) {
           console.warn('Backend server unreachable. Logging into client-side Demo Mode.');
           const mockToken = 'mock-jwt-token-prologue';
+          
+          let role: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE' = 'ROLE_ADMIN';
+          let name = 'Niranjan';
+          let designation = 'Engineering';
+          let department = 'CSE';
+          let experience = 10;
+          let skills = 'java html css react git github sql etc';
+
+          if (credentials.email === 'ms.user@pm.com' || credentials.email === 'ramesh@pm.com') {
+            role = 'ROLE_EMPLOYEE';
+            name = 'Ramesh';
+            designation = 'Software Developer';
+            department = 'Engineering';
+            experience = 4;
+            skills = 'Java, Spring Boot, React, SQL';
+          } else if (credentials.email === 'rahul@pm.com') {
+            role = 'ROLE_EMPLOYEE';
+            name = 'Rahul';
+            designation = 'Frontend Engineer';
+            department = 'Web Engineering';
+            experience = 3;
+            skills = 'React, HTML, CSS, JavaScript, Git';
+          } else if (credentials.email === 'manju@pm.com') {
+            role = 'ROLE_EMPLOYEE';
+            name = 'Manju';
+            designation = 'Backend Engineer';
+            department = 'Engineering';
+            experience = 5;
+            skills = 'Java, SQL, Spring Boot, GitHub';
+          } else if (credentials.email === 'vinay@pm.com') {
+            role = 'ROLE_EMPLOYEE';
+            name = 'Vinay';
+            designation = 'QA Engineer';
+            department = 'Quality Assurance';
+            experience = 3;
+            skills = 'Testing, Automation, Java, Git';
+          } else if (credentials.email === 'google.user@pm.com' || credentials.email === 'demo@pm.com') {
+            role = 'ROLE_ADMIN';
+            name = 'Niranjan';
+            designation = 'Engineering';
+            department = 'CSE';
+            experience = 10;
+            skills = 'java html css react git github sql etc';
+          }
+
           const mockUser: User = {
             id: 999,
-            name: 'Demo Admin',
+            name,
             email: credentials.email,
-            role: 'ROLE_ADMIN',
-            designation: 'Workspace Manager',
-            department: 'Product & Design',
-            experience: 8,
-            skills: 'React, TypeScript, Tailwind, Figma, Spring Boot',
+            role,
+            designation,
+            department,
+            experience,
+            skills,
             createdAt: new Date().toISOString()
           };
           localStorage.setItem('token', mockToken);
+          localStorage.setItem('mock_user', JSON.stringify(mockUser));
           set({ token: mockToken, user: mockUser, loading: false });
           alert('Backend server is offline. Logging in to Demo Mode with mock data.');
           return true;

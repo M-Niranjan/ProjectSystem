@@ -1,3 +1,4 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -54,13 +55,9 @@ export default function Sidebar() {
     { name: 'Hub Settings', view: 'settings', icon: Settings },
   ];
 
-  const allowedItems = menuItems.filter(item => {
-    if (user?.role === 'ROLE_EMPLOYEE') {
-      const blockedViews = ['projects', 'timeline', 'teams', 'reports'];
-      return !blockedViews.includes(item.view);
-    }
-    return true;
-  });
+  const allowedItems = user?.role === 'ROLE_EMPLOYEE'
+    ? menuItems.filter(item => !['projects', 'timeline', 'teams', 'reports'].includes(item.view))
+    : menuItems;
 
   const handleLogout = () => {
     if (confirm('Are you sure you want to log out of Prologue?')) {
@@ -130,13 +127,13 @@ export default function Sidebar() {
                     setView(item.view);
                     if (isMobile) toggleSidebar();
                   }}
-                  className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 cursor-pointer ${
+                  className={`w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl font-bold text-sm transition-all duration-300 cursor-pointer group ${
                     isActive
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/15'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white shadow-lg shadow-blue-500/25 border border-white/20 scale-[1.02]'
+                      : 'text-slate-500 dark:text-slate-400 hover:bg-white/15 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white hover:shadow-md'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'scale-110' : ''}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 transition-transform duration-300 group-hover:scale-115 group-hover:rotate-6 ${isActive ? 'scale-110 text-white' : 'group-hover:text-blue-500 dark:group-hover:text-blue-400'}`} />
                   {(isMobile || sidebarExpanded) && (
                     <motion.span
                       initial={{ opacity: 0, x: -10 }}
@@ -155,24 +152,24 @@ export default function Sidebar() {
         {/* Logout Footnote */}
         <div className="px-3 space-y-4">
           {(isMobile || sidebarExpanded) && user && (
-            <div className="mx-2 p-3 bg-white/5 border border-slate-200/20 dark:border-white/5 rounded-xl flex items-center gap-3 overflow-hidden">
+            <div className="mx-2 p-3 bg-white/40 dark:bg-slate-900/60 backdrop-blur-xl border border-white/20 dark:border-white/10 rounded-2xl flex items-center gap-3 overflow-hidden shadow-sm hover:border-blue-500/30 transition-all">
               <img
-                src={user.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.name}`}
+                src={user.profilePhoto || getAvatarByName(user.name)}
                 alt="avatar"
-                className="w-9 h-9 rounded-lg object-cover ring-2 ring-blue-500/20 flex-shrink-0"
+                className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30 flex-shrink-0 shadow-sm"
               />
               <div className="truncate">
-                <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user.name}</p>
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider truncate">{user.role.replace('ROLE_', '')}</p>
+                <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.name}</p>
+                <p className="text-[10px] text-blue-600 dark:text-blue-400 font-extrabold uppercase tracking-wider truncate">{user.role.replace('ROLE_', '')}</p>
               </div>
             </div>
           )}
           
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-red-500 hover:bg-red-500/10 font-bold text-sm transition-colors cursor-pointer"
+            className="w-full flex items-center gap-3.5 px-3 py-2.5 rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/15 font-extrabold text-sm transition-all cursor-pointer group shadow-sm"
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-5 h-5 flex-shrink-0 group-hover:-translate-x-1 transition-transform" />
             {(isMobile || sidebarExpanded) && (
               <motion.span
                 initial={{ opacity: 0 }}

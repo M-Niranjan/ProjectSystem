@@ -1,3 +1,4 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, Pencil } from 'lucide-react';
@@ -42,9 +43,11 @@ export default function Teams() {
 
   // Default Mock Team
   const mockTeam: TeamMember[] = [
-    { id: 1, name: 'Alice Smith', email: 'alice@company.com', role: 'ROLE_MANAGER', designation: 'Product Lead', department: 'Product Design', experience: 6, skills: 'Figma, UX, CSS, React' },
-    { id: 2, name: 'Bob Johnson', email: 'bob@company.com', role: 'ROLE_EMPLOYEE', designation: 'Senior Developer', department: 'Engineering', experience: 8, skills: 'Spring Boot, Java, MySQL, AWS' },
-    { id: 3, name: 'Charlie Brown', email: 'charlie@company.com', role: 'ROLE_EMPLOYEE', designation: 'DevOps Architect', department: 'Infrastructure', experience: 4, skills: 'Docker, Kubernetes, CI/CD' }
+    { id: 999, name: 'Niranjan', email: 'niranjan@pm.com', role: 'ROLE_ADMIN', designation: 'Engineering', department: 'CSE', experience: 10, skills: 'java html css react git github sql etc' },
+    { id: 1001, name: 'Ramesh', email: 'ramesh@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Software Developer', department: 'Engineering', experience: 4, skills: 'Java, Spring Boot, React, SQL' },
+    { id: 1002, name: 'Rahul', email: 'rahul@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Frontend Engineer', department: 'Web Engineering', experience: 3, skills: 'React, HTML, CSS, JavaScript, Git' },
+    { id: 1003, name: 'Manju', email: 'manju@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Backend Engineer', department: 'Engineering', experience: 5, skills: 'Java, SQL, Spring Boot, GitHub' },
+    { id: 1004, name: 'Vinay', email: 'vinay@pm.com', role: 'ROLE_EMPLOYEE', designation: 'QA Engineer', department: 'Quality Assurance', experience: 3, skills: 'Testing, Automation, Java, Git' }
   ];
 
   const fetchMembers = async () => {
@@ -222,7 +225,7 @@ export default function Teams() {
       {/* Members Grid layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {members.map(member => (
-          <div key={member.id} className="glass-panel p-6 flex flex-col justify-between h-56 relative group">
+          <div key={member.id} className="glass-panel p-6 flex flex-col justify-between min-h-[220px] relative group">
             {/* Hover card action icons overlay */}
             <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10">
               <button
@@ -246,7 +249,7 @@ export default function Teams() {
             <div className="flex gap-4">
               <div className="relative flex-shrink-0">
                 <img
-                  src={member.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${member.name}`}
+                  src={member.profilePhoto || getAvatarByName(member.name)}
                   alt="Avatar"
                   className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
                 />
@@ -317,7 +320,7 @@ export default function Teams() {
                       />
                     ) : (
                       <img
-                        src={profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${inviteName || 'seed'}`}
+                        src={profilePhoto || getAvatarByName(inviteName || 'seed')}
                         alt="Teammate avatar preview"
                         className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
                       />
@@ -516,7 +519,7 @@ export default function Teams() {
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
                   <img
-                    src={viewingMember.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${viewingMember.name}`}
+                    src={viewingMember.profilePhoto || getAvatarByName(viewingMember.name)}
                     alt="avatar"
                     className="w-20 h-20 rounded-2xl object-cover ring-2 ring-blue-500/20"
                   />

@@ -11,12 +11,20 @@ export default function VoiceController() {
   const [matchedCommand, setMatchedCommand] = useState<string | null>(null);
   const recognitionRef = useRef<any>(null);
 
-  useEffect(() => {
-    // Initialize Web Speech API
+  const startListening = () => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     if (!SpeechRecognition) {
       setRecognitionError('Speech Recognition is not supported by your current browser. Try Chrome or Edge.');
       return;
+    }
+
+    // Stop existing instance
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch (e) {
+        console.error(e);
+      }
     }
 
     const recognition = new SpeechRecognition();
@@ -32,13 +40,15 @@ export default function VoiceController() {
     };
 
     recognition.onresult = (event: any) => {
-      const resultText = event.results[0][0].transcript;
-      setTranscript(resultText);
-      processCommand(resultText);
+      if (event.results && event.results[0] && event.results[0][0]) {
+        const resultText = event.results[0][0].transcript;
+        setTranscript(resultText);
+        processCommand(resultText);
+      }
     };
 
     recognition.onerror = (event: any) => {
-      console.error('Speech recognition error', event.error);
+      console.error('Speech recognition error:', event.error);
       if (event.error === 'not-allowed') {
         setRecognitionError('Microphone access denied. Please grant permissions.');
       } else {
@@ -51,32 +61,43 @@ export default function VoiceController() {
       setIsListening(false);
     };
 
-    recognitionRef.current = recognition;
-  }, []);
+    try {
+      recognition.start();
+      recognitionRef.current = recognition;
+    } catch (err) {
+      console.error('Failed to start SpeechRecognition', err);
+      setIsListening(false);
+    }
+  };
 
-  // Handle auto-start when opened
-  useEffect(() => {
-    if (voiceOverlayOpen && recognitionRef.current && !isListening) {
+  const stopListening = () => {
+    if (recognitionRef.current) {
       try {
-        recognitionRef.current.start();
+        recognitionRef.current.stop();
       } catch (err) {
         console.error(err);
       }
     }
+    setIsListening(false);
+  };
+
+  // Handle auto-start when opened
+  useEffect(() => {
+    if (voiceOverlayOpen) {
+      startListening();
+    } else {
+      stopListening();
+    }
+    return () => {
+      stopListening();
+    };
   }, [voiceOverlayOpen]);
 
   const toggleListening = () => {
     if (isListening) {
-      recognitionRef.current?.stop();
+      stopListening();
     } else {
-      setTranscript('Listening...');
-      setMatchedCommand(null);
-      setRecognitionError(null);
-      try {
-        recognitionRef.current?.start();
-      } catch (err) {
-        console.error(err);
-      }
+      startListening();
     }
   };
 

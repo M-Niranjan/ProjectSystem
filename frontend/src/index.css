@@ -1,6 +1,8 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Manrope:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Urbanist:wght@300;400;500;600;700;800;900&display=swap');
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   :root {
     /* Color Palette */
@@ -14,31 +16,31 @@
     --danger: EF4444;
 
     /* Theme-specific tokens: LIGHT THEME (Default) */
-    --bg-main: #F8FAFC;
-    --bg-card: rgba(255, 255, 255, 0.45);
-    --bg-navbar: rgba(255, 255, 255, 0.6);
-    --border-glass: rgba(226, 232, 240, 0.8);
+    --bg-main: #FFFFFF;
+    --bg-card: rgba(255, 255, 255, 0.65);
+    --bg-navbar: rgba(255, 255, 255, 0.7);
+    --border-glass: rgba(148, 163, 184, 0.25);
     --text-primary: #0F172A;
     --text-secondary: #475569;
     --text-tertiary: #94A3B8;
-    --shadow-glass: 0 8px 32px 0 rgba(148, 163, 184, 0.08);
-    --glow-card: rgba(37, 99, 235, 0.05);
+    --shadow-glass: 0 8px 32px 0 rgba(148, 163, 184, 0.06);
+    --glow-card: rgba(37, 99, 235, 0.03);
     --blur-glass: 16px;
     --font-heading: 'Plus Jakarta Sans', 'Inter', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
-  .dark {
-    /* Theme-specific tokens: DARK THEME */
-    --bg-main: #0F172A;
-    --bg-card: rgba(30, 41, 59, 0.45);
-    --bg-navbar: rgba(15, 23, 42, 0.6);
-    --border-glass: rgba(255, 255, 255, 0.06);
+  .dark, :root.dark {
+    /* Theme-specific tokens: DARK THEME (AMOLED Black) */
+    --bg-main: #000000;
+    --bg-card: rgba(10, 10, 10, 0.65);
+    --bg-navbar: rgba(0, 0, 0, 0.75);
+    --border-glass: rgba(255, 255, 255, 0.16);
     --text-primary: #F8FAFC;
     --text-secondary: #94A3B8;
     --text-tertiary: #64748B;
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --glow-card: rgba(99, 102, 241, 0.15);
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.6);
+    --glow-card: rgba(99, 102, 241, 0.1);
   }
 
   body {
@@ -100,6 +102,123 @@
   box-shadow: var(--shadow-glass);
 }
 
+/* Premium Glassmorphism Card & Login Utilities */
+.glass-card-login {
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  box-shadow: 0 30px 60px -12px rgba(50, 50, 93, 0.15), 0 18px 36px -18px rgba(0, 0, 0, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  border-radius: 28px;
+}
+
+.dark .glass-card-login {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.7), 0 18px 36px -18px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
+  border-radius: 28px;
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.03);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.2);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-input:focus-within, .glass-input:focus {
+  border-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18), inset 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-input:focus-within, .dark .glass-input:focus {
+  border-color: rgba(99, 102, 241, 0.8);
+  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.25), inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.glass-btn-social {
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  transition: all 0.25s ease;
+}
+
+.dark .glass-btn-social {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.25s ease;
+}
+
+.glass-btn-social:hover {
+  background: rgba(255, 255, 255, 0.85);
+  border-color: rgba(59, 130, 246, 0.4);
+  transform: translateY(-1px);
+}
+
+.dark .glass-btn-social:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+/* HD Icon Hover Effects & Glassmorphism Utilities */
+.hd-icon-badge {
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.hd-icon-badge:hover, .group:hover .hd-icon-badge {
+  transform: scale(1.15) rotate(5deg);
+  filter: drop-shadow(0 6px 16px rgba(59, 130, 246, 0.45));
+}
+
+.glass-card-dashboard {
+  background: rgba(255, 255, 255, 0.65);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(226, 232, 240, 0.7);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  border-radius: 24px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-card-dashboard {
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(20px) saturate(200%);
+  -webkit-backdrop-filter: blur(20px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+  border-radius: 24px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.glass-card-dashboard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(99, 102, 241, 0.35);
+  box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.dark .glass-card-dashboard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(99, 102, 241, 0.4);
+  box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+}
+
 /* Background Gradients & Drifting Orbs */
 .animated-bg {
   position: fixed;
@@ -128,13 +247,15 @@
   position: absolute;
   border-radius: 50%;
   filter: blur(80px);
-  opacity: 0.15;
-  mix-blend-mode: plus-lighter;
+  opacity: 0.12;
+  mix-blend-mode: multiply;
   pointer-events: none;
+  transition: opacity 0.4s ease, mix-blend-mode 0.4s ease;
 }
 
 .dark .orb {
-  opacity: 0.25;
+  opacity: 0.28;
+  mix-blend-mode: screen;
 }
 
 .orb-1 {
@@ -212,27 +333,47 @@
 html:not(.dark) {
   --text-secondary: #334155 !important; /* Slate 700 */
   --text-tertiary: #64748B !important;  /* Slate 500 */
+}
 
-  .text-slate-400 {
-    color: #475569 !important; /* Slate 600 */
-  }
-  .text-slate-500 {
-    color: #334155 !important; /* Slate 700 */
-  }
-  .text-slate-300 {
-    color: #64748B !important; /* Slate 500 */
-  }
-  .text-slate-200 {
-    color: #475569 !important; /* Slate 600 */
-  }
-  .text-slate-400\/70 {
-    color: rgba(71, 85, 105, 0.7) !important;
-  }
-  .text-slate-500\/70 {
-    color: rgba(51, 65, 85, 0.7) !important;
-  }
-  .text-slate-400\/50 {
-    color: rgba(71, 85, 105, 0.5) !important;
-  }
+html:not(.dark) .text-slate-400 {
+  color: #475569 !important; /* Slate 600 */
+}
+html:not(.dark) .text-slate-500 {
+  color: #273549 !important; /* Slate 800 */
+}
+html:not(.dark) .text-slate-300 {
+  color: #5C6A7E !important; /* Slate 500 */
+}
+html:not(.dark) .text-slate-200 {
+  color: #475569 !important; /* Slate 600 */
+}
+html:not(.dark) .text-slate-400\/70 {
+  color: rgba(71, 85, 105, 0.7) !important;
+}
+html:not(.dark) .text-slate-500\/70 {
+  color: rgba(39, 53, 73, 0.7) !important;
+}
+html:not(.dark) .text-slate-400\/50 {
+  color: rgba(71, 85, 105, 0.5) !important;
+}
+
+/* Hover overrides in Light Mode to prevent text from disappearing into white backgrounds */
+html:not(.dark) .hover\:text-white:hover {
+  color: #0F172A !important;
+}
+html:not(.dark) .hover\:text-slate-100:hover {
+  color: #0F172A !important;
+}
+html:not(.dark) .hover\:text-slate-200:hover {
+  color: #0F172A !important;
+}
+html:not(.dark) .hover\:text-slate-300:hover {
+  color: #1E293B !important;
+}
+html:not(.dark) .group:hover .group-hover\:text-white {
+  color: #0F172A !important;
+}
+html:not(.dark) .group:hover .group-hover\:text-slate-200 {
+  color: #0F172A !important;
 }
 

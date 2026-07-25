@@ -10,6 +10,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
+
 import java.util.List;
 
 @RestController
@@ -17,9 +19,28 @@ import java.util.List;
 public class TeamController {
 
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public TeamController(UserRepository userRepository) {
+    public TeamController(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createMember(@RequestBody User user) {
+        if (userRepository.existsByEmail(user.getEmail())) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Email address already in use!");
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            user.setPassword(passwordEncoder.encode("password123"));
+        } else {
+            user.setPassword(passwordEncoder.encode(user.getPassword()));
+        }
+        if (user.getRole() == null) {
+            user.setRole(Role.ROLE_EMPLOYEE);
+        }
+        User savedUser = userRepository.save(user);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedUser);
     }
 
     @GetMapping

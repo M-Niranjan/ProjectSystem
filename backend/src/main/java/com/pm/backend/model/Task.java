@@ -94,4 +94,10 @@ public class Task {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
+
+    @Column(name = "decline_reason", columnDefinition = "TEXT")
+    private String declineReason;
+
+    @Column(name = "accepted_at")
+    private LocalDateTime acceptedAt;
 }

@@ -1,3 +1,4 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -56,7 +57,7 @@ export default function Profile() {
     if (!user) return;
     try {
       const res = await api.get(`/api/logs/user/${user.id}`);
-      setActivities(res.data);
+      setActivities(Array.isArray(res.data) ? res.data : mockActivities);
     } catch (err) {
       setActivities(mockActivities);
     }
@@ -218,7 +219,7 @@ export default function Profile() {
           <div className="glass-panel p-6 text-center space-y-4 flex flex-col items-center relative">
             <div className="relative">
               <img
-                src={user.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${user.name}`}
+                src={user.profilePhoto || getAvatarByName(user.name)}
                 alt="Profile"
                 className="w-28 h-28 rounded-2xl object-cover ring-4 ring-blue-500/20"
               />
@@ -394,7 +395,7 @@ export default function Profile() {
               <Clock className="w-4 h-4 text-blue-500" /> Recent Audit Activity History
             </h3>
             <div className="divide-y divide-slate-100 dark:divide-white/5">
-              {activities.slice(0, 5).map((act) => (
+              {(Array.isArray(activities) ? activities : []).slice(0, 5).map((act) => (
                 <div key={act.id} className="py-3 flex items-center justify-between text-xs gap-4 font-bold">
                   <div className="flex items-center gap-3 truncate">
                     <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase flex-shrink-0 ${
@@ -459,7 +460,7 @@ export default function Profile() {
                       />
                     ) : (
                       <img
-                        src={editPhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${editName || 'seed'}`}
+                        src={editPhoto || getAvatarByName(editName || 'seed')}
                         alt="Teammate avatar preview"
                         className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
                       />

@@ -1,3 +1,4 @@
+import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
@@ -362,7 +363,7 @@ export default function Boards() {
   return (
     <div className="space-y-6 select-none h-[calc(100vh-100px)] flex flex-col relative">
       {/* Title Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0">
+      <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 flex-shrink-0 w-full min-w-0">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
             Kanban Boards
@@ -373,7 +374,7 @@ export default function Boards() {
         </div>
 
         {/* Filters */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-3">
           {user?.role === 'ROLE_EMPLOYEE' && (
             <label className="flex items-center gap-2 text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl px-3.5 py-2">
               <input
@@ -393,14 +394,14 @@ export default function Boards() {
               placeholder="Filter board tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs w-48"
+              className="pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs w-40 sm:w-48"
             />
           </div>
 
           {isTeamLeader && (
             <button
               onClick={() => setTaskModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors"
+              className="flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors whitespace-nowrap flex-shrink-0"
             >
               <Plus className="w-4 h-4" /> Add Task
             </button>
@@ -492,7 +493,7 @@ export default function Boards() {
               if (!t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
               const taskStatus = t.status ? t.status.toUpperCase() : '';
               if (col.id === 'TO_DO') {
-                return taskStatus === 'TO_DO' || taskStatus === 'TODO';
+                return taskStatus === 'TO_DO' || taskStatus === 'TODO' || taskStatus === 'ACCEPTED';
               }
               if (col.id === 'IN_PROGRESS') {
                 return taskStatus === 'IN_PROGRESS' || taskStatus === 'INPROGRESS';
@@ -885,7 +886,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
           )}
           {task.assignee && (
             <img
-              src={task.assignee.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${task.assignee.name}`}
+              src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
               alt="assignee"
               className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-blue-500/20"
               title={`Assignee: ${task.assignee.name}`}
@@ -893,7 +894,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
           )}
           {task.reviewer && (
             <img
-              src={task.reviewer.profilePhoto || `https://api.dicebear.com/7.x/adventurer/svg?seed=${task.reviewer.name}`}
+              src={task.reviewer.profilePhoto || getAvatarByName(task.reviewer.name)}
               alt="reviewer"
               className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-purple-500/20 border border-purple-500/50"
               title={`Reviewer: ${task.reviewer.name}`}

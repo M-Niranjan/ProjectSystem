@@ -140,14 +140,14 @@ function AppContent() {
           <Navbar />
 
           {/* Main Workspace Frame */}
-          <main className="flex-1 pt-24 px-6 md:px-8 w-full max-w-7xl mx-auto">
+          <main className="flex-1 pt-24 px-4 sm:px-6 md:px-8 w-full max-w-7xl mx-auto min-w-0">
             <AnimatePresence mode="wait">
               <motion.div
                 key={activeView}
-                initial={{ opacity: 0, y: 15 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -15 }}
-                transition={{ duration: 0.25, ease: 'easeInOut' }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.2, ease: 'easeInOut' }}
                 className="w-full h-full"
               >
                 {renderView()}
