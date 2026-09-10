@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, User as UserIcon, Briefcase, Award, Eye, EyeOff, Shield, Compass, Sparkles, ArrowRight, CheckSquare } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Mail, Lock, User as UserIcon, Briefcase, Award, Eye, EyeOff, Shield, 
+  Compass, Sparkles, ArrowRight, KeyRound, CheckCircle2, X, RefreshCw, ShieldCheck 
+} from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { signInWithGoogle, signInWithEmailPassword, fetchFirestoreUserDoc, upsertFirestoreUserDoc } from '../services/firebase';
+import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 
 // Validation Schemas
 const loginSchema = z.object({
@@ -24,29 +30,44 @@ const signupSchema = z.object({
 });
 
 export default function Login() {
+  const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
-  const [selectedRoleTab, setSelectedRoleTab] = useState<'LEADER' | 'EMPLOYEE'>('LEADER');
 
-  const { login, register, error, loading, clearError } = useAuthStore();
+  // Forgot password OTP step modal state
+  const [showForgotModal, setShowForgotModal] = useState(false);
+  const [otpStep, setOtpStep] = useState<1 | 2 | 3>(1); // 1: Email, 2: OTP, 3: New Password
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [otpCode, setOtpCode] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSuccessMsg, setForgotSuccessMsg] = useState('');
+  const [forgotErrorMsg, setForgotErrorMsg] = useState('');
+
+  const { login, loginWithFirebase, register, requestOtp, verifyOtp, resetPasswordWithOtp, error, loading, clearError } = useAuthStore();
 
   const {
     register: registerLogin,
     handleSubmit: handleLoginSubmit,
     formState: { errors: loginErrors },
     reset: resetLoginForm,
-    setValue
+    getValues
   } = useForm({
     resolver: zodResolver(loginSchema),
+    defaultValues: {
+      email: '',
+      password: '',
+    },
   });
 
-  useEffect(() => {
-    // Default pre-fill for Team Leader
-    setValue('email', 'google.user@pm.com');
-    setValue('password', 'password123');
-  }, [setValue]);
+  React.useEffect(() => {
+    resetLoginForm({ email: '', password: '' });
+  }, [resetLoginForm]);
 
   const {
     register: registerSignup,
@@ -61,16 +82,128 @@ export default function Login() {
   });
 
   const onLoginSubmit = async (data: any) => {
-    const success = await login(data, rememberMe);
-    if (success) {
-      resetLoginForm();
+    clearError();
+    const email = (data.email || '').trim();
+    const password = (data.password || '').trim();
+
+    // 1. Authenticate with Firebase Authentication using signInWithEmailAndPassword
+    let userCredential;
+    try {
+      userCredential = await signInWithEmailPassword(email, password);
+    } catch (firebaseErr: any) {
+      console.warn("Firebase Auth error:", firebaseErr?.code || firebaseErr?.message);
+      let errorMsg = 'Invalid email or password! Please check your credentials.';
+      if (
+        firebaseErr?.code === 'auth/user-not-found' ||
+        firebaseErr?.code === 'auth/wrong-password' ||
+        firebaseErr?.code === 'auth/invalid-credential'
+      ) {
+        errorMsg = 'Invalid email or password! Please check your credentials.';
+      } else if (firebaseErr?.code === 'auth/too-many-requests') {
+        errorMsg = 'Access to this account has been temporarily disabled due to many failed login attempts. Please try again later or reset your password.';
+      } else if (firebaseErr?.code === 'auth/network-request-failed') {
+        errorMsg = 'Network connection error. Please check your internet connection.';
+      } else if (firebaseErr?.message) {
+        errorMsg = firebaseErr.message;
+      }
+      useAuthStore.setState({ error: errorMsg, loading: false });
+      return;
     }
+
+    // 2. Extract authenticated Firebase User and exact UID
+    const user = userCredential.user;
+    if (!user || !user.uid) {
+      useAuthStore.setState({ error: "Authentication failed. Could not retrieve user ID.", loading: false });
+      return;
+    }
+
+    console.log("Logged in UID:", user.uid);
+    console.log("User email:", user.email);
+    console.log("Firestore document path:", `users/${user.uid}`);
+
+    // 3. Find user's document in Firestore 'users' collection using exact UID: doc(db, 'users', user.uid)
+    const userData = await fetchFirestoreUserDoc(user.uid);
+
+    // 4. If the document does not exist: deny access (do NOT open Employee Dashboard)
+    if (!userData) {
+      console.warn("Firestore document not found: users/" + user.uid);
+      useAuthStore.setState({ 
+        error: "User profile not found. Please contact your administrator.", 
+        loading: false,
+        user: null,
+        token: null
+      });
+      return;
+    }
+
+    // 5. Read the role field strictly from that document
+    const rawRole = (userData as any).role ?? (userData as any).roleCode;
+    console.log("User role from Firestore:", rawRole);
+
+    const normalizedRole = normalizeRole(rawRole);
+
+    if (!normalizedRole) {
+      console.warn("Invalid user role found in Firestore:", rawRole);
+      useAuthStore.setState({ 
+        error: "Invalid user role. Please contact your administrator.", 
+        loading: false,
+        user: null,
+        token: null
+      });
+      return;
+    }
+
+    // 7. Redirect based strictly on verified role
+    const targetRoute = getDashboardPathForRole(normalizedRole);
+    if (!targetRoute) {
+      useAuthStore.setState({ error: 'Invalid user role. Please contact the administrator.', loading: false, user: null, token: null });
+      return;
+    }
+    const roleEnum = normalizedRole;
+    console.log("Redirecting to:", targetRoute);
+
+    const loggedInUser = {
+      id: user.uid,
+      email: user.email || email,
+      name: (userData as any).name || (userData as any).displayName || user.displayName || email.split('@')[0],
+      role: roleEnum,
+      designation: (userData as any).designation || (roleEnum === 'ROLE_ADMIN' ? 'System Administrator' : roleEnum === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
+      department: (userData as any).department || (roleEnum === 'ROLE_ADMIN' ? 'Executive' : roleEnum === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
+      experience: (userData as any).experience || 5,
+      skills: (userData as any).skills || '',
+      createdAt: (userData as any).createdAt || new Date().toISOString(),
+    };
+
+    const token = await user.getIdToken();
+    const storage = rememberMe ? localStorage : sessionStorage;
+    storage.setItem('token', token);
+    if (rememberMe) {
+      sessionStorage.setItem('token', token);
+    } else {
+      localStorage.removeItem('token');
+    }
+    useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
+    resetLoginForm();
+    navigate(targetRoute, { replace: true });
   };
 
   const onSignupSubmit = async (data: any) => {
+    clearError();
     const success = await register(data);
     if (success) {
       resetSignupForm();
+      const currentUser = useAuthStore.getState().user;
+      const userRole = currentUser?.role;
+      const normalizedUserRole = normalizeRole(userRole);
+      if (normalizedUserRole === 'ROLE_ADMIN') {
+        navigate('/admin/dashboard', { replace: true });
+      } else if (normalizedUserRole === 'ROLE_MANAGER') {
+        navigate('/team-lead/dashboard', { replace: true });
+      } else if (normalizedUserRole === 'ROLE_EMPLOYEE') {
+        navigate('/employee/dashboard', { replace: true });
+      } else {
+        useAuthStore.setState({ error: "Invalid user role. Please contact the administrator." });
+      }
     }
   };
 
@@ -79,51 +212,187 @@ export default function Login() {
     setIsLogin(!isLogin);
   };
 
-  const handleSocialLogin = (platform: string) => {
-    setSocialLoading(platform);
-    setTimeout(async () => {
-      // Simulate OAuth login by using a pre-seeded account
-      const credentials = {
-        email: platform === 'google' ? 'google.user@pm.com' : 'ms.user@pm.com',
-        password: 'password123',
-      };
-      
-      // Auto-register mock user if login fails (since it's a test environment)
-      let success = await login(credentials, true);
-      if (!success) {
-        // Sign up first, then log in
-        const mockSignup = {
-          name: platform === 'google' ? 'Google Associate' : 'Microsoft Executive',
-          email: credentials.email,
-          password: credentials.password,
-          role: 'ROLE_MANAGER',
-          designation: 'Enterprise Architect',
-          department: 'Product Strategy',
-          experience: 6,
-          skills: 'Agile, SaaS, Cloud, Spring Boot',
-        };
-        const signupSuccess = await register(mockSignup);
-        if (signupSuccess) {
-          await login(credentials, true);
-        }
+  const handleOpenForgotModal = () => {
+    const currentEmail = getValues('email');
+    setForgotEmail(currentEmail || '');
+    setOtpStep(1);
+    setOtpCode('');
+    setNewPassword('');
+    setConfirmPassword('');
+    setForgotSuccessMsg('');
+    setForgotErrorMsg('');
+    setShowForgotModal(true);
+  };
+
+  // Step 1: Send OTP to Email
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErrorMsg('');
+    setForgotSuccessMsg('');
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(forgotEmail.trim())) {
+      setForgotErrorMsg('Please enter a valid email address.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await requestOtp(forgotEmail);
+      if (res.success) {
+        setForgotSuccessMsg(res.message);
+        setOtpStep(2);
+      } else {
+        setForgotErrorMsg(res.message);
       }
-      setSocialLoading(null);
-    }, 1500);
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 2: Verify 6-digit OTP
+  const handleVerifyOtpSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErrorMsg('');
+    setForgotSuccessMsg('');
+
+    if (!otpCode || otpCode.trim().length !== 6) {
+      setForgotErrorMsg('Please enter the 6-digit OTP code sent to your email.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await verifyOtp(forgotEmail, otpCode);
+      if (res.success) {
+        setForgotSuccessMsg(res.message);
+        setOtpStep(3);
+      } else {
+        setForgotErrorMsg(res.message);
+      }
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  // Step 3: Reset Password with Verified OTP
+  const handleResetPasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotErrorMsg('');
+    setForgotSuccessMsg('');
+
+    if (!newPassword || newPassword.length < 6) {
+      setForgotErrorMsg('New password must be at least 6 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setForgotErrorMsg('Passwords do not match! Please check and try again.');
+      return;
+    }
+
+    setForgotLoading(true);
+    try {
+      const res = await resetPasswordWithOtp(forgotEmail, otpCode, newPassword);
+      if (res.success) {
+        setForgotSuccessMsg(res.message);
+        setTimeout(() => {
+          setShowForgotModal(false);
+        }, 2000);
+      } else {
+        setForgotErrorMsg(res.message);
+      }
+    } finally {
+      setForgotLoading(false);
+    }
+  };
+
+  const handleSocialLogin = async (platform: string) => {
+    setSocialLoading(platform);
+    clearError();
+
+    if (platform === 'google') {
+      try {
+        const result = await signInWithGoogle();
+        const user = result.user;
+
+        console.log("Authenticated UID (Google):", user.uid);
+        console.log("Firestore Document Path:", `users/${user.uid}`);
+
+        const userData = await fetchFirestoreUserDoc(user.uid);
+
+        if (!userData) {
+          console.log("Error: User document does not exist in Firestore users collection for UID:", user.uid);
+          useAuthStore.setState({ 
+            error: "User profile not found. Please contact the administrator.",
+            loading: false 
+          });
+          setSocialLoading(null);
+          return;
+        }
+
+        const firestoreRole = userData.role;
+        console.log("Firestore user data:", userData);
+        console.log("Firestore role:", firestoreRole);
+
+        if (!firestoreRole) {
+          console.log("Error: Role field missing in Firestore user document.");
+          useAuthStore.setState({ 
+            error: "Invalid user role. Please contact the administrator.",
+            loading: false 
+          });
+          setSocialLoading(null);
+          return;
+        }
+
+        const normalizedRole = normalizeRole(firestoreRole);
+        const targetRoute = getDashboardPathForRole(normalizedRole);
+        if (!normalizedRole || !targetRoute) {
+          console.log("Error: Invalid or unmapped user role in Firestore:", firestoreRole);
+          useAuthStore.setState({ 
+            error: "Invalid user role. Please contact the administrator.",
+            loading: false 
+          });
+          setSocialLoading(null);
+          return;
+        }
+
+        const roleEnum = normalizedRole;
+        console.log("Redirect route:", targetRoute);
+
+        await loginWithFirebase({
+          uid: user.uid,
+          email: user.email,
+          displayName: userData.name || user.displayName,
+          photoURL: user.photoURL,
+        }, rememberMe);
+
+        setSocialLoading(null);
+        navigate(targetRoute);
+      } catch (err: any) {
+        if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+          console.error('Google sign-in failed', err);
+          useAuthStore.setState({ error: 'Google sign-in failed. Check Firebase configuration and try again.' });
+        }
+        setSocialLoading(null);
+      }
+      return;
+    }
+
+    setSocialLoading(null);
+    useAuthStore.setState({ error: 'This sign-in method is not configured. Use email and password.' });
   };
 
   return (
     <div className="relative min-h-screen flex items-center justify-center p-4 md:p-8 overflow-hidden select-none">
-      {/* Sunset Mountain Landscape Background Image matching reference image */}
+      {/* Background wallpaper */}
       <div 
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat filter brightness-95 contrast-105"
         style={{
           backgroundImage: `url('/login_bg_wallpaper.jpg'), url('https://images.unsplash.com/photo-1506744038136-46273834b3fb?q=80&w=2000&auto=format&fit=crop')`
         }}
       >
-        {/* Soft natural overlay */}
         <div className="absolute inset-0 bg-gradient-to-tr from-slate-950/40 via-purple-950/20 to-blue-900/30 backdrop-blur-[2px]"></div>
         
-        {/* Glowing glass sphere background accents matching reference image */}
+        {/* Glowing glass sphere background accents */}
         <div className="absolute -top-16 -left-16 w-80 h-80 rounded-full border border-white/40 bg-white/10 backdrop-blur-2xl shadow-xl pointer-events-none"></div>
         <div className="absolute -bottom-24 -left-12 w-80 h-80 rounded-full border border-white/40 bg-white/10 backdrop-blur-xl shadow-xl pointer-events-none"></div>
         <div className="absolute top-6 -right-16 w-72 h-72 rounded-full border border-white/30 bg-white/10 backdrop-blur-2xl shadow-lg pointer-events-none"></div>
@@ -139,19 +408,17 @@ export default function Login() {
       >
         {/* Left Hero Showcase Panel */}
         <div className="lg:col-span-5 p-8 md:p-10 bg-slate-200/40 dark:bg-slate-900/50 backdrop-blur-xl border-b lg:border-b-0 lg:border-r border-white/30 flex flex-col justify-between relative overflow-hidden min-h-[460px]">
-          {/* Ambient glow orbs inside panel */}
           <div className="absolute -top-20 -left-20 w-64 h-64 rounded-full bg-purple-400/20 blur-3xl pointer-events-none"></div>
           <div className="absolute -bottom-20 -right-20 w-64 h-64 rounded-full bg-blue-400/20 blur-3xl pointer-events-none"></div>
 
           <div>
             {/* Top App Logo Badge */}
-            <div className="w-12 h-12 rounded-2xl bg-white/60 dark:bg-white/15 backdrop-blur-md border border-white/50 flex items-center justify-center shadow-md mb-6">
-              <CheckSquare className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <div className="w-14 h-14 bg-transparent p-0 overflow-hidden mb-6 flex items-center justify-center">
+              <img src="/logo.png" alt="Project Management System Logo" className="w-full h-full object-contain filter drop-shadow-lg" />
             </div>
 
             {/* 3D Layered Glass Cards Graphic */}
             <div className="relative my-6 h-40 flex items-center justify-center">
-              {/* Back Card */}
               <div className="absolute w-48 h-28 rounded-2xl bg-gradient-to-tr from-purple-500/30 to-indigo-500/30 backdrop-blur-md border border-white/40 transform -rotate-12 -translate-y-4 -translate-x-4 shadow-xl p-3 flex flex-col justify-between">
                 <div className="flex items-center gap-1.5">
                   <div className="w-2 h-2 rounded-full bg-white/60"></div>
@@ -160,7 +427,6 @@ export default function Login() {
                 <div className="h-8 bg-white/10 rounded-lg border border-white/20"></div>
               </div>
 
-              {/* Middle Card */}
               <div className="absolute w-52 h-30 rounded-2xl bg-gradient-to-tr from-indigo-500/40 to-blue-500/40 backdrop-blur-lg border border-white/50 transform -rotate-6 -translate-y-2 shadow-2xl p-3 flex flex-col justify-between">
                 <div className="flex items-center justify-between">
                   <div className="w-14 h-2 rounded-full bg-white/40"></div>
@@ -174,14 +440,15 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* Front Card */}
               <div className="absolute w-56 h-32 rounded-2xl bg-white/60 dark:bg-white/20 backdrop-blur-xl border border-white/60 shadow-2xl p-3.5 flex flex-col justify-between transform hover:scale-105 transition-transform duration-300">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5">
                     <Sparkles className="w-4 h-4 text-purple-600 dark:text-purple-300" />
-                    <span className="text-[10px] font-black tracking-wider uppercase text-slate-900 dark:text-white">Analytics</span>
+                    <span className="text-[10px] font-black tracking-wider uppercase text-slate-900 dark:text-white">
+                      Prologue System
+                    </span>
                   </div>
-                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/30">+84.2%</span>
+                  <span className="text-[9px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-500/30">Active</span>
                 </div>
                 <div className="flex items-end gap-2 h-14 pt-2">
                   <div className="w-3.5 bg-indigo-500/60 rounded-t h-[35%]"></div>
@@ -192,21 +459,20 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Headline */}
+            {/* Unified Headline & Subtitle */}
             <h1 className="text-2xl md:text-3xl font-black tracking-tight leading-tight text-slate-900 dark:text-white">
-              <span className="text-purple-600 dark:text-purple-400">Project</span> <br />
-              Management System
+              <span className="text-purple-600 dark:text-purple-400">Enterprise</span> <br /> Project Management
             </h1>
             <p className="text-xs text-slate-800 dark:text-slate-200 mt-2 font-medium leading-relaxed">
-              Plan, track and manage your projects efficiently in one beautiful workspace.
+              Unified workspace portal for global project administration, team tracking, and agile deliverables.
             </p>
           </div>
 
-          {/* Bottom Capsule Security Badge */}
+          {/* Bottom Security Badge */}
           <div className="mt-6 self-start">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-purple-100/60 dark:bg-purple-950/60 backdrop-blur-md border border-purple-200 dark:border-purple-800 text-xs font-bold text-purple-900 dark:text-purple-200 shadow-sm">
               <Shield className="w-3.5 h-3.5 text-purple-600 dark:text-purple-300" />
-              <span>Secure • Fast • Reliable</span>
+              <span>SECURE AUTHENTICATION</span>
             </div>
           </div>
         </div>
@@ -216,10 +482,10 @@ export default function Login() {
           <div>
             <div className="mb-6">
               <h2 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-                {isLogin ? 'Welcome Back' : 'Create Account'}
+                Sign In
               </h2>
               <p className="text-xs font-semibold text-slate-700 dark:text-slate-300 mt-1">
-                {isLogin ? 'Sign in to continue to your account' : 'Fill in your enterprise profile credentials'}
+                Enter your provisioned email address and password to access your dashboard
               </p>
             </div>
 
@@ -234,371 +500,350 @@ export default function Login() {
               </motion.div>
             )}
 
-            <AnimatePresence mode="wait">
-              {isLogin ? (
-                <motion.form
-                  key="login"
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  transition={{ duration: 0.3 }}
-                  onSubmit={handleLoginSubmit(onLoginSubmit)}
-                  className="space-y-4"
-                >
-                  {/* Role Selection Tabs */}
-                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-200/60 dark:bg-white/10 border border-slate-300/80 dark:border-white/20 backdrop-blur-md rounded-2xl mb-5 shadow-inner">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedRoleTab('LEADER');
-                        setValue('email', 'google.user@pm.com');
-                        setValue('password', 'password123');
-                      }}
-                      className={`py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        selectedRoleTab === 'LEADER'
-                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]'
-                          : 'text-slate-900 dark:text-slate-100 font-extrabold hover:bg-white/60 dark:hover:bg-white/20'
-                      }`}
-                    >
-                      🧑💼 Team Leader
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSelectedRoleTab('EMPLOYEE');
-                        setValue('email', 'ms.user@pm.com');
-                        setValue('password', 'password123');
-                      }}
-                      className={`py-2.5 rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                        selectedRoleTab === 'EMPLOYEE'
-                          ? 'bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 text-white shadow-lg shadow-indigo-500/25 scale-[1.02]'
-                          : 'text-slate-900 dark:text-slate-100 font-extrabold hover:bg-white/60 dark:hover:bg-white/20'
-                      }`}
-                    >
-                      👷 Employee
-                    </button>
-                  </div>
+            <form
+              onSubmit={handleLoginSubmit(onLoginSubmit)}
+              className="space-y-4"
+              autoComplete="off"
+            >
+              {/* Hidden dummy fields to block browser autofill */}
+              <input type="text" name="prevent_autofill_email" id="prevent_autofill_email" value="" style={{ display: 'none' }} tabIndex={-1} readOnly autoComplete="off" />
+              <input type="password" name="prevent_autofill_password" id="prevent_autofill_password" value="" style={{ display: 'none' }} tabIndex={-1} readOnly autoComplete="off" />
 
-                  {/* Email Input Tile */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
-                      Email Address
-                    </label>
-                    <div className="relative">
-                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                      <input
-                        type="email"
-                        placeholder="john.doe@example.com"
-                        {...registerLogin('email')}
-                        className="w-full pl-11 pr-4 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm"
-                      />
-                    </div>
-                    {loginErrors.email && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-1">{loginErrors.email.message as string}</p>
-                    )}
-                  </div>
+              {/* Email Input Tile */}
+              <div className="space-y-1">
+                <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                  Email Address
+                </label>
+                <div className="relative">
+                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
+                  <input
+                    type="email"
+                    placeholder="name@company.com"
+                    autoComplete="off"
+                    {...registerLogin('email')}
+                    className="w-full pl-11 pr-4 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm"
+                  />
+                </div>
+                {loginErrors.email && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-1">{loginErrors.email.message as string}</p>
+                )}
+              </div>
 
-                  {/* Password Input Tile */}
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
-                        Password
-                      </label>
-                      <a href="#" className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline transition-colors">
-                        Forgot password?
-                      </a>
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                        {...registerLogin('password')}
-                        className="w-full pl-11 pr-11 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {loginErrors.password && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-1">{loginErrors.password.message as string}</p>
-                    )}
-                  </div>
-
-                  {/* Remember Me Checkbox */}
-                  <div className="flex items-center pt-1">
-                    <input
-                      type="checkbox"
-                      id="remember"
-                      checked={rememberMe}
-                      onChange={(e) => setRememberMe(e.target.checked)}
-                      className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500/20 bg-white cursor-pointer"
-                    />
-                    <label htmlFor="remember" className="ml-2 text-xs font-extrabold text-slate-900 dark:text-slate-100 cursor-pointer">
-                      Remember me
-                    </label>
-                  </div>
-
-                  {/* Sign In Button with Right Circle Arrow */}
+              {/* Password Input Tile */}
+              <div className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                    Password
+                  </label>
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/25 transform hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer flex items-center justify-between mt-2"
+                    type="button"
+                    onClick={handleOpenForgotModal}
+                    className="text-xs font-bold text-purple-600 dark:text-purple-400 hover:underline transition-colors cursor-pointer"
                   >
-                    <span></span>
-                    <span className="text-center flex-1 font-black tracking-wide">{loading ? 'Signing In...' : 'Sign In'}</span>
-                    <div className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
+                    Forgot password?
                   </button>
-                </motion.form>
-              ) : (
-                <motion.form
-                  key="signup"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.3 }}
-                  onSubmit={handleSignupSubmit(onSignupSubmit)}
-                  className="space-y-3 max-h-[50vh] overflow-y-auto pr-1"
-                >
-                  {/* Name */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Full Name</label>
-                    <div className="relative">
-                      <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                      <input
-                        type="text"
-                        placeholder="John Doe"
-                        {...registerSignup('name')}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                      />
-                    </div>
-                    {signupErrors.name && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">{signupErrors.name.message as string}</p>
-                    )}
-                  </div>
-
-                  {/* Email */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Email Address</label>
-                    <div className="relative">
-                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                      <input
-                        type="email"
-                        placeholder="name@company.com"
-                        {...registerSignup('email')}
-                        className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                      />
-                    </div>
-                    {signupErrors.email && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">{signupErrors.email.message as string}</p>
-                    )}
-                  </div>
-
-                  {/* Password */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Password</label>
-                    <div className="relative">
-                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                      <input
-                        type={showPassword ? 'text' : 'password'}
-                        placeholder="••••••••••••"
-                        {...registerSignup('password')}
-                        className="w-full pl-10 pr-10 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {signupErrors.password && (
-                      <p className="text-xs text-rose-600 dark:text-rose-400 font-bold">{signupErrors.password.message as string}</p>
-                    )}
-                  </div>
-
-                  {/* Role & Designation */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Role</label>
-                      <div className="relative">
-                        <Shield className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                        <select
-                          {...registerSignup('role')}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-purple-600 transition-all font-semibold text-xs appearance-none cursor-pointer shadow-sm"
-                        >
-                          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="ROLE_EMPLOYEE">Employee</option>
-                          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="ROLE_MANAGER">Manager</option>
-                          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="ROLE_ADMIN">Admin</option>
-                        </select>
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Designation</label>
-                      <div className="relative">
-                        <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Designer"
-                          {...registerSignup('designation')}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Department & Experience */}
-                  <div className="grid grid-cols-2 gap-2">
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Department</label>
-                      <div className="relative">
-                        <Compass className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                        <input
-                          type="text"
-                          placeholder="e.g. Product"
-                          {...registerSignup('department')}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-1">
-                      <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Experience (Yrs)</label>
-                      <div className="relative">
-                        <Award className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
-                        <input
-                          type="number"
-                          placeholder="3"
-                          {...registerSignup('experience')}
-                          className="w-full pl-10 pr-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Key Skills */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">Skills</label>
-                    <input
-                      type="text"
-                      placeholder="React, CSS, SQL, Java"
-                      {...registerSignup('skills')}
-                      className="w-full px-4 py-2.5 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 transition-all font-semibold text-xs shadow-sm"
-                    />
-                  </div>
-
-                  {/* Sign Up Button */}
+                </div>
+                <div className="relative">
+                  <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-900 dark:text-slate-300" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="••••••••••••"
+                    autoComplete="new-password"
+                    {...registerLogin('password')}
+                    className="w-full pl-11 pr-11 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm"
+                  />
                   <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/25 transform hover:-translate-y-0.5 transition-all cursor-pointer flex items-center justify-between"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-colors"
                   >
-                    <span></span>
-                    <span className="text-center flex-1 font-black tracking-wide">{loading ? 'Creating...' : 'Create Account'}</span>
-                    <div className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0">
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </div>
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </motion.form>
-              )}
-            </AnimatePresence>
+                </div>
+                {loginErrors.password && (
+                  <p className="text-xs text-rose-600 dark:text-rose-400 font-bold mt-1">{loginErrors.password.message as string}</p>
+                )}
+              </div>
+
+              {/* Remember Me Checkbox */}
+              <div className="flex items-center pt-1">
+                <input
+                  type="checkbox"
+                  id="remember"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
+                  className="w-4 h-4 rounded border-slate-300 text-purple-600 focus:ring-purple-500/20 bg-white cursor-pointer"
+                />
+                <label htmlFor="remember" className="ml-2 text-xs font-extrabold text-slate-900 dark:text-slate-100 cursor-pointer">
+                  Remember me
+                </label>
+              </div>
+
+              {/* Sign In Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-sm shadow-xl shadow-indigo-500/25 transform hover:-translate-y-0.5 active:translate-y-0 transition-all cursor-pointer flex items-center justify-between mt-2"
+              >
+                <span></span>
+                <span className="text-center flex-1 font-black tracking-wide">{loading ? 'Signing In...' : 'Sign In'}</span>
+                <div className="w-7 h-7 rounded-full bg-white/20 border border-white/30 flex items-center justify-center flex-shrink-0">
+                  <ArrowRight className="w-4 h-4 text-white" />
+                </div>
+              </button>
+            </form>
           </div>
 
-          <div>
-            {/* Divider */}
-            <div className="relative my-5">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-slate-300 dark:border-white/20"></div>
-              </div>
-              <div className="relative flex justify-center text-[11px] font-semibold">
-                <span className="px-3 text-slate-700 dark:text-slate-300 bg-transparent">
-                  or continue with
-                </span>
-              </div>
-            </div>
-
-            {/* Social Logins 3-Column Glass Grid matching reference mockup */}
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                type="button"
-                disabled={socialLoading !== null}
-                onClick={() => handleSocialLogin('google')}
-                className="flex items-center justify-center py-2.5 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl hover:bg-white text-slate-900 dark:text-white font-bold transition-all cursor-pointer shadow-sm hover:shadow-md hover:scale-105 disabled:opacity-50"
-                title="Sign in with Google"
-              >
-                {socialLoading === 'google' ? (
-                  <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
-                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
-                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
-                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
-                  </svg>
-                )}
-              </button>
-              
-              <button
-                type="button"
-                disabled={socialLoading !== null}
-                onClick={() => handleSocialLogin('microsoft')}
-                className="flex items-center justify-center py-2.5 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl hover:bg-white text-slate-900 dark:text-white font-bold transition-all cursor-pointer shadow-sm hover:shadow-md hover:scale-105 disabled:opacity-50"
-                title="Sign in with Microsoft"
-              >
-                {socialLoading === 'microsoft' ? (
-                  <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <svg className="w-4.5 h-4.5" viewBox="0 0 23 23">
-                    <path fill="#f35325" d="M0 0h11v11H0z" />
-                    <path fill="#81bc06" d="M12 0h11v11H12z" />
-                    <path fill="#05a6f0" d="M0 12h11v11H0z" />
-                    <path fill="#ffba08" d="M12 12h11v11H12z" />
-                  </svg>
-                )}
-              </button>
-
-              <button
-                type="button"
-                disabled={socialLoading !== null}
-                onClick={() => handleSocialLogin('github')}
-                className="flex items-center justify-center py-2.5 bg-white/90 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl hover:bg-white text-slate-900 dark:text-white font-bold transition-all cursor-pointer shadow-sm hover:shadow-md hover:scale-105 disabled:opacity-50"
-                title="Sign in with GitHub"
-              >
-                {socialLoading === 'github' ? (
-                  <div className="w-4 h-4 border-2 border-slate-600 border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <svg className="w-5 h-5 fill-current text-black dark:text-white" viewBox="0 0 24 24">
-                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-                  </svg>
-                )}
-              </button>
-            </div>
-
-            {/* Toggle Footer Link */}
-            <div className="mt-5 text-center">
-              <button
-                type="button"
-                onClick={toggleForm}
-                className="text-xs font-semibold text-slate-700 dark:text-slate-300 hover:underline transition-colors cursor-pointer"
-              >
-                {isLogin ? (
-                  <>Don't have an account? <span className="text-purple-600 dark:text-purple-400 font-bold underline ml-1">Sign up</span></>
-                ) : (
-                  <>Already have an account? <span className="text-purple-600 dark:text-purple-400 font-bold underline ml-1">Sign in</span></>
-                )}
-              </button>
-            </div>
+          <div className="mt-6 pt-4 border-t border-slate-200/50 dark:border-white/10 text-center">
+            <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+              Account provisioning is restricted to Authorized System Administrators & Team Leaders.
+            </p>
           </div>
         </div>
       </motion.div>
+
+      {/* Forgot Password 3-Step 6-Digit OTP Modal Overlay */}
+      <AnimatePresence>
+        {showForgotModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              transition={{ duration: 0.25 }}
+              className="w-full max-w-md bg-white/95 dark:bg-slate-900/95 border border-white/40 dark:border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl backdrop-blur-2xl relative"
+            >
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(false)}
+                className="absolute top-5 right-5 p-2 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+                title="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                  <KeyRound className="w-6 h-6" />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 dark:text-white">Reset Password</h3>
+                  <div className="flex items-center gap-1.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 mt-0.5">
+                    <ShieldCheck className="w-3.5 h-3.5" />
+                    <span>6-Digit OTP Verification</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Progress Steps */}
+              <div className="flex items-center justify-between mb-5 px-2">
+                <div className={`flex items-center gap-1 text-xs font-black ${otpStep >= 1 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400'}`}>
+                  <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">1</span>
+                  <span>Email</span>
+                </div>
+                <div className={`h-0.5 flex-1 mx-2 ${otpStep >= 2 ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
+                <div className={`flex items-center gap-1 text-xs font-black ${otpStep >= 2 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400'}`}>
+                  <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">2</span>
+                  <span>OTP</span>
+                </div>
+                <div className={`h-0.5 flex-1 mx-2 ${otpStep >= 3 ? 'bg-purple-600' : 'bg-slate-200 dark:bg-slate-800'}`}></div>
+                <div className={`flex items-center gap-1 text-xs font-black ${otpStep >= 3 ? 'text-purple-600 dark:text-purple-400' : 'text-slate-400'}`}>
+                  <span className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">3</span>
+                  <span>New Pass</span>
+                </div>
+              </div>
+
+              {forgotErrorMsg && (
+                <div className="mb-4 p-3 bg-rose-500/15 border border-rose-500/30 text-rose-700 dark:text-rose-300 rounded-2xl text-xs font-bold flex items-start gap-2">
+                  <span className="mt-0.5 w-2 h-2 rounded-full bg-rose-500 flex-shrink-0 animate-ping"></span>
+                  <span>{forgotErrorMsg}</span>
+                </div>
+              )}
+
+              {forgotSuccessMsg && (
+                <div className="mb-4 p-3.5 bg-emerald-500/15 border border-emerald-500/30 text-emerald-800 dark:text-emerald-300 rounded-2xl text-xs font-bold flex items-center gap-2.5">
+                  <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <span>{forgotSuccessMsg}</span>
+                </div>
+              )}
+
+              {/* STEP 1: Enter Email */}
+              {otpStep === 1 && (
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                    Enter your registered email address. We will send a 6-digit OTP verification code directly to your email inbox.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                      Account Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="email"
+                        required
+                        placeholder="name@example.com"
+                        value={forgotEmail}
+                        onChange={(e) => setForgotEmail(e.target.value)}
+                        disabled={forgotLoading}
+                        className="w-full pl-11 pr-4 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <button
+                      type="submit"
+                      disabled={forgotLoading}
+                      className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-purple-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-60"
+                    >
+                      {forgotLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Sending OTP...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Send 6-Digit OTP Code</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 2: Enter 6-Digit OTP */}
+              {otpStep === 2 && (
+                <form onSubmit={handleVerifyOtpSubmit} className="space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                    Check your email inbox for <strong className="text-purple-600 dark:text-purple-400">{forgotEmail}</strong> and enter the 6-digit OTP code below.
+                  </p>
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                      6-Digit Verification Code
+                    </label>
+                    <div className="relative">
+                      <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type="text"
+                        required
+                        maxLength={6}
+                        placeholder="123456"
+                        value={otpCode}
+                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                        disabled={forgotLoading}
+                        className="w-full pl-11 pr-4 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-black text-center text-base letter-spacing-2 tracking-widest shadow-sm disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <button
+                      type="submit"
+                      disabled={forgotLoading || otpCode.length !== 6}
+                      className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-purple-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {forgotLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Verifying OTP...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Verify 6-Digit OTP</span>
+                          <ArrowRight className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setOtpStep(1)}
+                      className="w-full py-2.5 px-4 bg-transparent hover:bg-slate-100 dark:hover:bg-white/5 text-slate-600 dark:text-slate-300 rounded-2xl font-extrabold text-xs transition-colors cursor-pointer text-center flex items-center justify-center gap-1.5"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                      <span>Resend OTP Code</span>
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* STEP 3: Enter New Password */}
+              {otpStep === 3 && (
+                <form onSubmit={handleResetPasswordSubmit} className="space-y-4">
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium leading-relaxed">
+                    OTP Verified! Please enter your new password to complete the reset process.
+                  </p>
+                  
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                      New Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        placeholder="••••••••••••"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        disabled={forgotLoading}
+                        className="w-full pl-11 pr-11 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm disabled:opacity-60"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-xs font-extrabold text-slate-900 dark:text-slate-100 block">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        required
+                        placeholder="••••••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        disabled={forgotLoading}
+                        className="w-full pl-11 pr-11 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white placeholder-slate-400 outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm disabled:opacity-60"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex flex-col gap-2">
+                    <button
+                      type="submit"
+                      disabled={forgotLoading || !newPassword || !confirmPassword}
+                      className="w-full py-3.5 px-6 bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 text-white rounded-2xl font-black text-xs shadow-lg shadow-purple-500/25 transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {forgotLoading ? (
+                        <>
+                          <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          <span>Resetting Password...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Save & Update Password</span>
+                          <CheckCircle2 className="w-4 h-4" />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

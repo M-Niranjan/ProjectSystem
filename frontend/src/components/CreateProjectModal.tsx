@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, X, Plus, Check, DollarSign, Calendar, Mail } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
+import { dispatchNotificationAlert } from '../services/notificationService';
 
 export default function CreateProjectModal() {
   const { projectModalOpen, setProjectModalOpen } = useUIStore();
@@ -58,11 +59,24 @@ export default function CreateProjectModal() {
         await api.post(`/api/projects/${newProjectId}/members`, invitedEmails);
       }
 
+      dispatchNotificationAlert({
+        title: 'New Project Created by Team Leader',
+        message: `Team Leader created project workspace "${name}".`,
+        type: 'PROJECT_UPDATE',
+        recipientId: 'ALL'
+      });
+
       window.dispatchEvent(new Event('project-created'));
       setProjectModalOpen(false);
       resetForm();
     } catch (err) {
       console.error('Failed to create project, running simulated save.', err);
+      dispatchNotificationAlert({
+        title: 'New Project Created by Team Leader',
+        message: `Team Leader created project workspace "${name}".`,
+        type: 'PROJECT_UPDATE',
+        recipientId: 'ALL'
+      });
       window.dispatchEvent(new Event('project-created'));
       setProjectModalOpen(false);
       resetForm();

@@ -10,6 +10,14 @@
     --primary-light: 3B82F6;
     --secondary: 6366F1;
     --secondary-light: 8B5CF6;
+
+    /* Dynamic Accent Color Tokens */
+    --accent-color: #3B82F6;
+    --accent-hover: #2563EB;
+    --accent-light: rgba(59, 130, 246, 0.15);
+    --accent-gradient: linear-gradient(135deg, #3B82F6, #6366F1);
+    --accent-glow: rgba(59, 130, 246, 0.35);
+    --density-factor: 1rem;
     
     --success: 22C55E;
     --warning: F59E0B;
@@ -49,6 +57,34 @@
     font-family: var(--font-body);
     transition: background-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), color 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     overflow-x: hidden;
+  }
+
+  /* Display Density Scaling Rules */
+  [data-density="compact"] {
+    font-size: 0.95rem;
+  }
+  [data-density="compact"] table th,
+  [data-density="compact"] table td {
+    padding-top: 0.35rem !important;
+    padding-bottom: 0.35rem !important;
+  }
+  [data-density="compact"] .p-4 {
+    padding: 0.65rem !important;
+  }
+  [data-density="compact"] .p-6 {
+    padding: 0.85rem !important;
+  }
+
+  [data-density="spacious"] {
+    font-size: 1.04rem;
+  }
+  [data-density="spacious"] table th,
+  [data-density="spacious"] table td {
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+  }
+  [data-density="spacious"] .p-4 {
+    padding: 1.25rem !important;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -179,44 +215,169 @@
 
 /* HD Icon Hover Effects & Glassmorphism Utilities */
 .hd-icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.15));
+}
+
+.hd-icon-badge:hover,
+.group:hover .hd-icon-badge,
+button:hover .hd-icon-badge {
+  transform: scale(1.18) translateY(-2px) rotate(6deg);
+  filter: drop-shadow(0 8px 20px rgba(99, 102, 241, 0.5));
+}
+
+.hd-icon-container {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
   transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.hd-icon-badge:hover, .group:hover .hd-icon-badge {
-  transform: scale(1.15) rotate(5deg);
-  filter: drop-shadow(0 6px 16px rgba(59, 130, 246, 0.45));
+.group:hover .hd-icon-container,
+.hd-icon-container:hover {
+  transform: scale(1.12) rotate(4deg);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 8px 25px rgba(99, 102, 241, 0.3);
 }
 
 .glass-card-dashboard {
-  background: rgba(255, 255, 255, 0.65);
+  background: rgba(255, 255, 255, 0.7);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(226, 232, 240, 0.7);
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.05), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
   border-radius: 24px;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .dark .glass-card-dashboard {
-  background: rgba(15, 23, 42, 0.65);
+  background: rgba(15, 23, 42, 0.7);
   backdrop-filter: blur(20px) saturate(200%);
   -webkit-backdrop-filter: blur(20px) saturate(200%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), inset 0 1px 1px 0 rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6), inset 0 1px 1px 0 rgba(255, 255, 255, 0.15);
   border-radius: 24px;
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .glass-card-dashboard:hover {
-  transform: translateY(-3px);
-  border-color: rgba(99, 102, 241, 0.35);
-  box-shadow: 0 20px 40px -10px rgba(59, 130, 246, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.3);
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.45);
+  box-shadow: 0 20px 45px -10px rgba(59, 130, 246, 0.25), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
 }
 
 .dark .glass-card-dashboard:hover {
-  transform: translateY(-3px);
-  border-color: rgba(99, 102, 241, 0.4);
-  box-shadow: 0 20px 50px -10px rgba(99, 102, 241, 0.3), inset 0 1px 1px 0 rgba(255, 255, 255, 0.2);
+  transform: translateY(-4px);
+  border-color: rgba(99, 102, 241, 0.5);
+  box-shadow: 0 24px 55px -10px rgba(99, 102, 241, 0.35), inset 0 1px 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+/* Premium Ultra Glassmorphism Panel */
+.glass-panel-ultra {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(255, 255, 255, 0.5) 100%);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  box-shadow: 0 20px 50px -10px rgba(148, 163, 184, 0.18), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95);
+  border-radius: 24px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-panel-ultra {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.5) 100%);
+  backdrop-filter: blur(28px) saturate(200%);
+  -webkit-backdrop-filter: blur(28px) saturate(200%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  box-shadow: 0 24px 60px -12px rgba(0, 0, 0, 0.75), inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.2);
+  border-radius: 24px;
+  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Premium Interactive Action Button */
+.btn-premium-gradient {
+  background: linear-gradient(135deg, #3B82F6 0%, #6366F1 50%, #8B5CF6 100%);
+  background-size: 200% 200%;
+  color: #FFFFFF;
+  font-weight: 800;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px -5px rgba(99, 102, 241, 0.4), inset 0 1px 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-premium-gradient:hover {
+  background-position: 100% 0%;
+  transform: translateY(-2px) scale(1.01);
+  box-shadow: 0 16px 35px -5px rgba(99, 102, 241, 0.55), inset 0 1px 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.btn-premium-gradient:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Multi-Color Gradient Text Utilities */
+.text-gradient-purple-blue {
+  background: linear-gradient(135deg, #A855F7 0%, #6366F1 50%, #3B82F6 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-emerald-teal {
+  background: linear-gradient(135deg, #10B981 0%, #14B8A6 50%, #06B6D4 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-gold-amber {
+  background: linear-gradient(135deg, #F59E0B 0%, #F59E0B 50%, #D97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Translucent Glass Pill Badges */
+.badge-glass-emerald {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10B981;
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.1);
+}
+
+.badge-glass-purple {
+  background: rgba(168, 85, 247, 0.12);
+  color: #A855F7;
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(168, 85, 247, 0.1);
+}
+
+.badge-glass-blue {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3B82F6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+}
+
+.badge-glass-amber {
+  background: rgba(245, 158, 11, 0.12);
+  color: #F59E0B;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.1);
 }
 
 /* Background Gradients & Drifting Orbs */
@@ -329,10 +490,11 @@
   }
 }
 
-/* Light Mode Typography Contrast Enhancements */
+/* Light Mode Typography Contrast & Border Enhancements */
 html:not(.dark) {
   --text-secondary: #334155 !important; /* Slate 700 */
   --text-tertiary: #64748B !important;  /* Slate 500 */
+  --border-glass: rgba(203, 213, 225, 0.7) !important; /* Slate 300 70% */
 }
 
 html:not(.dark) .text-slate-400 {
@@ -350,30 +512,136 @@ html:not(.dark) .text-slate-200 {
 html:not(.dark) .text-slate-400\/70 {
   color: rgba(71, 85, 105, 0.7) !important;
 }
-html:not(.dark) .text-slate-500\/70 {
-  color: rgba(39, 53, 73, 0.7) !important;
-}
 html:not(.dark) .text-slate-400\/50 {
   color: rgba(71, 85, 105, 0.5) !important;
 }
 
-/* Hover overrides in Light Mode to prevent text from disappearing into white backgrounds */
-html:not(.dark) .hover\:text-white:hover {
-  color: #0F172A !important;
+/* Light Mode Border & Hover Refinements */
+html:not(.dark) .glass-panel {
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(203, 213, 225, 0.7);
+  box-shadow: 0 10px 30px -10px rgba(148, 163, 184, 0.15), inset 0 1px 1px 0 rgba(255, 255, 255, 0.95);
 }
-html:not(.dark) .hover\:text-slate-100:hover {
-  color: #0F172A !important;
+
+html:not(.dark) .glass-panel-hover:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  box-shadow: 0 12px 35px -8px rgba(59, 130, 246, 0.18), inset 0 1px 1px 0 rgba(255, 255, 255, 0.9);
+  transform: translateY(-2px);
 }
-html:not(.dark) .hover\:text-slate-200:hover {
-  color: #0F172A !important;
+
+html:not(.dark) input,
+html:not(.dark) select,
+html:not(.dark) textarea {
+  border-color: rgba(203, 213, 225, 0.8) !important;
 }
-html:not(.dark) .hover\:text-slate-300:hover {
-  color: #1E293B !important;
+
+html:not(.dark) input:hover,
+html:not(.dark) select:hover,
+html:not(.dark) textarea:hover {
+  border-color: rgba(59, 130, 246, 0.5) !important;
 }
-html:not(.dark) .group:hover .group-hover\:text-white {
-  color: #0F172A !important;
+
+html:not(.dark) input:focus,
+html:not(.dark) select:focus,
+html:not(.dark) textarea:focus {
+  border-color: rgba(59, 130, 246, 0.8) !important;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.15) !important;
 }
-html:not(.dark) .group:hover .group-hover\:text-slate-200 {
-  color: #0F172A !important;
+
+html:not(.dark) .hover\:bg-white\/5:hover,
+html:not(.dark) .hover\:bg-white\/10:hover {
+  background-color: rgba(241, 245, 249, 0.85) !important; /* Slate 100 */
+}
+
+html:not(.dark) .hover\:border-purple-500\/40:hover {
+  border-color: rgba(168, 85, 247, 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(168, 85, 247, 0.15) !important;
+}
+
+html:not(.dark) .hover\:border-blue-500\/40:hover {
+  border-color: rgba(59, 130, 246, 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(59, 130, 246, 0.15) !important;
+}
+
+html:not(.dark) .hover\:border-indigo-500\/40:hover {
+  border-color: rgba(99, 102, 241, 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(99, 102, 241, 0.15) !important;
+}
+
+html:not(.dark) .hover\:border-amber-500\/40:hover {
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(245, 158, 11, 0.15) !important;
+}
+
+html:not(.dark) .hover\:border-emerald-500\/40:hover {
+  border-color: rgba(16, 185, 129, 0.5) !important;
+  box-shadow: 0 8px 24px -4px rgba(16, 185, 129, 0.15) !important;
+}
+
+/* ==========================================
+   DYNAMIC ACCENT COLOR SYSTEM OVERRIDES
+   ========================================== */
+.bg-blue-600,
+.bg-blue-500,
+.hover\:bg-blue-500:hover,
+.hover\:bg-blue-600:hover {
+  background-color: var(--accent-color) !important;
+}
+
+.bg-gradient-to-r.from-blue-600.to-indigo-600,
+.bg-gradient-to-r.from-purple-600.to-indigo-600,
+.bg-gradient-to-r.from-blue-500.to-indigo-500 {
+  background: var(--accent-gradient) !important;
+}
+
+.text-blue-500,
+.text-blue-600,
+.text-blue-400,
+.hover\:text-blue-500:hover,
+.hover\:text-blue-400:hover {
+  color: var(--accent-color) !important;
+}
+
+.border-blue-500,
+.border-blue-600,
+.border-blue-500\/20,
+.border-blue-500\/30,
+.border-blue-500\/40,
+.border-blue-500\/50,
+.focus\:border-blue-500\/50:focus {
+  border-color: var(--accent-color) !important;
+}
+
+.bg-blue-500\/10,
+.bg-blue-600\/10,
+.bg-blue-500\/20 {
+  background-color: var(--accent-light) !important;
+}
+
+/* ==========================================
+   GLOBAL PRINT MEDIA OVERRIDES
+   ========================================== */
+@media print {
+  aside,
+  header,
+  nav,
+  .glass-navbar,
+  .glass-panel-hover,
+  .print\:hidden {
+    display: none !important;
+  }
+
+  body,
+  html,
+  #root,
+  main {
+    background: #ffffff !important;
+    color: #000000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: visible !important;
+  }
 }
 

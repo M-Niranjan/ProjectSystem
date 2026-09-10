@@ -1,18 +1,30 @@
 import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
-import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
-import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2 } from 'lucide-react';
+import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2, Sparkles, Activity, Lock, Settings } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
+import { normalizeRole } from '../services/authRoles';
 
 const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
 
-export default function Dashboard() {
+interface DashboardProps {
+  forcedRole?: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';
+}
+
+export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   const { user } = useAuthStore();
   const { setView } = useUIStore();
   const [time, setTime] = useState(new Date());
-  
+
+  const effectiveRole = forcedRole || normalizeRole(user?.role);
+  if (!effectiveRole) return null;
+
+  const isAdmin = effectiveRole === 'ROLE_ADMIN';
+  const isTeamLead = effectiveRole === 'ROLE_MANAGER';
+  const isEmployee = effectiveRole === 'ROLE_EMPLOYEE';
+
   // Shared state
   const [stats, setStats] = useState({
     totalProjects: 0,
@@ -34,14 +46,15 @@ export default function Dashboard() {
   const [employeeDirectory, setEmployeeDirectory] = useState<any[]>([]);
   const [allTasks, setAllTasks] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
-  
+  const [auditLogs, setAuditLogs] = useState<any[]>([]);
+
   // Assign task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState('MEDIUM');
+  const [newTaskPriority, setNewTaskPriority] = useState('HIGH');
   const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  const [newTaskHours, setNewTaskHours] = useState('4');
+  const [newTaskHours, setNewTaskHours] = useState('8');
   const [newTaskProjectId, setNewTaskProjectId] = useState('');
   
   const [formSuccess, setFormSuccess] = useState('');
@@ -55,42 +68,41 @@ export default function Dashboard() {
 
   const loadDashboardData = async () => {
     try {
-      if (user?.role === 'ROLE_EMPLOYEE') {
-        // Fetch employee tasks
+      if (isEmployee) {
         const tasksRes = await api.get('/api/tasks');
         const allTasksList = tasksRes.data || [];
-        
-        // Filter tasks assigned to logged-in employee
-        const assigned = allTasksList.filter((t: any) => t.assignee && t.assignee.id === user.id);
+        const assigned = allTasksList.filter((t: any) => t.assignee && (t.assignee.id === user?.id || t.assignee.name === user?.name));
         setMyTasks(assigned);
 
-        // Filter pending acceptance
         const pending = assigned.filter((t: any) => t.status === 'PENDING_ACCEPTANCE');
         setPendingTasks(pending);
 
         const completed = assigned.filter((t: any) => t.status === 'COMPLETED').length;
         const total = assigned.length;
-        const active = total - completed;
 
         setStats({
-          totalProjects: 0,
-          activeProjects: 0,
+          totalProjects: 1,
+          activeProjects: 1,
           completedProjects: 0,
           totalTasks: total,
           completedTasks: completed,
-          pendingTasks: active,
+          pendingTasks: total - completed,
           productivityScore: total > 0 ? Math.round((completed / total) * 100) : 100
         });
 
       } else {
-        // Fetch manager reports, employee list, and project lists
         const reportsRes = await api.get('/api/reports/analytics');
         if (reportsRes.data) {
-          setStats(reportsRes.data);
+          setStats(prev => ({ ...prev, ...reportsRes.data }));
         }
 
         const teamsRes = await api.get('/api/teams');
-        setEmployeeDirectory(teamsRes.data || []);
+        // System Administrator manages the portal only - filter out ROLE_ADMIN and Niranjan from task assignment directory
+        const assignableStaff = (teamsRes.data || []).filter((e: any) => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan');
+        setEmployeeDirectory(assignableStaff);
+        if (assignableStaff.length > 0) {
+          setNewTaskAssigneeId(assignableStaff[0].id.toString());
+        }
 
         const projectsRes = await api.get('/api/projects');
         setProjectsList(projectsRes.data || []);
@@ -100,6 +112,13 @@ export default function Dashboard() {
 
         const allTasksRes = await api.get('/api/tasks');
         setAllTasks(allTasksRes.data || []);
+
+        try {
+          const auditRes = await api.get('/api/admin/audit-logs');
+          setAuditLogs(auditRes.data || []);
+        } catch (e) {
+          setAuditLogs([]);
+        }
       }
     } catch (err) {
       console.log('Error loading dashboard statistics, running mock values.');
@@ -108,67 +127,50 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadDashboardData();
-    const handleUpdate = () => {
-      loadDashboardData();
-    };
+    const handleUpdate = () => loadDashboardData();
     window.addEventListener('task-status-updated', handleUpdate);
-    return () => {
-      window.removeEventListener('task-status-updated', handleUpdate);
-    };
+    return () => window.removeEventListener('task-status-updated', handleUpdate);
   }, [user]);
 
-  // Accept Task Flow
+  // Employee Accept Task Flow
   const handleAcceptTask = async (taskId: number) => {
-    // Optimistic UI: instantly remove from pending list and add to active
     setPendingTasks(prev => prev.filter(t => t.id !== taskId));
     setMyTasks(prev => prev.map(t => t.id === taskId ? { ...t, status: 'ACCEPTED', acceptedAt: new Date().toISOString() } : t));
 
     try {
       const taskRes = await api.get(`/api/tasks/${taskId}`);
       const taskData = taskRes.data;
-
-      // Guard: already accepted — skip
-      if (taskData.status === 'ACCEPTED' || taskData.status === 'TO_DO' || taskData.status === 'IN_PROGRESS') {
-        return;
-      }
-
       taskData.status = 'ACCEPTED';
       await api.put(`/api/tasks/${taskId}`, taskData);
       window.dispatchEvent(new Event('task-status-updated'));
     } catch (err) {
-      console.log('Failed to accept task — reverting UI');
-      loadDashboardData(); // Re-sync on failure
+      loadDashboardData();
     }
   };
 
-  // Decline Task Flow
-  const handleDeclineTask = async () => {
-    if (!declineTargetId || !declineReason.trim()) return;
+  // Employee Submit Task for Review Flow
+  const handleSubmitForReview = async (taskId: number) => {
     try {
-      // 1. Post Decline Reason Comment
-      const commentPayload = {
-        content: `🚨 [System Log] Task Declined by ${user?.name}. Reason: ${declineReason}`
-      };
-      await api.post(`/api/tasks/${declineTargetId}/comments`, commentPayload);
-
-      // 2. Unassign and Revert Task
-      const taskRes = await api.get(`/api/tasks/${declineTargetId}`);
+      const taskRes = await api.get(`/api/tasks/${taskId}`);
       const taskData = taskRes.data;
-      taskData.status = 'BACKLOG'; // Revert back to Backlog
-      taskData.assignee = null;   // Remove assignee
+      taskData.status = 'CODE_REVIEW';
+      taskData.submittedForReview = true;
+      taskData.reviewStatus = 'PENDING_REVIEW';
+      await api.put(`/api/tasks/${taskId}`, taskData);
 
-      await api.put(`/api/tasks/${declineTargetId}`, taskData);
-      
-      // Cleanup UI state
-      setDeclineTargetId(null);
-      setDeclineReason('');
+      // Post audit comment
+      await api.post(`/api/tasks/${taskId}/comments`, {
+        content: `🚀 [Employee Submission] Task submitted for Code Review by ${user?.name}.`
+      });
+
+      window.dispatchEvent(new Event('task-status-updated'));
       loadDashboardData();
     } catch (err) {
-      console.log('Failed to decline task');
+      loadDashboardData();
     }
   };
 
-  // Assign Task Panel Submit
+  // Team Lead Assign Task Form Submit
   const handleAssignTaskSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormSuccess('');
@@ -183,9 +185,9 @@ export default function Dashboard() {
       const payload = {
         title: newTaskTitle,
         description: newTaskDesc,
-        status: 'PENDING_ACCEPTANCE', // Created as pending acceptance
+        status: 'PENDING_ACCEPTANCE',
         priority: newTaskPriority,
-        dueDate: newTaskDueDate || '2026-07-20',
+        dueDate: newTaskDueDate || '2026-08-30',
         estimatedTime: parseFloat(newTaskHours),
         project: { id: parseInt(newTaskProjectId) },
         assignee: { id: parseInt(newTaskAssigneeId) }
@@ -201,13 +203,9 @@ export default function Dashboard() {
     }
   };
 
-  const isEmployee = user?.role === 'ROLE_EMPLOYEE';
-
-  // Workload analysis stats for employee
   const overdueCount = myTasks.filter(t => t.status !== 'COMPLETED' && t.dueDate && new Date(t.dueDate) < new Date()).length;
   const activeCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
 
-  // Mock data for charts
   const weeklyProductivity = [
     { name: 'Mon', completed: 4 },
     { name: 'Tue', completed: 6 },
@@ -215,29 +213,30 @@ export default function Dashboard() {
     { name: 'Thu', completed: 5 },
     { name: 'Fri', completed: 9 },
     { name: 'Sat', completed: 3 },
-    { name: 'Sun', completed: 2 },
   ];
 
-  const monthlyProgress = [
-    { name: 'Jan', rate: 45 },
-    { name: 'Feb', rate: 58 },
-    { name: 'Mar', rate: 62 },
-    { name: 'Apr', rate: 70 },
-    { name: 'May', rate: 75 },
-    { name: 'Jun', rate: 82 },
-    { name: 'Jul', rate: stats.productivityScore },
+  const userDistribution = [
+    { name: 'Admins', value: 1 },
+    { name: 'Team Leads', value: 1 },
+    { name: 'Developers & QA', value: 3 },
   ];
 
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
-      {/* Title */}
+      {/* Top Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">
-            {isEmployee ? 'Worker Dashboard' : 'Manager Dashboard'}
+          <h1 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
+            {isAdmin ? (
+              <><Shield className="w-7 h-7 text-purple-500" /> Admin Dashboard</>
+            ) : isTeamLead ? (
+              <><Briefcase className="w-7 h-7 text-blue-500" /> Team Lead Dashboard</>
+            ) : (
+              <><CheckSquare className="w-7 h-7 text-emerald-500" /> Employee Workspace</>
+            )}
           </h1>
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
-            Welcome back, {user?.name}! Here is your workspace summary.
+            Welcome back, {user?.name}! Roles: <span className="font-extrabold text-blue-500 uppercase">{user?.role.replace('ROLE_', '')}</span>
           </p>
         </div>
 
@@ -246,8 +245,8 @@ export default function Dashboard() {
           <div className="glass-card-dashboard px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 group">
             <CloudSun className="w-5 h-5 text-amber-500 hd-icon-badge" />
             <div className="text-left">
-              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Local Weather</p>
-              <p className="text-xs font-black text-slate-900 dark:text-slate-100">Sunny, 22°C</p>
+              <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Workspace System</p>
+              <p className="text-xs font-black text-slate-900 dark:text-slate-100">Optimal, 22°C</p>
             </div>
           </div>
 
@@ -263,484 +262,497 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {isEmployee ? (
-        /* ==================== EMPLOYEE VIEW ==================== */
+      {/* ========================================================================= */}
+      {/* 1. ADMIN DASHBOARD VIEW */}
+      {/* ========================================================================= */}
+      {isAdmin && (
         <div className="space-y-6">
-          {/* Top Row: Profile Card & Workload Summary */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* My Profile widget */}
-            <div className="glass-card-dashboard p-6 flex flex-col justify-between space-y-4">
-              <div className="flex items-start gap-4">
-                <img
-                  src={user?.profilePhoto || getAvatarByName(user?.name)}
-                  alt="avatar"
-                  className="w-16 h-16 rounded-2xl object-cover ring-2 ring-blue-500/30 shadow-md"
-                />
+          {/* Admin Metric Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
                 <div>
-                  <h4 className="text-lg font-black text-slate-900 dark:text-white">{user?.name}</h4>
-                  <p className="text-xs font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">{user?.designation || 'Employee'}</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-extrabold mt-1">{user?.department || 'Operations'}</p>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Total System Users</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">5</h3>
+                </div>
+                <div className="hd-icon-container bg-purple-500/10 text-purple-500 border-purple-500/20">
+                  <Users className="w-5 h-5 hd-icon-badge text-purple-500" />
                 </div>
               </div>
-              <div className="border-t border-slate-200/50 dark:border-white/10 pt-3 space-y-1.5 text-xs text-slate-700 dark:text-slate-300 font-semibold">
-                <p><strong className="font-extrabold text-slate-900 dark:text-white">Email:</strong> {user?.email}</p>
-                <p><strong className="font-extrabold text-slate-900 dark:text-white">Experience:</strong> {user?.experience || '2'} Years</p>
-                <p><strong className="font-extrabold text-slate-900 dark:text-white">Skills:</strong> {user?.skills || 'React, Java'}</p>
-              </div>
-              <button
-                onClick={() => setView('profile')}
-                className="w-full text-center py-2.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-md hover:scale-[1.02]"
-              >
-                Go to Profile Settings
-              </button>
+              <p className="text-[10px] text-purple-400 font-extrabold mt-3">Full Access & RBAC Active</p>
             </div>
 
-            {/* Workload summary details */}
-            <div className="glass-card-dashboard p-6 lg:col-span-2 flex flex-col justify-between">
-              <div>
-                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider">My Workload Summary</h4>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Real-time status analysis of your personal pipeline.</p>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 my-4">
-                <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
-                  <h5 className="text-2xl font-black text-blue-600 dark:text-blue-400">{activeCount}</h5>
-                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Active Tasks</p>
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Total Teams</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">3</h3>
                 </div>
-                <div className="bg-rose-500/10 border border-rose-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
-                  <h5 className="text-2xl font-black text-rose-600 dark:text-rose-400">{overdueCount}</h5>
-                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Overdue Tasks</p>
-                </div>
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-2xl p-4 text-center hover:scale-105 transition-all">
-                  <h5 className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{stats.completedTasks}</h5>
-                  <p className="text-[10px] font-extrabold text-slate-600 dark:text-slate-400 uppercase mt-1">Completed History</p>
+                <div className="hd-icon-container bg-blue-500/10 text-blue-500 border-blue-500/20">
+                  <FolderGit2 className="w-5 h-5 hd-icon-badge text-blue-500" />
                 </div>
               </div>
-              <div className="text-xs font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-2">
-                <Shield className="w-4.5 h-4.5 text-blue-500 animate-pulse" />
-                <span>Productivity Index: {stats.productivityScore}% overall completion rate.</span>
+              <p className="text-[10px] text-blue-500 font-bold mt-3">Engineering, QA, Product</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Active Projects</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.activeProjects}</h3>
+                </div>
+                <div className="hd-icon-container bg-amber-500/10 text-amber-500 border-amber-500/20">
+                  <Activity className="w-5 h-5 hd-icon-badge text-amber-500" />
+                </div>
               </div>
+              <p className="text-[10px] text-amber-500 font-bold mt-3">Hospital PM, SaaS, Workflow</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Completed Projects</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.completedProjects}</h3>
+                </div>
+                <div className="hd-icon-container bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  <CheckCircle2 className="w-5 h-5 hd-icon-badge text-emerald-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-emerald-500 font-bold mt-3">100% On-Time Delivery</p>
             </div>
           </div>
 
-          {/* New Assignment Alerts (Pending Acceptance) */}
-          {pendingTasks.length > 0 && (
-            <div className="bg-blue-600/15 border border-blue-500/30 rounded-3xl p-6 space-y-4 backdrop-blur-xl shadow-xl">
-              <h3 className="text-base font-black text-blue-600 dark:text-blue-400 flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 animate-bounce text-amber-500" /> New Assignment Alerts
+          {/* Admin Navigation Quick Module Grid */}
+          <div className="glass-panel p-6 space-y-4">
+            <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-purple-500" /> Admin System Modules Navigation
+            </h3>
+
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <button
+                onClick={() => setView('users')}
+                className="p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-purple-500/40 text-left transition-all hover:scale-105 cursor-pointer space-y-2"
+              >
+                <Users className="w-6 h-6 text-purple-500" />
+                <p className="text-xs font-black text-slate-800 dark:text-white">User Directory</p>
+                <p className="text-[9px] text-slate-400 font-medium">Create & assign roles</p>
+              </button>
+
+              <button
+                onClick={() => setView('roles')}
+                className="p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-blue-500/40 text-left transition-all hover:scale-105 cursor-pointer space-y-2"
+              >
+                <Shield className="w-6 h-6 text-blue-500" />
+                <p className="text-xs font-black text-slate-800 dark:text-white">Roles & Permissions</p>
+                <p className="text-[9px] text-slate-400 font-medium">RBAC matrix settings</p>
+              </button>
+
+              <button
+                onClick={() => setView('teams')}
+                className="p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-indigo-500/40 text-left transition-all hover:scale-105 cursor-pointer space-y-2"
+              >
+                <FolderGit2 className="w-6 h-6 text-indigo-500" />
+                <p className="text-xs font-black text-slate-800 dark:text-white">Teams Config</p>
+                <p className="text-[9px] text-slate-400 font-medium">Assign Team Leads</p>
+              </button>
+
+              <button
+                onClick={() => setView('organization')}
+                className="p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-amber-500/40 text-left transition-all hover:scale-105 cursor-pointer space-y-2"
+              >
+                <Settings className="w-6 h-6 text-amber-500" />
+                <p className="text-xs font-black text-slate-800 dark:text-white">Org Settings</p>
+                <p className="text-[9px] text-slate-400 font-medium">Working hours & defaults</p>
+              </button>
+
+              <button
+                onClick={() => setView('audit-logs')}
+                className="p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-emerald-500/40 text-left transition-all hover:scale-105 cursor-pointer space-y-2"
+              >
+                <FileText className="w-6 h-6 text-emerald-500" />
+                <p className="text-xs font-black text-slate-800 dark:text-white">Audit Logs</p>
+                <p className="text-[9px] text-slate-400 font-medium">Security activity history</p>
+              </button>
+            </div>
+          </div>
+
+          {/* Admin System Audit Stream */}
+          <div className="glass-panel p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <Activity className="w-4 h-4 text-emerald-500" /> System Security & Activity Log Feed
               </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {pendingTasks.map((t) => (
-                  <div key={t.id} className="glass-card-dashboard p-4 flex flex-col justify-between gap-3">
-                    <div>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 uppercase border border-blue-500/30">{t.priority}</span>
-                      <h4 className="text-xs font-black text-slate-900 dark:text-slate-100 mt-2">{t.title}</h4>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{t.description}</p>
-                      <p className="text-[9px] text-slate-500 dark:text-slate-400 mt-2 font-bold"><strong>Due:</strong> {t.dueDate} | <strong>Est:</strong> {t.estimatedTime} hrs</p>
+              <button onClick={() => setView('audit-logs')} className="text-xs font-bold text-blue-500 hover:underline">View All Logs →</button>
+            </div>
+
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left text-xs border-collapse min-w-[650px]">
+                <thead>
+                  <tr className="bg-slate-500/5 border-b border-slate-200/30 dark:border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    <th className="p-3">Actor User</th>
+                    <th className="p-3">Action</th>
+                    <th className="p-3">Activity Description</th>
+                    <th className="p-3">Timestamp</th>
+                    <th className="p-3 text-right">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
+                  {auditLogs && auditLogs.length > 0 ? (
+                    auditLogs.map((log: any) => (
+                      <tr key={log.id} className="hover:bg-white/5">
+                        <td className="p-3 font-black text-slate-800 dark:text-white">{log.user}</td>
+                        <td className="p-3 font-extrabold text-blue-500 uppercase text-[10px]">{log.action}</td>
+                        <td className="p-3 text-slate-600 dark:text-slate-300 font-semibold">{log.activity}</td>
+                        <td className="p-3 text-slate-400 font-bold text-[10px]">{log.date ? `${log.date} ${log.time || ''}` : log.timestamp || 'N/A'}</td>
+                        <td className="p-3 text-right">
+                          <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
+                            log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
+                          }`}>
+                            {log.status || 'SUCCESS'}
+                          </span>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={5} className="p-4 text-center text-xs font-semibold text-slate-400">
+                        No activity logs recorded yet. Real user actions will appear here automatically.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 2. TEAM LEAD DASHBOARD VIEW */}
+      {/* ========================================================================= */}
+      {isTeamLead && (
+        <div className="space-y-6">
+          {/* Team Lead Overview Metric Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Active Projects</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.activeProjects}</h3>
+                </div>
+                <div className="hd-icon-container bg-blue-500/10 text-blue-500 border-blue-500/20">
+                  <FolderGit2 className="w-5 h-5 hd-icon-badge text-blue-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-500 font-bold mt-3">Hospital System, SaaS, Workflow</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Pending Code Reviews</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">1</h3>
+                </div>
+                <div className="hd-icon-container bg-amber-500/10 text-amber-500 border-amber-500/20">
+                  <Award className="w-5 h-5 hd-icon-badge text-amber-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-amber-500 font-extrabold mt-3">Rahul: Create Patient Dashboard</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Total Active Tasks</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.totalTasks}</h3>
+                </div>
+                <div className="hd-icon-container bg-indigo-500/10 text-indigo-500 border-indigo-500/20">
+                  <CheckSquare className="w-5 h-5 hd-icon-badge text-indigo-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-indigo-400 font-bold mt-3">2 In Progress • 1 Testing</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Overall Health</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">92%</h3>
+                </div>
+                <div className="hd-icon-container bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  <CheckCircle2 className="w-5 h-5 hd-icon-badge text-emerald-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-emerald-500 font-bold mt-3">✓ Optimal Team Velocity</p>
+            </div>
+          </div>
+
+          {/* Real World Workflow Highlight & Task Review Queue Banner */}
+          <div className="glass-panel p-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/20 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-500 flex items-center justify-center font-black text-xl flex-shrink-0">
+                  🏥
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Active Real-World Project</span>
+                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30 animate-pulse">Code Review Submission</span>
+                  </div>
+                  <h3 className="text-base font-black text-slate-800 dark:text-white mt-1">Hospital Management System — Create Patient Dashboard</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Submitted by <strong className="text-slate-800 dark:text-white">Rahul (Employee)</strong> for Team Lead approval.</p>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setView('reviews')}
+                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5"
+              >
+                Review & Approve Task <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          {/* Employee Directory & Assign Task Form */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Team Directory Workload Allocation */}
+            <div className="glass-panel p-6 lg:col-span-2 space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <Users className="w-4 h-4 text-blue-500" /> Team Workload & Allocation
+              </h3>
+
+              <div className="divide-y divide-slate-100 dark:divide-white/5">
+                {employeeDirectory
+                  .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan')
+                  .map(emp => (
+                  <div key={emp.id} className="py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3">
+                      <img src={emp.profilePhoto || getAvatarByName(emp.name)} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+                      <div>
+                        <p className="font-black text-slate-800 dark:text-white">{emp.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold">{emp.designation || 'Software Engineer'}</p>
+                      </div>
                     </div>
 
-                    {declineTargetId === t.id ? (
-                      <div className="space-y-2 pt-2 border-t border-slate-200/50 dark:border-white/10">
-                        <input
-                          type="text"
-                          placeholder="Reason for declining task..."
-                          value={declineReason}
-                          onChange={(e) => setDeclineReason(e.target.value)}
-                          className="w-full px-3 py-1.5 bg-white/70 dark:bg-slate-900/80 border border-slate-300 dark:border-white/20 rounded-xl text-xs outline-none font-semibold"
-                        />
-                        <div className="flex gap-2">
-                          <button
-                            onClick={handleDeclineTask}
-                            className="px-3 py-1.5 bg-rose-600 text-white rounded-lg text-[10px] font-black uppercase cursor-pointer shadow-sm"
-                          >
-                            Submit
-                          </button>
-                          <button
-                            onClick={() => setDeclineTargetId(null)}
-                            className="px-3 py-1.5 bg-slate-500 text-white rounded-lg text-[10px] font-black uppercase cursor-pointer"
-                          >
-                            Cancel
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => handleAcceptTask(t.id)}
-                          className="flex-1 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all cursor-pointer shadow-md"
-                        >
-                          Accept Task
-                        </button>
-                        <button
-                          onClick={() => setDeclineTargetId(t.id)}
-                          className="py-2 px-3 bg-rose-500/15 hover:bg-rose-500/25 text-rose-600 dark:text-rose-400 rounded-xl font-black text-[10px] uppercase tracking-wider transition-colors cursor-pointer"
-                        >
-                          Decline
-                        </button>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-4">
+                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
+                        ⚡ 50% Allocated
+                      </span>
+                      <button
+                        onClick={() => {
+                          setNewTaskAssigneeId(emp.id.toString());
+                        }}
+                        className="px-2.5 py-1 bg-white/5 border border-slate-200/50 dark:border-white/10 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                      >
+                        + Assign Task
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Direct Task Assignment Form */}
+            <div className="glass-panel p-6 space-y-4">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <Plus className="w-4 h-4 text-indigo-500" /> Quick Task Assignment
+              </h3>
+
+              {formSuccess && <p className="text-xs text-emerald-500 font-bold">✓ {formSuccess}</p>}
+              {formError && <p className="text-xs text-rose-500 font-bold">⚠️ {formError}</p>}
+
+              <form onSubmit={handleAssignTaskSubmit} className="space-y-3">
+                <input
+                  type="text"
+                  placeholder="Task Title (e.g. Patient Dashboard UI)"
+                  value={newTaskTitle}
+                  onChange={(e) => setNewTaskTitle(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                />
+
+                <select
+                  value={newTaskProjectId}
+                  onChange={(e) => setNewTaskProjectId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
+                >
+                  {projectsList.map(p => (
+                    <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
+                  ))}
+                </select>
+
+                <select
+                  value={newTaskAssigneeId}
+                  onChange={(e) => setNewTaskAssigneeId(e.target.value)}
+                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
+                >
+                  <option value="" className="dark:bg-slate-900">Select Assignee...</option>
+                  {employeeDirectory
+                    .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan')
+                    .map(emp => (
+                    <option key={emp.id} value={emp.id} className="dark:bg-slate-900">{emp.name} ({emp.designation})</option>
+                  ))}
+                </select>
+
+                <button
+                  type="submit"
+                  className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
+                >
+                  Create & Assign Task
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ========================================================================= */}
+      {/* 3. EMPLOYEE DASHBOARD VIEW */}
+      {/* ========================================================================= */}
+      {isEmployee && (
+        <div className="space-y-6">
+          {/* Employee Top Metric Cards */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">My Active Tasks</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{activeCount}</h3>
+                </div>
+                <div className="hd-icon-container bg-blue-500/10 text-blue-500 border-blue-500/20">
+                  <CheckSquare className="w-5 h-5 hd-icon-badge text-blue-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-blue-500 font-bold mt-3">Hospital & SaaS Tasks</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Pending Acceptance</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{pendingTasks.length}</h3>
+                </div>
+                <div className="hd-icon-container bg-amber-500/10 text-amber-500 border-amber-500/20">
+                  <AlertCircle className="w-5 h-5 hd-icon-badge text-amber-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-amber-500 font-bold mt-3">Action Required</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">Completed Tasks</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">{stats.completedTasks}</h3>
+                </div>
+                <div className="hd-icon-container bg-emerald-500/10 text-emerald-500 border-emerald-500/20">
+                  <CheckCircle2 className="w-5 h-5 hd-icon-badge text-emerald-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-emerald-500 font-bold mt-3">100% Delivery Rate</p>
+            </div>
+
+            <div className="glass-card-dashboard group p-5 relative overflow-hidden flex flex-col justify-between cursor-pointer">
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400">My Working Hours Today</p>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-1">7.5h</h3>
+                </div>
+                <div className="hd-icon-container bg-purple-500/10 text-purple-500 border-purple-500/20">
+                  <Clock className="w-5 h-5 hd-icon-badge text-purple-500" />
+                </div>
+              </div>
+              <p className="text-[10px] text-purple-400 font-bold mt-3">Daily Goal: 8.0h</p>
+            </div>
+          </div>
+
+          {/* Pending Task Acceptance Alerts */}
+          {pendingTasks.length > 0 && (
+            <div className="glass-panel p-5 bg-gradient-to-r from-blue-600/15 to-indigo-600/15 border border-blue-500/30 space-y-3">
+              <h3 className="text-xs font-black text-blue-500 flex items-center gap-2 uppercase tracking-wider">
+                <AlertCircle className="w-4 h-4 text-amber-500 animate-bounce" /> New Task Assignment Alerts
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {pendingTasks.map(t => (
+                  <div key={t.id} className="glass-panel p-4 flex flex-col justify-between space-y-3">
+                    <div>
+                      <h4 className="text-xs font-black text-slate-800 dark:text-white">{t.title}</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.description}</p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => handleAcceptTask(t.id)}
+                        className="flex-1 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer"
+                      >
+                        ✓ Accept Task
+                      </button>
+                    </div>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* Active Tasks & Completed History */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="glass-card-dashboard p-5">
-              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-1.5">
-                <Clock className="w-4.5 h-4.5 text-blue-500" /> Active Assigned Tasks ({myTasks.filter(t => t.status !== 'COMPLETED').length})
-              </h4>
-              <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
-                {myTasks.filter(t => t.status !== 'COMPLETED').length === 0 ? (
-                  <p className="text-[10px] font-bold text-slate-400 text-center py-6">No active tasks in progress.</p>
-                ) : (
-                  myTasks.filter(t => t.status !== 'COMPLETED').map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-3 bg-white/40 dark:bg-white/5 rounded-2xl border border-slate-200/50 dark:border-white/10 hover:border-blue-500/30 transition-all">
-                      <span className="font-bold text-xs text-slate-900 dark:text-slate-100 truncate flex-1">{t.title}</span>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-600 dark:text-blue-400 uppercase">{t.status}</span>
-                    </div>
-                  ))
-                )}
-              </div>
+          {/* My Tasks & Real-world Workflow Action Table */}
+          <div className="glass-panel p-6 space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-500" /> My Assigned Tasks & Workflow
+              </h3>
+              <button onClick={() => setView('my-tasks')} className="text-xs font-bold text-blue-500 hover:underline">View All Tasks →</button>
             </div>
 
-            <div className="glass-card-dashboard p-5">
-              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-3 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4.5 h-4.5 text-emerald-500" /> My Completed History
-              </h4>
-              <div className="space-y-2 overflow-y-auto max-h-48 pr-1">
-                {myTasks.filter(t => t.status === 'COMPLETED').length === 0 ? (
-                  <p className="text-[10px] font-bold text-slate-400 text-center py-6">No completed tasks yet.</p>
-                ) : (
-                  myTasks.filter(t => t.status === 'COMPLETED').map(t => (
-                    <div key={t.id} className="flex items-center justify-between p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20">
-                      <span className="font-bold text-xs text-slate-500 dark:text-slate-400 line-through truncate flex-1">{t.title}</span>
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 uppercase">Completed</span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      ) : (
-        /* ==================== TEAM LEADER VIEW ==================== */
-        <div className="space-y-6">
-          {/* Managers Stats Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            {/* Stat Card 1: Total Projects */}
-            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Total Projects</span>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-blue-500/25">
-                  <LayoutDashboard className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-baseline justify-between">
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.totalProjects}</h3>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                  +12.5% this month
-                </span>
-              </div>
-            </div>
-
-            {/* Stat Card 2: Active Projects */}
-            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Active Projects</span>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-indigo-500/25">
-                  <FolderGit2 className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-baseline justify-between">
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.activeProjects}</h3>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                  4 teams active
-                </span>
-              </div>
-            </div>
-
-            {/* Stat Card 3: Pending Tasks */}
-            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Pending Tasks</span>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-violet-600 to-pink-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-violet-500/25">
-                  <CheckSquare className="w-6 h-6" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-baseline justify-between">
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.pendingTasks}</h3>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-violet-500/15 text-violet-600 dark:text-violet-400 border border-violet-500/20">
-                  Awaiting review
-                </span>
-              </div>
-            </div>
-
-            {/* Stat Card 4: Productivity Index */}
-            <div className="glass-card-dashboard p-6 flex flex-col justify-between cursor-pointer group relative overflow-hidden">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400">Productivity Score</span>
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 to-teal-600 text-white flex items-center justify-center hd-icon-badge shadow-lg shadow-emerald-500/25">
-                  <Award className="w-6 h-6 animate-pulse" />
-                </div>
-              </div>
-              <div className="mt-4 flex items-baseline justify-between">
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white">{stats.productivityScore}%</h3>
-                <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                  98.4% efficiency
-                </span>
-              </div>
-            </div>
-          </div>
-
-          {/* Directory & Assign Panel Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Employee Directory */}
-            <div className="glass-card-dashboard p-6 lg:col-span-2 flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between">
-                  <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-500 hd-icon-badge" /> Employee Directory
-                  </h4>
-                  <span className="text-xs font-extrabold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
-                    {employeeDirectory.length} Active Staff
-                  </span>
-                </div>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Directory of active team members and current task assignments.</p>
-              </div>
-
-              <div className="my-4 divide-y divide-slate-200/50 dark:divide-white/10 max-h-[320px] overflow-y-auto pr-1">
-                {employeeDirectory.map(emp => {
-                  const empActiveTasksCount = allTasks.filter(t => t.assignee?.id === emp.id && t.status !== 'COMPLETED').length;
-                  return (
-                    <div key={emp.id} className="flex items-center justify-between py-3 px-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all">
-                      <div className="flex items-center gap-3.5">
-                        <div className="relative">
-                          <img
-                            src={emp.profilePhoto || getAvatarByName(emp.name)}
-                            alt="avatar"
-                            className="w-11 h-11 rounded-2xl object-cover ring-2 ring-blue-500/30 shadow-md"
-                          />
-                          <span className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 bg-emerald-500 border-2 border-white dark:border-slate-900 rounded-full"></span>
-                        </div>
-                        <div>
-                          <p className="font-black text-xs text-slate-900 dark:text-slate-100">{emp.name}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase mt-0.5">{emp.designation || 'Staff'} ({emp.department || 'Tech'})</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center gap-3">
-                        <span className={`text-[10px] px-2.5 py-1 rounded-full font-extrabold border ${
-                          empActiveTasksCount > 0 
-                            ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-                            : 'bg-slate-500/10 text-slate-500 border-slate-500/20'
-                        }`}>
-                          ⚡ {empActiveTasksCount} Tasks Active
-                        </span>
-
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setNewTaskAssigneeId(emp.id.toString());
-                          }}
-                          className="px-3 py-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-white/10 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 rounded-xl font-bold text-[10px] transition-all cursor-pointer shadow-xs"
-                        >
-                          + Assign
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Assign Task Panel Form */}
-            {!isEmployee && (
-              <div className="glass-card-dashboard p-6">
-                <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                  <Plus className="w-5 h-5 text-blue-500 hd-icon-badge" /> Assign Task Panel
-                </h4>
-                <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5 mt-4">
+            <div className="divide-y divide-slate-100 dark:divide-white/5">
+              {myTasks.map(t => (
+                <div key={t.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
                   <div>
-                    <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Task Title</label>
-                    <input
-                      type="text"
-                      placeholder="Fix login UI bug..."
-                      value={newTaskTitle}
-                      onChange={(e) => setNewTaskTitle(e.target.value)}
-                      className="w-full px-3.5 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-500/20 transition-all font-semibold text-slate-900 dark:text-white placeholder-slate-400 shadow-sm"
-                    />
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase border border-blue-500/20">
+                        {t.project?.name || 'Hospital Management System'}
+                      </span>
+                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${
+                        t.status === 'CODE_REVIEW' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' : 'bg-blue-500/15 text-blue-500'
+                      }`}>
+                        {t.status.replace('_', ' ')}
+                      </span>
+                    </div>
+                    <h4 className="text-sm font-black text-slate-800 dark:text-white mt-1.5">{t.title}</h4>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
                   </div>
-                  
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Project</label>
-                      <select
-                        value={newTaskProjectId}
-                        onChange={(e) => setNewTaskProjectId(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white cursor-pointer shadow-sm"
+
+                  <div className="flex items-center gap-3">
+                    {t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED' || t.status === 'TODO' ? (
+                      <button
+                        onClick={() => handleSubmitForReview(t.id)}
+                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow cursor-pointer transition-all flex items-center gap-1.5"
                       >
-                        {projectsList.map(p => (
-                          <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" key={p.id} value={p.id}>{p.name}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Assignee</label>
-                      <select
-                        value={newTaskAssigneeId}
-                        onChange={(e) => setNewTaskAssigneeId(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white cursor-pointer shadow-sm"
-                      >
-                        <option className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white" value="">-- Select --</option>
-                        {employeeDirectory.filter(u => u.role === 'ROLE_EMPLOYEE').map(emp => (
-                          <option className="dark:bg-slate-800 text-slate-700" key={emp.id} value={emp.id}>{emp.name}</option>
-                        ))}
-                      </select>
-                    </div>
+                        Submit for Review <ArrowRight className="w-3.5 h-3.5" />
+                      </button>
+                    ) : t.status === 'CODE_REVIEW' ? (
+                      <span className="text-[10px] font-black px-3 py-1.5 bg-amber-500/15 text-amber-500 rounded-xl border border-amber-500/30 animate-pulse">
+                        ⏳ Pending Team Lead Review
+                      </span>
+                    ) : (
+                      <span className="text-[10px] font-black text-slate-400">✓ Deliverable Passed</span>
+                    )}
                   </div>
-
-                  <div className="grid grid-cols-2 gap-2">
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Due Date</label>
-                      <input
-                        type="date"
-                        value={newTaskDueDate}
-                        onChange={(e) => setNewTaskDueDate(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white shadow-sm"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300 block mb-1">Hours</label>
-                      <input
-                        type="number"
-                        value={newTaskHours}
-                        onChange={(e) => setNewTaskHours(e.target.value)}
-                        className="w-full px-3 py-2.5 bg-white/80 dark:bg-slate-900/90 border border-slate-300 dark:border-white/20 rounded-2xl text-xs outline-none font-semibold text-slate-900 dark:text-white shadow-sm"
-                      />
-                    </div>
-                  </div>
-
-                  {formSuccess && <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold">{formSuccess}</p>}
-                  {formError && <p className="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold">{formError}</p>}
-
-                  <button
-                    type="submit"
-                    className="w-full py-3 px-6 bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider transition-all cursor-pointer shadow-xl shadow-blue-500/25 hover:scale-[1.02] flex items-center justify-between"
-                  >
-                    <span>Send Task (Pending Acceptance)</span>
-                    <ArrowRight className="w-4 h-4 text-white" />
-                  </button>
-                </form>
-              </div>
-            )}
-          </div>
-
-          {/* Acceptance Tracker & Cumulative progress rows */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            
-            {/* Acceptance Tracker list */}
-            <div className="glass-card-dashboard p-6 lg:col-span-2">
-              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 uppercase tracking-wider flex items-center gap-2">
-                <UserCheck className="w-5 h-5 text-blue-500 hd-icon-badge" /> Acceptance Tracker
-              </h4>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 font-semibold">Real-time tracker of tasks pending, accepted, or declined by staff.</p>
-
-              <div className="my-4 divide-y divide-slate-200/50 dark:divide-white/10 max-h-[300px] overflow-y-auto pr-1 space-y-1">
-                {allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE' || t.status === 'ACCEPTED' || t.acceptedAt || t.status === 'DECLINED' || Boolean(t.declineReason)).length === 0 ? (
-                  <p className="text-[10px] font-bold text-slate-400 text-center py-8">No task acceptance records currently active.</p>
-                ) : (
-                  allTasks.filter(t => t.status === 'PENDING_ACCEPTANCE' || t.status === 'ACCEPTED' || t.acceptedAt || t.status === 'DECLINED' || Boolean(t.declineReason)).map(task => {
-                    const isAccepted = task.status === 'ACCEPTED' || Boolean(task.acceptedAt);
-                    const isDeclined = task.status === 'DECLINED' || (Boolean(task.declineReason) && task.status === 'BACKLOG');
-                    const isPending = task.status === 'PENDING_ACCEPTANCE';
-                    
-                    let employeeName = task.assignee ? task.assignee.name : 'Employee';
-                    let reasonContent = task.declineReason || '';
-                    if (!task.assignee && task.declineReason && task.declineReason.includes(':')) {
-                      const parts = task.declineReason.split(':');
-                      employeeName = parts[0].trim();
-                      reasonContent = parts.slice(1).join(':').trim();
-                    }
-
-                    return (
-                      <div key={task.id} className="flex items-start justify-between py-3 px-3 rounded-2xl hover:bg-white/50 dark:hover:bg-white/5 transition-all gap-3">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-slate-900 dark:text-slate-100 text-xs truncate">{task.title}</p>
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400 font-extrabold mt-0.5">
-                            👤 {employeeName}
-                          </p>
-
-                          {/* Accepted timestamp */}
-                          {isAccepted && task.acceptedAt && (
-                            <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-extrabold mt-0.5">
-                              ✓ Accepted at {new Date(task.acceptedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} · {new Date(task.acceptedAt).toLocaleDateString()}
-                            </p>
-                          )}
-
-                          {/* Declined Reason */}
-                          {isDeclined && reasonContent && (
-                            <p className="text-[10px] text-rose-600 dark:text-rose-400 font-extrabold mt-0.5">
-                              ❌ Reason: <span className="text-slate-800 dark:text-slate-200 font-semibold">{reasonContent}</span>
-                            </p>
-                          )}
-
-                          {/* Next Action */}
-                          {isAccepted && (
-                            <p className="text-[9px] text-blue-500 font-bold mt-0.5">Next: Member to begin work</p>
-                          )}
-                          {isPending && (
-                            <p className="text-[9px] text-amber-500 font-bold mt-0.5">Next: Awaiting employee response</p>
-                          )}
-                          {isDeclined && (
-                            <p className="text-[9px] text-slate-400 font-bold mt-0.5">Next: Reassign or revise task requirements</p>
-                          )}
-                        </div>
-
-                        {/* Status Badges */}
-                        {isPending ? (
-                          <span className="px-3 py-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[9px] font-black uppercase rounded-full animate-pulse flex-shrink-0 border border-amber-500/30">
-                            ⏳ Pending
-                          </span>
-                        ) : isAccepted ? (
-                          <span className="px-3 py-1 bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase rounded-full flex-shrink-0 border border-emerald-500/30">
-                            ✓ Accepted
-                          </span>
-                        ) : (
-                          <span className="px-3 py-1 bg-rose-500/15 text-rose-600 dark:text-rose-400 text-[9px] font-black uppercase rounded-full flex-shrink-0 border border-rose-500/30">
-                            ❌ Declined
-                          </span>
-                        )}
-                      </div>
-                    );
-                  })
-                )}
-              </div>
+                </div>
+              ))}
             </div>
-
-            {/* Team Analytics */}
-            <div className="glass-card-dashboard p-6">
-              <h4 className="text-sm font-black text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
-                <FileText className="w-5 h-5 text-blue-500 hd-icon-badge" /> Cumulative Output
-              </h4>
-              <div className="h-44">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyProgress}>
-                    <XAxis dataKey="name" hide />
-                    <Area type="monotone" dataKey="rate" stroke="#6366F1" fill="#6366F1" fillOpacity={0.2} />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-              <div className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider text-center mt-2">
-                Workspace performance velocity: Stable at {stats.productivityScore}% completion rate.
-              </div>
-            </div>
-
           </div>
         </div>
       )}
     </div>
   );
+}
+
+export function AdminDashboard() {
+  return <Dashboard forcedRole="ROLE_ADMIN" />;
+}
+
+export function TeamLeaderDashboard() {
+  return <Dashboard forcedRole="ROLE_MANAGER" />;
+}
+
+export function EmployeeDashboard() {
+  return <Dashboard forcedRole="ROLE_EMPLOYEE" />;
 }

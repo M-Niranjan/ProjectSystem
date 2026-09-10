@@ -1,0 +1,67 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() && (
+        getUserData().role == 'ROLE_ADMIN' || 
+        getUserData().role == 'admin'
+      );
+    }
+
+    function isManager() {
+      return isAuthenticated() && (
+        getUserData().role == 'ROLE_MANAGER' || 
+        getUserData().role == 'team_leader' || 
+        getUserData().role == 'manager'
+      );
+    }
+
+    // Rules for 'users' collection
+    match /users/{userId} {
+      // Any authenticated user can read user profiles
+      allow read: if isAuthenticated();
+      
+      // Users can create their initial profile document upon authentication; Admins/Team Leaders can create provisioned profiles
+      allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isManager());
+      
+      // Admins, Team Leaders (for assigned team members), or profile owner can update profile info
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isManager() || request.auth.token.admin == true);
+      
+      // Only Admins can delete users
+      allow delete: if isAuthenticated() && (isAdmin() || request.auth.token.admin == true);
+    }
+
+    // Rules for 'projects' collection
+    match /projects/{projectId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin() || isManager();
+    }
+
+    // Rules for 'tasks' collection
+    match /tasks/{taskId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isAuthenticated();
+      allow delete: if isAdmin() || isManager();
+    }
+
+    // Rules for 'audit_logs' collection
+    match /audit_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAuthenticated();
+    }
+  }
+}

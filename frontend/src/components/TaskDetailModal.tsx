@@ -5,6 +5,7 @@ import { X, Calendar, User, Shield, Clock, Play, Pause, Square, Sparkles, Messag
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
+import TaskStepPipeline from './TaskStepPipeline';
 
 interface Task {
   id: number;
@@ -333,6 +334,11 @@ export default function TaskDetailModal() {
                     </button>
                   </div>
                 )}
+              </div>
+
+              {/* Sequential Step Verification Pipeline */}
+              <div className="space-y-3.5 border-t border-slate-200/30 dark:border-white/5 pt-6">
+                <TaskStepPipeline taskId={task.id} taskTitle={task.title} />
               </div>
 
               {/* Comments Stream */}

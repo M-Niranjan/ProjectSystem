@@ -5,6 +5,7 @@ import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight, M
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
+import { requestMobilePushPermission } from '../services/mobilePushService';
 
 interface Notification {
   id: number;
@@ -107,9 +108,14 @@ export default function Navbar() {
   useEffect(() => {
     if (user) {
       fetchNotifications();
-      // Poll notifications every 10 seconds for real-time responsiveness
-      const interval = setInterval(fetchNotifications, 10000);
-      return () => clearInterval(interval);
+      // Poll notifications every 5 seconds for real-time responsiveness
+      const interval = setInterval(fetchNotifications, 5000);
+      const handleAlert = () => fetchNotifications();
+      window.addEventListener('new-notification-alert', handleAlert);
+      return () => {
+        clearInterval(interval);
+        window.removeEventListener('new-notification-alert', handleAlert);
+      };
     }
   }, [user]);
 
@@ -262,7 +268,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`fixed top-0 right-0 left-0 z-20 h-16 glass-navbar flex items-center justify-between px-6 ${sidebarExpanded ? 'md:pl-[272px]' : 'md:pl-[88px]'} pl-6 transition-all duration-400`}>
+    <header className={`fixed top-0 right-0 left-0 z-20 h-16 glass-navbar flex items-center justify-between px-6 print:hidden ${sidebarExpanded ? 'md:pl-[270px]' : 'md:pl-[92px]'} pl-6 transition-all duration-300 ease-in-out`}>
       {/* Search Input bar */}
       <div className="flex items-center gap-3 flex-1 max-w-md">
         {/* Mobile menu hamburger toggle button */}
@@ -402,14 +408,30 @@ export default function Navbar() {
             >
               <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-200 dark:border-white/10 flex items-center justify-between">
                 <span className="text-xs font-black text-slate-900 dark:text-white">Alerts Inbox</span>
-                {notifications.length > 0 && (
-                  <button 
-                    onClick={markAllAsRead}
-                    className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      const granted = await requestMobilePushPermission();
+                      if (granted) {
+                        alert("📱 Mobile System & Email Alerts Enabled!\nYou will receive real-time notifications on your phone & desktop.");
+                      } else {
+                        alert("Notification permission requested. Please enable notification permissions in your browser/phone settings.");
+                      }
+                    }}
+                    className="text-[10px] font-extrabold px-2 py-0.5 bg-blue-500/10 text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 rounded-md cursor-pointer transition-all flex items-center gap-1"
+                    title="Enable Mobile Phone & Browser Push Notifications"
                   >
-                    Clear All
+                    📱 Mobile Alerts
                   </button>
-                )}
+                  {notifications.length > 0 && (
+                    <button 
+                      onClick={markAllAsRead}
+                      className="text-[10px] font-extrabold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                </div>
               </div>
               <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 dark:divide-white/5">
                 {notifications.length === 0 ? (
