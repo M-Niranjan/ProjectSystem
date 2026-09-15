@@ -305,7 +305,7 @@ export default function Projects() {
                 key={project.id}
                 layout
                 onClick={() => setView('boards', project.id)}
-                className="glass-panel glass-panel-hover p-6 flex flex-col justify-between h-64 cursor-pointer relative"
+                className="glass-card-dashboard group glass-panel-hover p-6 flex flex-col justify-between h-64 cursor-pointer relative"
               >
                 {/* Color label tag indicator */}
                 <div
@@ -512,6 +512,7 @@ export default function Projects() {
                     >
                       <option className="dark:bg-slate-800" value="PLANNING">Planning</option>
                       <option className="dark:bg-slate-800" value="ACTIVE">Active</option>
+                      <option className="dark:bg-slate-800" value="ON_HOLD">On Hold</option>
                       <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
                       <option className="dark:bg-slate-800" value="ARCHIVED">Archived</option>
                     </select>

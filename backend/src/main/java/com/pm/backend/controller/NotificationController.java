@@ -9,6 +9,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import com.pm.backend.service.EmailService;
+
 import java.util.List;
 
 @RestController
@@ -17,10 +19,12 @@ public class NotificationController {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final EmailService emailService;
 
-    public NotificationController(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationController(NotificationRepository notificationRepository, UserRepository userRepository, EmailService emailService) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.emailService = emailService;
     }
 
     @GetMapping
@@ -60,5 +64,43 @@ public class NotificationController {
         }
         notificationRepository.saveAll(unread);
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping
+    public ResponseEntity<?> createNotification(@RequestBody java.util.Map<String, Object> payload,
+                                               @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        String title = (String) payload.getOrDefault("title", "Notification Alert");
+        String message = (String) payload.getOrDefault("message", "System update");
+        String type = (String) payload.getOrDefault("type", "SYSTEM_ALERT");
+        Object recipientIdObj = payload.get("recipientId");
+
+        List<User> recipients;
+        if (recipientIdObj != null && !"ALL".equals(String.valueOf(recipientIdObj))) {
+            try {
+                Long recipientId = Long.parseLong(String.valueOf(recipientIdObj));
+                recipients = userRepository.findById(recipientId).map(List::of).orElseGet(() -> userRepository.findAll());
+            } catch (Exception e) {
+                recipients = userRepository.findAll();
+            }
+        } else {
+            recipients = userRepository.findAll();
+        }
+
+        for (User recipient : recipients) {
+            Notification notification = Notification.builder()
+                    .title(title)
+                    .message(message)
+                    .type(type)
+                    .isRead(false)
+                    .recipient(recipient)
+                    .build();
+            notificationRepository.save(notification);
+
+            if (recipient.getEmail() != null && recipient.getEmail().contains("@")) {
+                emailService.sendEmailAlert(recipient.getEmail(), "[Project Workspace Alert] " + title, message);
+            }
+        }
+
+        return ResponseEntity.ok().body(java.util.Map.of("message", "Notifications dispatched to " + recipients.size() + " user(s)."));
     }
 }

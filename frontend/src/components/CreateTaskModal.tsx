@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckSquare, X, Plus, Sparkles, User, Folder, Clock } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
+import { dispatchNotificationAlert } from '../services/notificationService';
 
 export default function CreateTaskModal() {
   const { taskModalOpen, setTaskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask } = useUIStore();
@@ -15,13 +16,16 @@ export default function CreateTaskModal() {
   const [estimatedTime, setEstimatedTime] = useState(4.0);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(null);
   const [assigneeId, setAssigneeId] = useState<number | null>(null);
+  const [dependencyId, setDependencyId] = useState<number | null>(null);
+  const [allocationPercent, setAllocationPercent] = useState<number>(100);
 
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [usersList, setUsersList] = useState<any[]>([]);
+  const [existingTasks, setExistingTasks] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [aiAnalyzing, setAiAnalyzing] = useState(false);
 
-  // Load projects and members
+  // Load projects, members and tasks
   const loadFormData = async () => {
     try {
       const projRes = await api.get('/api/projects');
@@ -29,23 +33,20 @@ export default function CreateTaskModal() {
       setActiveProjectId(selectedProjectId || null);
 
       const userRes = await api.get('/api/teams');
-      setUsersList(userRes.data);
-      if (userRes.data.length > 0) {
-        setAssigneeId(userRes.data[0].id);
+      // System Administrator manages the portal only - filter out ROLE_ADMIN from task assignment dropdown
+      const assignableUsers = (userRes.data || []).filter((u: any) => u.role !== 'ROLE_ADMIN' && !u.role?.includes('ADMIN'));
+      setUsersList(assignableUsers);
+      if (assignableUsers.length > 0) {
+        setAssigneeId(assignableUsers[0].id);
       }
-    } catch (err) {
-      setProjectsList([
-        { id: 1, name: 'Prologue SaaS Dashboard' },
-        { id: 2, name: 'Workflow Suite Integration' }
-      ]);
-      setActiveProjectId(selectedProjectId || null);
 
-      setUsersList([
-        { id: 1, name: 'Alice Smith' },
-        { id: 2, name: 'Bob Johnson' },
-        { id: 3, name: 'Charlie Brown' }
-      ]);
-      setAssigneeId(1);
+      const tasksRes = await api.get('/api/tasks');
+      setExistingTasks(tasksRes.data || []);
+    } catch (err) {
+      setProjectsList([]);
+      setActiveProjectId(selectedProjectId || null);
+      setUsersList([]);
+      setAssigneeId(null);
     }
   };
 
@@ -61,6 +62,8 @@ export default function CreateTaskModal() {
         setDueDate(editingTask.dueDate);
         setAssigneeId(editingTask.assignee ? editingTask.assignee.id : null);
         setActiveProjectId(editingTask.project ? editingTask.project.id : null);
+        setDependencyId(editingTask.dependencyId || null);
+        setAllocationPercent(editingTask.allocationPercent || 100);
       } else {
         setTitle('');
         setDescription('');
@@ -69,6 +72,8 @@ export default function CreateTaskModal() {
         setEstimatedTime(4.0);
         setDueDate('2026-07-20');
         setAssigneeId(null);
+        setDependencyId(null);
+        setAllocationPercent(100);
       }
     }
   }, [taskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask]);
@@ -114,6 +119,8 @@ export default function CreateTaskModal() {
       dueDate,
       estimatedTime,
       actualTime: isTaskEditMode && editingTask ? editingTask.actualTime : 0.0,
+      dependencyId,
+      allocationPercent,
       project: { id: activeProjectId },
       assignee: assigneeId ? { id: assigneeId } : null
     };
@@ -121,14 +128,33 @@ export default function CreateTaskModal() {
     try {
       if (isTaskEditMode && editingTask) {
         await api.put(`/api/tasks/${editingTask.id}`, payload);
+        dispatchNotificationAlert({
+          title: 'Task Details Updated by Team Leader',
+          message: `Team Leader updated task "${title}".`,
+          type: 'TASK_UPDATED',
+          recipientId: 'ALL'
+        });
       } else {
         await api.post('/api/tasks', payload);
+        const assignedMember = usersList.find(u => u.id === assigneeId);
+        dispatchNotificationAlert({
+          title: 'New Task Assigned by Team Leader',
+          message: `Team Leader assigned task "${title}"${assignedMember ? ` to ${assignedMember.name}` : ''}.`,
+          type: 'TASK_ASSIGNED',
+          recipientId: 'ALL'
+        });
       }
       window.dispatchEvent(new Event('task-created'));
       setTaskModalOpen(false);
       resetForm();
     } catch (err) {
       console.error('Failed to save task, running simulated save.', err);
+      dispatchNotificationAlert({
+        title: 'Task Assigned by Team Leader',
+        message: `Team Leader created task "${title}".`,
+        type: 'TASK_ASSIGNED',
+        recipientId: 'ALL'
+      });
       window.dispatchEvent(new Event('task-created'));
       setTaskModalOpen(false);
       resetForm();
@@ -294,6 +320,41 @@ export default function CreateTaskModal() {
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
                     className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                  />
+                </div>
+              </div>
+
+              {/* PDF Spec Modules: Task Dependency Graph & Resource Capacity Allocation */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                    🔗 Precedent Dependency
+                  </label>
+                  <select
+                    value={dependencyId || ''}
+                    onChange={(e) => setDependencyId(e.target.value ? Number(e.target.value) : null)}
+                    className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
+                  >
+                    <option className="dark:bg-slate-800" value="">No Precedent Task</option>
+                    {existingTasks.filter(t => !editingTask || t.id !== editingTask.id).map(t => (
+                      <option className="dark:bg-slate-800" key={t.id} value={t.id}>{t.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                    ⚡ Resource Allocation %
+                  </label>
+                  <input
+                    type="number"
+                    min="10"
+                    max="200"
+                    step="10"
+                    value={allocationPercent}
+                    onChange={(e) => setAllocationPercent(Number(e.target.value))}
+                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    placeholder="e.g. 50% or 100%"
                   />
                 </div>
               </div>

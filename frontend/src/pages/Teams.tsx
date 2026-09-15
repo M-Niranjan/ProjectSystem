@@ -1,11 +1,12 @@
 import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, Pencil } from 'lucide-react';
+import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle } from 'lucide-react';
 import api from '../services/api';
+import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 
 interface TeamMember {
-  id: number;
+  id: number | string;
   name: string;
   email: string;
   role: string;
@@ -14,10 +15,13 @@ interface TeamMember {
   experience?: number;
   skills?: string;
   profilePhoto?: string;
+  capacityHours?: number; // Capacity per week (default 40h)
+  allocatedPercent?: number; // Calculated total workload %
 }
 
 export default function Teams() {
   const [members, setMembers] = useState<TeamMember[]>([]);
+  const [memberWorkloads, setMemberWorkloads] = useState<{ [key: string]: number }>({});
   const [isInviteOpen, setIsInviteOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
@@ -25,6 +29,8 @@ export default function Teams() {
   // Form states
   const [inviteEmail, setInviteEmail] = useState('');
   const [inviteName, setInviteName] = useState('');
+  const [invitePassword, setInvitePassword] = useState('');
+  const [showInvitePassword, setShowInvitePassword] = useState(false);
   const [inviteRole, setInviteRole] = useState('ROLE_EMPLOYEE');
   const [inviteDesignation, setInviteDesignation] = useState('');
   const [inviteDept, setInviteDept] = useState('Technology');
@@ -36,30 +42,52 @@ export default function Teams() {
   const [viewingMember, setViewingMember] = useState<TeamMember | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
 
-  // Camera settings
+  // Profile image camera state
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   // Default Mock Team
-  const mockTeam: TeamMember[] = [
-    { id: 999, name: 'Niranjan', email: 'niranjan@pm.com', role: 'ROLE_ADMIN', designation: 'Engineering', department: 'CSE', experience: 10, skills: 'java html css react git github sql etc' },
-    { id: 1001, name: 'Ramesh', email: 'ramesh@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Software Developer', department: 'Engineering', experience: 4, skills: 'Java, Spring Boot, React, SQL' },
-    { id: 1002, name: 'Rahul', email: 'rahul@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Frontend Engineer', department: 'Web Engineering', experience: 3, skills: 'React, HTML, CSS, JavaScript, Git' },
-    { id: 1003, name: 'Manju', email: 'manju@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Backend Engineer', department: 'Engineering', experience: 5, skills: 'Java, SQL, Spring Boot, GitHub' },
-    { id: 1004, name: 'Vinay', email: 'vinay@pm.com', role: 'ROLE_EMPLOYEE', designation: 'QA Engineer', department: 'Quality Assurance', experience: 3, skills: 'Testing, Automation, Java, Git' }
-  ];
+  const mockTeam: TeamMember[] = [];
 
   const fetchMembers = async () => {
+    let teamList: any[] = [];
     try {
       const res = await api.get('/api/teams');
-      if (res.data && res.data.length > 0) {
-        setMembers(res.data);
-      } else {
-        setMembers(mockTeam);
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        teamList = res.data;
       }
     } catch (err) {
-      setMembers(mockTeam);
+      console.warn('Backend get teams failed in Teams.tsx, trying Cloud Firestore direct:', err);
+    }
+
+    if (teamList.length === 0) {
+      teamList = await fetchAllFirestoreUserDocs();
+    }
+
+    setMembers(teamList);
+
+    // Compute total task allocation % for each team member
+    try {
+      const tasksRes = await api.get('/api/tasks');
+      const allTasks = tasksRes.data || [];
+      const workloads: { [key: string]: number } = {};
+
+      teamList.forEach((m: any) => {
+        let totalAlloc = 0;
+        allTasks.forEach((t: any) => {
+          if (t.assignee && (t.assignee.id === m.id || t.assignee.uid === m.uid || t.assignee.name === m.name)) {
+            if (t.status !== 'COMPLETED') {
+              totalAlloc += (t.allocationPercent || 50);
+            }
+          }
+        });
+        workloads[m.id || m.uid] = totalAlloc;
+      });
+
+      setMemberWorkloads(workloads);
+    } catch (err) {
+      setMemberWorkloads({});
     }
   };
 
@@ -73,6 +101,8 @@ export default function Teams() {
     setEditingMember(member);
     setInviteName(member.name);
     setInviteEmail(member.email);
+    setInvitePassword('');
+    setShowInvitePassword(false);
     setInviteRole(member.role);
     setInviteDesignation(member.designation || '');
     setInviteDept(member.department || 'Technology');
@@ -87,6 +117,8 @@ export default function Teams() {
     setEditingMember(null);
     setInviteName('');
     setInviteEmail('');
+    setInvitePassword('');
+    setShowInvitePassword(false);
     setInviteRole('ROLE_EMPLOYEE');
     setInviteDesignation('');
     setInviteDept('Technology');
@@ -153,16 +185,25 @@ export default function Teams() {
     setIsCameraActive(false);
   };
 
+  const [modalError, setModalError] = useState<string | null>(null);
+
   const closeInviteModal = () => {
     stopCamera();
+    setModalError(null);
     setIsInviteOpen(false);
   };
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim() || !inviteName.trim()) return;
+    setModalError(null);
 
-    const payload = {
+    if (!inviteEmail.trim() || !inviteName.trim()) return;
+    if (!isEditMode && (!invitePassword || invitePassword.length < 6)) {
+      setModalError('Password must be at least 6 characters long!');
+      return;
+    }
+
+    const payload: any = {
       name: inviteName,
       email: inviteEmail,
       role: inviteRole,
@@ -172,33 +213,41 @@ export default function Teams() {
       skills: inviteSkills,
       profilePhoto: profilePhoto || undefined
     };
-
-    if (isEditMode && editingMember) {
-      try {
-        const res = await api.put(`/api/teams/${editingMember.id}`, {
-          ...editingMember,
-          ...payload
-        });
-        setMembers(members.map(m => m.id === editingMember.id ? res.data : m));
-      } catch (err) {
-        // Offline update
-        setMembers(members.map(m => m.id === editingMember.id ? { ...m, ...payload } : m));
-      }
-    } else {
-      try {
-        const res = await api.post('/api/teams', payload);
-        setMembers([...members, res.data]);
-      } catch (err) {
-        // Offline update
-        const newMember: TeamMember = {
-          id: Date.now(),
-          ...payload
-        };
-        setMembers([...members, newMember]);
-      }
+    if (invitePassword.trim()) {
+      payload.password = invitePassword.trim();
     }
 
+    if (isEditMode && editingMember) {
+      const docId = String((editingMember as any).uid || editingMember.id);
+      try {
+        await api.put(`/api/teams/${docId}`, payload);
+      } catch (err) {}
+      await upsertFirestoreUserDoc(docId, payload);
+    } else {
+      try {
+        const canonicalRole = inviteRole === 'ROLE_ADMIN' ? 'admin' : (inviteRole === 'ROLE_MANAGER' ? 'teamLeader' : 'employee');
+        const endpoint = (inviteRole === 'ROLE_MANAGER' || inviteRole === 'teamLeader')
+          ? '/api/users/team-leaders'
+          : '/api/users/employees';
+        const res = await api.post(endpoint, payload);
+        const createdUid = res.data?.uid || res.data?.id;
+        if (createdUid) {
+          await upsertFirestoreUserDoc(createdUid, {
+            ...payload,
+            uid: createdUid,
+            role: canonicalRole,
+            roleCode: inviteRole,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      } catch (err: any) {
+        const errorMsg = err.response?.data?.message || err.message || 'Account provisioning failed.';
+        setModalError(errorMsg);
+        return;
+      }
+    }
     closeInviteModal();
+    await fetchMembers();
   };
 
   return (
@@ -263,6 +312,38 @@ export default function Teams() {
             </div>
 
             <div className="space-y-3 border-t border-slate-200/30 dark:border-white/5 pt-4">
+              {/* PDF Spec: Resource Capacity & Workload Allocation Bar */}
+              {(() => {
+                const workloadPercent = memberWorkloads[member.id] || 0;
+                const isOverallocated = workloadPercent > 100;
+                const capacityHours = Math.round((workloadPercent / 100) * 40);
+
+                return (
+                  <div className="space-y-1 bg-white/5 p-2.5 rounded-xl border border-slate-200/40 dark:border-white/5">
+                    <div className="flex justify-between items-center text-[10px] font-black">
+                      <span className="text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                        ⚡ Workload Allocation
+                      </span>
+                      <span className={isOverallocated ? 'text-red-500 font-extrabold animate-pulse' : 'text-slate-700 dark:text-slate-200'}>
+                        {workloadPercent}% {isOverallocated ? '⚠️ Overbooked' : `(${capacityHours}h/40h)`}
+                      </span>
+                    </div>
+                    <div className="w-full bg-slate-200/40 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all duration-500 ${
+                          isOverallocated
+                            ? 'bg-gradient-to-r from-amber-500 to-red-500 shadow-md shadow-red-500/30'
+                            : workloadPercent > 70
+                            ? 'bg-gradient-to-r from-blue-500 to-amber-500'
+                            : 'bg-gradient-to-r from-blue-600 to-indigo-600'
+                        }`}
+                        style={{ width: `${Math.min(100, workloadPercent)}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                );
+              })()}
+
               <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
                 <span className="flex items-center gap-1.5 truncate pr-2">
                   <Mail className="w-3.5 h-3.5" /> {member.email}
@@ -308,6 +389,12 @@ export default function Teams() {
               </h2>
 
               <form onSubmit={handleInvite} className="space-y-4">
+                {modalError && (
+                  <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                    <span>{modalError}</span>
+                  </div>
+                )}
                 {/* Profile Photo selector & Camera capture */}
                 <div className="flex flex-col items-center space-y-3 p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl">
                   <div className="relative">
@@ -403,6 +490,31 @@ export default function Teams() {
                     onChange={(e) => setInviteEmail(e.target.value)}
                     className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
                   />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                    Password {isEditMode ? '(Leave blank to keep current)' : ''}
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showInvitePassword ? 'text' : 'password'}
+                      required={!isEditMode}
+                      minLength={6}
+                      placeholder={isEditMode ? '•••••••• (unchanged)' : 'Enter initial account password'}
+                      value={invitePassword}
+                      onChange={(e) => setInvitePassword(e.target.value)}
+                      className="w-full pl-4 pr-10 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowInvitePassword(!showInvitePassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                      title={showInvitePassword ? "Hide password" : "Show password"}
+                    >
+                      {showInvitePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">

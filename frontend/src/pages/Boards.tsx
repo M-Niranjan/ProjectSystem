@@ -95,24 +95,18 @@ export default function Boards() {
         setActiveProjectId(res.data[0].id);
       }
     } catch (err) {
-      setProjectsList([
-        { id: 1, name: 'Prologue SaaS Dashboard' },
-        { id: 2, name: 'Workflow Suite Integration' }
-      ]);
-      if (!activeProjectId) setActiveProjectId(1);
+      setProjectsList([]);
     }
   };
 
   const fetchUsers = async () => {
     try {
       const res = await api.get('/api/teams');
-      setUsersList(res.data);
+      // System Administrator manages the portal only - filter out ROLE_ADMIN from reviewer/assignee list
+      const assignableUsers = (res.data || []).filter((u: any) => u.role !== 'ROLE_ADMIN' && !u.role?.includes('ADMIN'));
+      setUsersList(assignableUsers);
     } catch (err) {
-      setUsersList([
-        { id: 1, name: 'Alice Smith' },
-        { id: 2, name: 'Bob Johnson' },
-        { id: 3, name: 'Charlie Brown' }
-      ]);
+      setUsersList([]);
     }
   };
 
@@ -157,6 +151,14 @@ export default function Boards() {
 
     const diff = targetIdx - currentIdx;
     
+    // Enforce strict lock: Employees cannot transition tasks to COMPLETED. Only Team Leaders can approve.
+    if (targetStatus === 'COMPLETED' && user?.role === 'ROLE_EMPLOYEE') {
+      return {
+        valid: false,
+        error: '🔒 Access Denied: Employees cannot mark tasks as COMPLETED. Please submit your task for REVIEW so your Team Leader can inspect and sign off.'
+      };
+    }
+
     // Enforce step-by-step sequential progression
     if (Math.abs(diff) !== 1) {
       return { valid: false, error: 'Workflow progression must be step-by-step. You cannot skip stages.' };
@@ -488,8 +490,15 @@ export default function Boards() {
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
         <div className="flex-1 overflow-x-auto pb-4 flex gap-6 items-start h-full mt-4 min-h-0">
           {COLUMNS.map(col => {
+            const isEmployeeRole = user?.role === 'ROLE_EMPLOYEE';
             const colTasks = tasks.filter(t => {
-              if (showMyTasksOnly && t.assignee?.id !== user?.id) return false;
+              const isMyTask = t.assignee && (t.assignee.id === user?.id || t.assignee.name === user?.name);
+              // Employees strictly see ONLY their own assigned tasks. Team leaders see ALL team tasks.
+              if (isEmployeeRole) {
+                if (!isMyTask) return false;
+              } else if (showMyTasksOnly && !isMyTask) {
+                return false;
+              }
               if (!t.title.toLowerCase().includes(searchQuery.toLowerCase())) return false;
               const taskStatus = t.status ? t.status.toUpperCase() : '';
               if (col.id === 'TO_DO') {

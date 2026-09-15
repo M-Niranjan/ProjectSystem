@@ -1,50 +1,41 @@
 import axios from 'axios';
 
 // Force-clear stale mock data when the mock version changes
-const MOCK_VERSION = 'v7-fixed-dm-unread-badge';
+const MOCK_VERSION = 'v12-completely-clean-no-default-users';
 if (localStorage.getItem('mock_version') !== MOCK_VERSION) {
-  ['mock_projects', 'mock_tasks', 'mock_teammates', 'mock_messages', 'mock_notifications', 'mock_user'].forEach(k => localStorage.removeItem(k));
+  ['mock_projects', 'mock_tasks', 'mock_teammates', 'mock_messages', 'mock_notifications', 'mock_user', 'mock_audit_logs', 'mock_roles_permissions', 'mock_users_db'].forEach(k => localStorage.removeItem(k));
   localStorage.setItem('mock_version', MOCK_VERSION);
 }
 
 // Initialize mock database in localStorage to persist user actions on page refreshes
 const initMocks = () => {
   if (!localStorage.getItem('mock_projects')) {
-    localStorage.setItem('mock_projects', JSON.stringify([
-      { id: 1, name: 'Prologue SaaS Dashboard', title: 'Prologue SaaS Dashboard', description: 'Next-gen enterprise workspace platform', status: 'ACTIVE' },
-      { id: 2, name: 'Workflow Integration Suite', title: 'Workflow Integration Suite', description: 'Continuous sync engine', status: 'ACTIVE' },
-      { id: 3, name: 'Brand Design System', title: 'Brand Design System', description: 'Modern UI design tokens', status: 'COMPLETED' }
-    ]));
+    localStorage.setItem('mock_projects', JSON.stringify([]));
   }
   if (!localStorage.getItem('mock_tasks')) {
-    localStorage.setItem('mock_tasks', JSON.stringify([
-      { id: 101, title: 'Design Figma Wireframes', description: 'Create modern UI designs', status: 'COMPLETED', priority: 'HIGH', dueDate: '2026-07-20', estimatedTime: 8, project: { id: 1, name: 'Prologue SaaS Dashboard', title: 'Prologue SaaS Dashboard' }, assignee: { id: 999, name: 'Niranjan', role: 'ROLE_ADMIN' } },
-      { id: 102, title: 'Setup Spring Boot Security', description: 'Configure JWT filters', status: 'ACCEPTED', acceptedAt: new Date(Date.now() - 3600000).toISOString(), priority: 'CRITICAL', dueDate: '2026-07-22', estimatedTime: 12, project: { id: 1, name: 'Prologue SaaS Dashboard', title: 'Prologue SaaS Dashboard' }, assignee: { id: 1001, name: 'Ramesh', role: 'ROLE_EMPLOYEE' } },
-      { id: 103, title: 'Write Unit Tests', description: 'Increase coverage to 80%', status: 'PENDING_ACCEPTANCE', priority: 'MEDIUM', dueDate: '2026-07-25', estimatedTime: 6, project: { id: 2, name: 'Workflow Integration Suite', title: 'Workflow Integration Suite' }, assignee: { id: 1002, name: 'Rahul', role: 'ROLE_EMPLOYEE' } },
-      { id: 104, title: 'Optimize Database Queries', description: 'Fix slow joins and add indexes', status: 'BACKLOG', declineReason: 'Manju: Heavy workload in current sprint', priority: 'HIGH', dueDate: '2026-07-28', estimatedTime: 8, project: { id: 2, name: 'Workflow Integration Suite', title: 'Workflow Integration Suite' }, assignee: null },
-      { id: 105, title: 'Automate E2E Regression Suite', description: 'Build Playwright integration test suite', status: 'ACCEPTED', acceptedAt: new Date(Date.now() - 7200000).toISOString(), priority: 'MEDIUM', dueDate: '2026-07-26', estimatedTime: 10, project: { id: 1, name: 'Prologue SaaS Dashboard', title: 'Prologue SaaS Dashboard' }, assignee: { id: 1004, name: 'Vinay', role: 'ROLE_EMPLOYEE' } }
-    ]));
+    localStorage.setItem('mock_tasks', JSON.stringify([]));
   }
   if (!localStorage.getItem('mock_teammates')) {
-    localStorage.setItem('mock_teammates', JSON.stringify([
-      { id: 999, name: 'Niranjan', email: 'niranjan@pm.com', role: 'ROLE_ADMIN', designation: 'Engineering', department: 'CSE', experience: 10, skills: 'java html css react git github sql etc' },
-      { id: 1001, name: 'Ramesh', email: 'ramesh@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Software Developer', department: 'Engineering', experience: 4, skills: 'Java, Spring Boot, React, SQL' },
-      { id: 1002, name: 'Rahul', email: 'rahul@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Frontend Engineer', department: 'Web Engineering', experience: 3, skills: 'React, HTML, CSS, JavaScript, Git' },
-      { id: 1003, name: 'Manju', email: 'manju@pm.com', role: 'ROLE_EMPLOYEE', designation: 'Backend Engineer', department: 'Engineering', experience: 5, skills: 'Java, SQL, Spring Boot, GitHub' },
-      { id: 1004, name: 'Vinay', email: 'vinay@pm.com', role: 'ROLE_EMPLOYEE', designation: 'QA Engineer', department: 'Quality Assurance', experience: 3, skills: 'Testing, Automation, Java, Git' }
+    localStorage.setItem('mock_teammates', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('mock_audit_logs')) {
+    localStorage.setItem('mock_audit_logs', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('mock_roles_permissions')) {
+    localStorage.setItem('mock_roles_permissions', JSON.stringify([
+      { role: 'Admin', code: 'ROLE_ADMIN', dashboard: true, userMgmt: true, roleMgmt: true, teamMgmt: true, orgSettings: true, auditLogs: true, projects: true, tasks: true },
+      { role: 'Team Lead', code: 'ROLE_MANAGER', dashboard: true, userMgmt: false, roleMgmt: false, teamMgmt: true, orgSettings: false, auditLogs: false, projects: true, tasks: true },
+      { role: 'Employee', code: 'ROLE_EMPLOYEE', dashboard: true, userMgmt: false, roleMgmt: false, teamMgmt: false, orgSettings: false, auditLogs: false, projects: false, tasks: true }
     ]));
   }
   if (!localStorage.getItem('mock_messages')) {
-    localStorage.setItem('mock_messages', JSON.stringify([
-      { id: 1, content: 'Hello team, let us launch the project dashboard by Monday!', sender: { id: 1001, name: 'Ramesh' }, createdAt: new Date(Date.now() - 3600000).toISOString(), project: { id: 1 } },
-      { id: 2, content: 'Sure, wireframes are fully designed.', sender: { id: 999, name: 'Niranjan' }, createdAt: new Date(Date.now() - 1800000).toISOString(), project: { id: 1 } },
-      { id: 3, content: 'Hey Ramesh, do you need help with the API config?', sender: { id: 999, name: 'Niranjan' }, recipient: { id: 1001 }, isRead: true, createdAt: new Date(Date.now() - 100000).toISOString() }
-    ]));
+    localStorage.setItem('mock_messages', JSON.stringify([]));
+  }
+  if (!localStorage.getItem('mock_users_db')) {
+    localStorage.setItem('mock_users_db', JSON.stringify([]));
   }
   if (!localStorage.getItem('mock_notifications')) {
-    localStorage.setItem('mock_notifications', JSON.stringify([
-      { id: 1, title: 'Task Assigned', message: 'You have been assigned: Write Unit Tests', type: 'TASK_ASSIGNED', isRead: false, createdAt: new Date().toISOString() }
-    ]));
+    localStorage.setItem('mock_notifications', JSON.stringify([]));
   }
 };
 
@@ -71,102 +62,94 @@ const mockAdapter = async (config: any) => {
   // Emulated REST Controller mappings
   if (url.includes('/api/auth/me')) {
     const storedUser = localStorage.getItem('mock_user');
-    resData = storedUser ? JSON.parse(storedUser) : {
-      id: 999,
-      name: 'Niranjan',
-      email: 'niranjan@pm.com',
-      role: 'ROLE_ADMIN',
-      designation: 'Engineering',
-      department: 'CSE',
-      experience: 10,
-      skills: 'java html css react git github sql etc',
-      createdAt: new Date().toISOString()
-    };
+    resData = storedUser ? JSON.parse(storedUser) : null;
   } else if (url.includes('/api/auth/login') || url.includes('/api/auth/register')) {
-    let role: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE' = 'ROLE_ADMIN';
-    let name = 'Niranjan';
-    let designation = 'Engineering';
-    let department = 'CSE';
-    let experience = 10;
-    let skills = 'java html css react git github sql etc';
-    let userId = 999;
-    const loginEmail = data?.email || 'niranjan@pm.com';
+    const inputEmail = (data?.email || '').trim().toLowerCase();
+    const inputPassword = (data?.password || '').trim();
 
-    if (loginEmail === 'ramesh@pm.com' || loginEmail === 'ms.user@pm.com') {
-      userId = 1001;
-      role = 'ROLE_EMPLOYEE';
-      name = 'Ramesh';
-      designation = 'Software Developer';
-      department = 'Engineering';
-      experience = 4;
-      skills = 'Java, Spring Boot, React, SQL';
-    } else if (loginEmail === 'rahul@pm.com') {
-      userId = 1002;
-      role = 'ROLE_EMPLOYEE';
-      name = 'Rahul';
-      designation = 'Frontend Engineer';
-      department = 'Web Engineering';
-      experience = 3;
-      skills = 'React, HTML, CSS, JavaScript, Git';
-    } else if (loginEmail === 'manju@pm.com') {
-      userId = 1003;
-      role = 'ROLE_EMPLOYEE';
-      name = 'Manju';
-      designation = 'Backend Engineer';
-      department = 'Engineering';
-      experience = 5;
-      skills = 'Java, SQL, Spring Boot, GitHub';
-    } else if (loginEmail === 'vinay@pm.com') {
-      userId = 1004;
-      role = 'ROLE_EMPLOYEE';
-      name = 'Vinay';
-      designation = 'QA Engineer';
-      department = 'Quality Assurance';
-      experience = 3;
-      skills = 'Testing, Automation, Java, Git';
-    } else if (loginEmail === 'google.user@pm.com' || loginEmail === 'demo@pm.com' || loginEmail === 'niranjan@pm.com') {
-      userId = 999;
-      role = 'ROLE_ADMIN';
-      name = 'Niranjan';
-      designation = 'Engineering';
-      department = 'CSE';
-      experience = 10;
-      skills = 'java html css react git github sql etc';
+    const usersDb = JSON.parse(localStorage.getItem('mock_users_db') || '[]');
+    let matchedUser = usersDb.find((u: any) => u.email.trim().toLowerCase() === inputEmail);
+
+    if (!matchedUser) {
+      const storedUserStr = localStorage.getItem('mock_user');
+      if (storedUserStr) {
+        const storedUser = JSON.parse(storedUserStr);
+        if (storedUser.email?.trim().toLowerCase() === inputEmail) {
+          matchedUser = storedUser;
+        }
+      }
     }
 
-    const mockUser = {
-      id: userId,
-      name: data?.name || name,
-      email: loginEmail,
-      role: data?.role || role,
-      designation: data?.designation || designation,
-      department: data?.department || department,
-      experience: data?.experience || experience,
-      skills: data?.skills || skills,
-      createdAt: new Date().toISOString()
-    };
-    localStorage.setItem('mock_user', JSON.stringify(mockUser));
+    if (matchedUser) {
+      if (matchedUser.password && inputPassword && matchedUser.password !== inputPassword) {
+        throw {
+          response: {
+            status: 400,
+            data: 'Invalid email or password! Please enter your updated credentials.'
+          }
+        };
+      }
 
-    // Dynamically register user in teammates list so they appear as chat contacts
-    const teammates = JSON.parse(localStorage.getItem('mock_teammates') || '[]');
-    if (!teammates.some((t: any) => t.id === userId)) {
-      teammates.push({
-        id: mockUser.id,
-        name: mockUser.name,
-        email: mockUser.email,
-        role: mockUser.role,
-        designation: mockUser.designation,
-        department: mockUser.department,
-        experience: mockUser.experience,
-        skills: mockUser.skills
-      });
-      localStorage.setItem('mock_teammates', JSON.stringify(teammates));
+      localStorage.setItem('mock_user', JSON.stringify(matchedUser));
+      resData = {
+        accessToken: 'mock-jwt-token-prologue',
+        user: matchedUser
+      };
+    } else {
+      const role = data?.role as 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE' | undefined;
+      if (!role) {
+        throw {
+          response: {
+            status: 400,
+            data: 'Invalid user role. Please contact your administrator.'
+          }
+        };
+      }
+      let name = data?.name || inputEmail.split('@')[0] || 'User';
+      let designation = data?.designation || (role === 'ROLE_ADMIN' ? 'System Administrator' : 'Software Engineer');
+      let department = data?.department || 'Engineering';
+      let experience = data?.experience || 1;
+      let skills = data?.skills || '';
+      let userId = Date.now();
+
+      const mockUser = {
+        id: userId,
+        name,
+        email: data?.email || inputEmail,
+        password: inputPassword || 'password123',
+        role,
+        designation,
+        department,
+        experience,
+        skills,
+        createdAt: new Date().toISOString()
+      };
+
+      usersDb.push(mockUser);
+      localStorage.setItem('mock_users_db', JSON.stringify(usersDb));
+      localStorage.setItem('mock_user', JSON.stringify(mockUser));
+
+      // Dynamically register user in teammates list so they appear as chat contacts
+      const teammates = JSON.parse(localStorage.getItem('mock_teammates') || '[]');
+      if (!teammates.some((t: any) => t.id === userId)) {
+        teammates.push({
+          id: mockUser.id,
+          name: mockUser.name,
+          email: mockUser.email,
+          role: mockUser.role,
+          designation: mockUser.designation,
+          department: mockUser.department,
+          experience: mockUser.experience,
+          skills: mockUser.skills
+        });
+        localStorage.setItem('mock_teammates', JSON.stringify(teammates));
+      }
+
+      resData = {
+        accessToken: 'mock-jwt-token-prologue',
+        user: mockUser
+      };
     }
-
-    resData = {
-      accessToken: 'mock-jwt-token-prologue',
-      user: mockUser
-    };
   } else if (url.includes('/api/reports/analytics')) {
     const t = getTasks();
     const p = getProjects();
@@ -219,15 +202,42 @@ const mockAdapter = async (config: any) => {
     resData = [
       { id: 1, name: 'architecture_diagram.png', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80', size: '1.2 MB' }
     ];
+  } else if (url.includes('/api/tasks/project/')) {
+    const match = url.match(/\/api\/tasks\/project\/(\d+)/);
+    const projId = match ? parseInt(match[1]) : 0;
+    const allT = getTasks();
+    resData = allT.filter((t: any) => t.project && (t.project.id === projId || t.project.id === Number(projId)));
+  } else if (url.match(/\/api\/tasks\/(\d+)/)) {
+    const match = url.match(/\/api\/tasks\/(\d+)/);
+    const taskId = match ? parseInt(match[1]) : 0;
+    const allT = getTasks();
+    
+    if (method === 'put') {
+      const index = allT.findIndex((t: any) => t.id === taskId);
+      if (index !== -1) {
+        allT[index] = { ...allT[index], ...data, id: taskId };
+        setTasks(allT);
+        resData = allT[index];
+      } else {
+        resData = { id: taskId, ...data };
+      }
+    } else if (method === 'delete') {
+      const filtered = allT.filter((t: any) => t.id !== taskId);
+      setTasks(filtered);
+      resData = { success: true };
+    } else {
+      const found = allT.find((t: any) => t.id === taskId);
+      resData = found || (allT.length > 0 ? allT[0] : { id: taskId, title: 'Task' });
+    }
   } else if (url.includes('/api/tasks')) {
     if (method === 'post') {
       const t = getTasks();
-      const resolvedAssignee = data.assignee ? data.assignee : (data.assigneeId ? { id: data.assigneeId, name: 'Assigned Member' } : null);
+      const resolvedAssignee = data.assignee ? data.assignee : (data.assigneeId ? { id: Number(data.assigneeId), name: 'Assigned Member' } : null);
 
       const newT = {
         id: Date.now(),
-        title: data.title,
-        description: data.description,
+        title: data.title || 'New Task',
+        description: data.description || '',
         status: data.status || (resolvedAssignee ? 'PENDING_ACCEPTANCE' : 'BACKLOG'),
         priority: data.priority || 'MEDIUM',
         dueDate: data.dueDate || new Date().toISOString().split('T')[0],
@@ -244,17 +254,51 @@ const mockAdapter = async (config: any) => {
     } else {
       resData = getTasks();
     }
+  } else if (url.includes('/api/projects/') && url.includes('/favorite')) {
+    const match = url.match(/\/api\/projects\/(\d+)\/favorite/);
+    const projId = match ? parseInt(match[1]) : 0;
+    const allP = getProjects();
+    const index = allP.findIndex((p: any) => p.id === projId);
+    if (index !== -1) {
+      allP[index].isFavorite = !allP[index].isFavorite;
+      setProjects(allP);
+      resData = allP[index];
+    } else {
+      resData = { id: projId, isFavorite: true };
+    }
+  } else if (url.match(/\/api\/projects\/(\d+)/)) {
+    const match = url.match(/\/api\/projects\/(\d+)/);
+    const projId = match ? parseInt(match[1]) : 0;
+    const allP = getProjects();
+
+    if (method === 'put') {
+      const index = allP.findIndex((p: any) => p.id === projId);
+      if (index !== -1) {
+        allP[index] = { ...allP[index], ...data, id: projId };
+        setProjects(allP);
+        resData = allP[index];
+      } else {
+        resData = { id: projId, ...data };
+      }
+    } else if (method === 'delete') {
+      const filtered = allP.filter((p: any) => p.id !== projId);
+      setProjects(filtered);
+      resData = { success: true };
+    } else {
+      const found = allP.find((p: any) => p.id === projId);
+      resData = found || (allP.length > 0 ? allP[0] : { id: projId, name: 'Project' });
+    }
   } else if (url.includes('/api/projects')) {
     if (method === 'post') {
       const p = getProjects();
-      const newProj = { id: Date.now(), ...data, status: 'ACTIVE' };
+      const newProj = { id: Date.now(), title: data.name || data.title, ...data, status: data.status || 'ACTIVE' };
       p.push(newProj);
       setProjects(p);
       resData = newProj;
     } else {
       resData = getProjects();
     }
-  } else if (url.includes('/api/teams')) {
+  } else if (url.includes('/api/teams') || url.includes('/api/admin/create-team-leader') || url.includes('/api/admin/create-employee')) {
     if (method === 'post') {
       const teammates = getTeammates();
       const newTeammate = {
@@ -268,6 +312,19 @@ const mockAdapter = async (config: any) => {
       };
       teammates.push(newTeammate);
       localStorage.setItem('mock_teammates', JSON.stringify(teammates));
+
+      const auditLogs = JSON.parse(localStorage.getItem('mock_audit_logs') || '[]');
+      auditLogs.unshift({
+        id: Date.now(),
+        user: 'Niranjan (Admin)',
+        action: (data.role === 'ROLE_MANAGER' || data.role === 'teamLeader') ? 'TEAM_LEAD_CREATE' : 'EMPLOYEE_CREATE',
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().split(' ')[0],
+        activity: `Provisioned user ${newTeammate.name} (${newTeammate.email}) as ${data.role === 'ROLE_MANAGER' || data.role === 'teamLeader' ? 'Team Lead' : 'Employee'}`,
+        status: 'SUCCESS'
+      });
+      localStorage.setItem('mock_audit_logs', JSON.stringify(auditLogs));
+
       resData = newTeammate;
     } else if (method === 'put') {
       const match = url.match(/\/api\/teams\/(\d+)/);
@@ -281,6 +338,16 @@ const mockAdapter = async (config: any) => {
       } else {
         resData = {};
       }
+    } else if (method === 'delete') {
+      const match = url.match(/\/api\/teams\/(\d+)/);
+      const id = match ? parseInt(match[1]) : 0;
+      const teammates = getTeammates().filter((x: any) => x.id !== id);
+      localStorage.setItem('mock_teammates', JSON.stringify(teammates));
+
+      const usersDb = JSON.parse(localStorage.getItem('mock_users_db') || '[]').filter((x: any) => x.id !== id);
+      localStorage.setItem('mock_users_db', JSON.stringify(usersDb));
+
+      resData = { success: true };
     } else {
       resData = getTeammates();
     }
@@ -356,15 +423,111 @@ const mockAdapter = async (config: any) => {
     setNotifications(updated);
     resData = { success: true };
   } else if (url.includes('/api/notifications/unread')) {
-    // Only return unread notifications
-    resData = getNotifications().filter((n: any) => !n.isRead);
+    const storedUser = localStorage.getItem('mock_user');
+    const currentUser = storedUser ? JSON.parse(storedUser) : { id: 999 };
+    const currentUserId = currentUser.id || 999;
+    const currentUserName = (currentUser.name || '').toLowerCase();
+
+    const notifications = getNotifications();
+    resData = notifications.filter((n: any) => {
+      if (n.isRead) return false;
+      if (n.recipientId && n.recipientId !== 'ALL' && String(n.recipientId) !== String(currentUserId)) {
+        return false;
+      }
+      if (n.recipientName && n.recipientName !== 'ALL' && String(n.recipientName).toLowerCase() !== currentUserName) {
+        return false;
+      }
+      return true;
+    });
   } else if (url.includes('/api/notifications')) {
-    resData = getNotifications();
+    if (method === 'post') {
+      const notifications = getNotifications();
+      const newNotification = {
+        id: Date.now() + Math.floor(Math.random() * 1000),
+        title: data?.title || 'Team Leader Update',
+        message: data?.message || 'Team Leader made changes in the workspace.',
+        type: data?.type || 'SYSTEM_ALERT',
+        isRead: false,
+        recipientId: data?.recipientId || 'ALL',
+        recipientName: data?.recipientName || 'ALL',
+        createdAt: new Date().toISOString(),
+      };
+      notifications.unshift(newNotification);
+      setNotifications(notifications);
+      resData = newNotification;
+    } else {
+      resData = getNotifications();
+    }
   } else if (url.includes('/api/users/profile')) {
-    resData = {
-      id: 999,
+    const storedUserStr = localStorage.getItem('mock_user');
+    const currentUser = storedUserStr ? JSON.parse(storedUserStr) : { id: 999, email: 'niranjan@pm.com', role: 'ROLE_ADMIN' };
+    
+    const usersDb = JSON.parse(localStorage.getItem('mock_users_db') || '[]');
+    let userIndex = usersDb.findIndex((u: any) => u.id === currentUser.id || u.email?.toLowerCase() === currentUser.email?.toLowerCase());
+
+    const updatedUserObj = {
+      ...currentUser,
       ...data,
-      role: 'ROLE_ADMIN'
+      id: currentUser.id || 999,
+      role: currentUser.role || 'ROLE_ADMIN'
+    };
+
+    if (data?.password && data.password.trim()) {
+      updatedUserObj.password = data.password.trim();
+    }
+
+    if (userIndex !== -1) {
+      usersDb[userIndex] = { ...usersDb[userIndex], ...updatedUserObj };
+    } else {
+      usersDb.push(updatedUserObj);
+    }
+
+    localStorage.setItem('mock_users_db', JSON.stringify(usersDb));
+    localStorage.setItem('mock_user', JSON.stringify(updatedUserObj));
+
+    // Also update mock_teammates list so chat contacts and assignee lists reflect new email & name
+    const teammates = JSON.parse(localStorage.getItem('mock_teammates') || '[]');
+    const tIndex = teammates.findIndex((t: any) => t.id === updatedUserObj.id || t.email?.toLowerCase() === currentUser.email?.toLowerCase());
+    if (tIndex !== -1) {
+      teammates[tIndex] = {
+        ...teammates[tIndex],
+        name: updatedUserObj.name || teammates[tIndex].name,
+        email: updatedUserObj.email || teammates[tIndex].email,
+        designation: updatedUserObj.designation || teammates[tIndex].designation,
+        department: updatedUserObj.department || teammates[tIndex].department,
+      };
+      localStorage.setItem('mock_teammates', JSON.stringify(teammates));
+    }
+
+    resData = updatedUserObj;
+  } else if (url.includes('/api/admin/roles')) {
+    const storedRoles = localStorage.getItem('mock_roles_permissions');
+    const defaultRoles = [
+      { role: 'Admin', code: 'ROLE_ADMIN', dashboard: true, userMgmt: true, roleMgmt: true, teamMgmt: true, orgSettings: true, auditLogs: true, projects: true, tasks: true },
+      { role: 'Team Lead', code: 'ROLE_MANAGER', dashboard: true, userMgmt: false, roleMgmt: false, teamMgmt: true, orgSettings: false, auditLogs: false, projects: true, tasks: true },
+      { role: 'Employee', code: 'ROLE_EMPLOYEE', dashboard: true, userMgmt: false, roleMgmt: false, teamMgmt: false, orgSettings: false, auditLogs: false, projects: false, tasks: true }
+    ];
+    if (method === 'put' || method === 'post') {
+      localStorage.setItem('mock_roles_permissions', JSON.stringify(data || defaultRoles));
+      resData = data || defaultRoles;
+    } else {
+      resData = storedRoles ? JSON.parse(storedRoles) : defaultRoles;
+    }
+  } else if (url.includes('/api/admin/audit-logs')) {
+    const storedLogs = localStorage.getItem('mock_audit_logs');
+    const defaultLogs = [
+      { id: 1, user: 'Niranjan (Admin)', action: 'LOGIN', date: '2026-08-25', time: '01:15:20', activity: 'Admin logged into Prologue Workspace', status: 'SUCCESS' },
+      { id: 2, user: 'Niranjan (Admin)', action: 'ROLE_UPDATE', date: '2026-08-24', time: '18:40:12', activity: 'Assigned Ramesh to Team Lead role', status: 'SUCCESS' },
+      { id: 3, user: 'Ramesh (Team Lead)', action: 'PROJECT_CREATE', date: '2026-08-24', time: '14:22:05', activity: 'Created Hospital Management System project', status: 'SUCCESS' },
+      { id: 4, user: 'Rahul (Employee)', action: 'TASK_SUBMIT', date: '2026-08-25', time: '00:30:10', activity: 'Submitted task Create Patient Dashboard for Code Review', status: 'PENDING_REVIEW' }
+    ];
+    resData = storedLogs ? JSON.parse(storedLogs) : [];
+  } else if (url.includes('/api/admin/organization')) {
+    resData = {
+      name: 'Prologue Enterprise Solutions',
+      workingHours: '09:00 - 18:00 (40h/week)',
+      timezone: 'Asia/Kolkata (IST)',
+      departments: 'Engineering, Product, Quality Assurance, Design, Management'
     };
   } else if (url.includes('/api/logs/user/')) {
     resData = [
@@ -373,7 +536,7 @@ const mockAdapter = async (config: any) => {
       { id: 3, action: 'COMMENT', details: 'Added comment: "Matches radius variables" on task 101', createdAt: new Date().toISOString() }
     ];
   } else {
-    resData = {};
+    resData = [];
   }
 
   return {
@@ -387,21 +550,12 @@ const mockAdapter = async (config: any) => {
 
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || '',
-  adapter: (config) => {
-    const token = localStorage.getItem('token');
-    // If utilizing mock token or no backend URL is set, we use our local mock adapter
-    if (token === 'mock-jwt-token-prologue' || !import.meta.env.VITE_API_BASE_URL) {
-      return mockAdapter(config);
-    }
-    // Otherwise use default browser HTTP adapter
-    return (axios.defaults.adapter as any)(config);
-  }
 });
 
 // Interceptor to append JWT token
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -416,7 +570,7 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401) {
+    if (error.response && error.response.status === 401 && !error.config?.url?.includes('/api/auth/login')) {
       localStorage.removeItem('token');
       window.dispatchEvent(new Event('auth-logout'));
     }

@@ -1,0 +1,21 @@
+# Environment & Secrets
+.env
+**/.env
+!**/.env.example
+serviceAccountKey*.json
+**/serviceAccountKey*.json
+*.bak
+
+# Node dependencies
+node_modules/
+**/node_modules/
+
+# Builds
+dist/
+**/dist/
+
+# System / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

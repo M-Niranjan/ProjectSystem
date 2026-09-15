@@ -1,0 +1,22 @@
+{
+  "short_name": "Project System",
+  "name": "Project Management System - TaskFlow",
+  "description": "Enterprise Project Management System for mobile and web",
+  "icons": [
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/logo.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#000000",
+  "theme_color": "#2563eb",
+  "display": "standalone",
+  "orientation": "portrait-primary"
+}

@@ -53,7 +53,7 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String skills; // Comma separated skills
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String profilePhoto;
 
     private String phone;
@@ -66,7 +66,7 @@ public class User {
     @Column(columnDefinition = "TEXT")
     private String education;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String resumeBase64;
 
     private String resumeFileName;

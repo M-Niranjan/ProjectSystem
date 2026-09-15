@@ -121,17 +121,83 @@ export default function Timeline() {
     return { left, width };
   };
 
+  const [showCriticalPath, setShowCriticalPath] = useState(true);
+
+  // PDF Spec: Calculate Critical Path (longest dependency chain in Gantt graph)
+  const getCriticalPathIds = (): Set<number> => {
+    if (!tasks || tasks.length === 0) return new Set();
+
+    const taskMap = new Map<number, Task>();
+    tasks.forEach(t => taskMap.set(t.id, t));
+
+    // Calculate duration in days for each task
+    const getDuration = (t: Task) => {
+      const start = new Date(t.startDate || '2026-07-01').getTime();
+      const end = new Date(t.dueDate || '2026-07-14').getTime();
+      return Math.max(1, Math.ceil((end - start) / (1000 * 3600 * 24)));
+    };
+
+    // Memoized chain length calculation
+    const memo = new Map<number, { length: number; path: number[] }>();
+
+    const getLongestPathFrom = (id: number): { length: number; path: number[] } => {
+      if (memo.has(id)) return memo.get(id)!;
+      const t = taskMap.get(id);
+      if (!t) return { length: 0, path: [] };
+
+      const dur = getDuration(t);
+      // Find downstream tasks that depend on this task
+      const children = tasks.filter(child => child.dependencyId === id);
+
+      if (children.length === 0) {
+        const res = { length: dur, path: [id] };
+        memo.set(id, res);
+        return res;
+      }
+
+      let maxChildPath: number[] = [];
+      let maxChildLength = 0;
+
+      for (const child of children) {
+        const childRes = getLongestPathFrom(child.id);
+        if (childRes.length > maxChildLength) {
+          maxChildLength = childRes.length;
+          maxChildPath = childRes.path;
+        }
+      }
+
+      const res = { length: dur + maxChildLength, path: [id, ...maxChildPath] };
+      memo.set(id, res);
+      return res;
+    };
+
+    let overallMaxPath: number[] = [];
+    let overallMaxLength = 0;
+
+    tasks.forEach(t => {
+      const res = getLongestPathFrom(t.id);
+      if (res.length > overallMaxLength) {
+        overallMaxLength = res.length;
+        overallMaxPath = res.path;
+      }
+    });
+
+    return new Set(overallMaxPath);
+  };
+
+  const criticalPathIds = getCriticalPathIds();
+
   return (
     <div className="space-y-6 select-none h-[calc(100vh-100px)] flex flex-col pb-6">
       {/* Header controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 flex-shrink-0">
         <div className="flex items-center gap-4">
           <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
-              Gantt Timelines
+            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
+              <Clock className="w-6 h-6 text-blue-500" /> Gantt Timelines & Critical Path
             </h1>
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-              Visualize task schedules, milestone nodes, and dependency links.
+              Visualize task schedules, milestone nodes, dependency chains, and critical path analysis.
             </p>
           </div>
 
@@ -146,8 +212,20 @@ export default function Timeline() {
           </select>
         </div>
 
-        {/* Zoom controls */}
+        {/* Zoom & Critical Path controls */}
         <div className="flex items-center gap-3">
+          <button
+            onClick={() => setShowCriticalPath(!showCriticalPath)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-extrabold flex items-center gap-1.5 transition-all cursor-pointer border ${
+              showCriticalPath
+                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 shadow-md shadow-amber-500/10'
+                : 'bg-white/5 text-slate-500 border-slate-200/50 dark:border-white/5 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Toggle Critical Path analysis highlighting"
+          >
+            🔥 {showCriticalPath ? 'Critical Path ON' : 'Critical Path OFF'}
+          </button>
+
           <div className="flex items-center gap-1 bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl">
             {(['DAY', 'WEEK', 'MONTH'] as const).map(z => (
               <button
@@ -234,30 +312,41 @@ export default function Timeline() {
             <div className="relative space-y-0 divide-y divide-slate-100/30 dark:divide-white/5">
               {tasks.map(t => {
                 const { left, width } = calculatePosition(t.startDate, t.dueDate);
+                const isCritical = showCriticalPath && criticalPathIds.has(t.id);
+
                 return (
                   <div key={t.id} className="h-14 relative flex items-center">
                     {t.isMilestone ? (
                       // Milestone Diamond Shape
                       <div
-                        className="absolute h-5 w-5 bg-indigo-600 rotate-45 flex items-center justify-center shadow-lg shadow-indigo-500/20 cursor-pointer"
+                        className={`absolute h-5 w-5 rotate-45 flex items-center justify-center shadow-lg cursor-pointer ${
+                          isCritical ? 'bg-amber-500 shadow-amber-500/40 ring-2 ring-amber-400' : 'bg-indigo-600 shadow-indigo-500/20'
+                        }`}
                         style={{ left: left + (width / 2) - 10 }}
-                        title={t.title}
+                        title={`${t.title}${isCritical ? ' (Critical Path)' : ''}`}
                       >
                         <div className="h-2.5 w-2.5 bg-white rounded-full"></div>
                       </div>
                     ) : (
                       // Standard Task Duration Bar
                       <div
-                        className="absolute h-7 rounded-xl bg-gradient-to-r from-blue-600/35 to-indigo-600/35 border border-blue-500/40 shadow-sm flex items-center px-3 cursor-pointer overflow-hidden group hover:border-blue-500 transition-colors"
+                        className={`absolute h-7 rounded-xl shadow-sm flex items-center px-3 cursor-pointer overflow-hidden group transition-all border ${
+                          isCritical
+                            ? 'bg-gradient-to-r from-amber-500/40 to-red-500/40 border-amber-400 shadow-amber-500/20 ring-1 ring-amber-400/50'
+                            : 'bg-gradient-to-r from-blue-600/35 to-indigo-600/35 border-blue-500/40 hover:border-blue-500'
+                        }`}
                         style={{ left, width }}
-                        title={`${t.title} (${t.progress}% done)`}
+                        title={`${t.title} (${t.progress}% done)${isCritical ? ' [CRITICAL PATH]' : ''}`}
                       >
                         {/* Progress slider */}
                         <div
-                          className="absolute inset-y-0 left-0 bg-blue-500/25 rounded-l-xl"
+                          className={`absolute inset-y-0 left-0 rounded-l-xl ${
+                            isCritical ? 'bg-amber-400/30' : 'bg-blue-500/25'
+                          }`}
                           style={{ width: `${t.progress}%` }}
                         ></div>
-                        <span className="text-[10px] font-black text-slate-800 dark:text-white truncate relative z-10">
+                        <span className="text-[10px] font-black text-slate-800 dark:text-white truncate relative z-10 flex items-center gap-1">
+                          {isCritical && <span className="text-amber-300">🔥</span>}
                           {t.progress}%
                         </span>
                       </div>
@@ -286,15 +375,17 @@ export default function Timeline() {
                       
                       // Path drawing a nice cubic bend line
                       const midX = startX + (endX - startX) / 2;
+                      const isCriticalDep = showCriticalPath && criticalPathIds.has(t.id) && criticalPathIds.has(depTask.id);
+
                       return (
                         <path
                           key={`dep-${t.id}`}
                           d={`M ${startX} ${startY} C ${midX} ${startY}, ${midX} ${endY}, ${endX} ${endY}`}
                           fill="none"
-                          stroke="#3B82F6"
-                          strokeWidth="1.5"
-                          strokeDasharray="4 4"
-                          markerEnd="url(#arrow)"
+                          stroke={isCriticalDep ? '#F59E0B' : '#3B82F6'}
+                          strokeWidth={isCriticalDep ? '2.5' : '1.5'}
+                          strokeDasharray={isCriticalDep ? 'none' : '4 4'}
+                          markerEnd={isCriticalDep ? 'url(#arrow-critical)' : 'url(#arrow)'}
                         />
                       );
                     }
@@ -304,6 +395,9 @@ export default function Timeline() {
                 <defs>
                   <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
                     <path d="M 0 0 L 10 5 L 0 10 z" fill="#3B82F6" />
+                  </marker>
+                  <marker id="arrow-critical" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                    <path d="M 0 0 L 10 5 L 0 10 z" fill="#F59E0B" />
                   </marker>
                 </defs>
               </svg>
