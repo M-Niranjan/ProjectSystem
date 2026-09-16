@@ -12,7 +12,6 @@ import {
   FileText,
   MessageSquare,
   BarChart3,
-  Settings,
   UserCircle,
   LogOut,
   ChevronLeft,
@@ -94,7 +93,10 @@ export default function Sidebar() {
     <img src="/team-config-icon.png" alt="Team Config" className={`${className || 'w-5 h-5'} object-contain`} />
   );
   const AuditNavIcon = ({ className }: { className?: string }) => (
-    <img src="/audit-icon.png" alt="Audit" className={`${className || 'w-5.5 h-5.5'} object-contain`} />
+    <img src="/audit-icon.png" alt="Audit" className={`${className || 'w-5 h-5'} object-contain`} />
+  );
+  const SettingsNavIcon = ({ className }: { className?: string }) => (
+    <img src="/settings-icon.png" alt="Settings" className={`${className || 'w-5 h-5'} object-contain`} />
   );
 
   const adminMenuItems: SidebarItem[] = [
@@ -104,7 +106,7 @@ export default function Sidebar() {
     { name: 'Org Settings', view: 'organization', icon: OrgNavIcon },
     { name: 'Team Config', view: 'teams', icon: TeamsNavIcon },
     { name: 'Audit Logs', view: 'audit-logs', icon: AuditNavIcon },
-    { name: 'Settings', view: 'settings', icon: Settings },
+    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
   const teamLeadMenuItems: SidebarItem[] = [
@@ -120,7 +122,7 @@ export default function Sidebar() {
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
-    { name: 'Settings', view: 'settings', icon: Settings },
+    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
   const employeeMenuItems: SidebarItem[] = [
@@ -132,7 +134,7 @@ export default function Sidebar() {
     { name: 'Calendar', view: 'calendar', icon: Calendar },
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
-    { name: 'Settings', view: 'settings', icon: Settings },
+    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
   const allowedItems = user?.role === 'ROLE_ADMIN'
