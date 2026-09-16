@@ -269,51 +269,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
         <div className="space-y-4 sm:space-y-6 w-full min-w-0">
           {/* Admin Metric Cards with Left-Top Icons & Cool Glassmorphism */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 w-full min-w-0">
-            {/* Card 1: Total System Users */}
-            <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-purple-500/40 hover:shadow-[0_16px_36px_-6px_rgba(168,85,247,0.22)] min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <Users className="w-4 h-4 sm:w-6 sm:h-6 text-purple-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wider flex-shrink-0">
-                  RBAC
-                </span>
-              </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Total Users</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">5</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-purple-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse flex-shrink-0"></span>
-                  <span className="truncate">RBAC Active</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Card 2: Total Teams */}
-            <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_16px_36px_-6px_rgba(59,130,246,0.22)] min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <FolderGit2 className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider flex-shrink-0">
-                  Teams
-                </span>
-              </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Total Teams</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">3</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-blue-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
-                  <span className="truncate">Engineering, QA</span>
-                </p>
-              </div>
-            </div>
-
-            {/* Card 3: Active Projects */}
+            {/* Card 1: Active Projects */}
             <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-amber-500/40 hover:shadow-[0_16px_36px_-6px_rgba(245,158,11,0.22)] min-w-0">
               <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <Activity className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <img src="/active-projects-icon.png" alt="Active Projects" className="w-full h-full object-contain drop-shadow-sm" />
                 </div>
                 <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20 uppercase tracking-wider flex-shrink-0">
                   Live
@@ -329,11 +289,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
             </div>
 
-            {/* Card 4: Completed Projects */}
+            {/* Card 2: Completed */}
             <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_16px_36px_-6px_rgba(16,185,129,0.22)] min-w-0">
               <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <img src="/completed-projects-icon.png" alt="Completed" className="w-full h-full object-contain drop-shadow-sm" />
                 </div>
                 <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 uppercase tracking-wider flex-shrink-0">
                   Done
@@ -345,6 +305,46 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 <p className="text-[10px] sm:text-[11px] font-bold text-emerald-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
                   <span className="truncate">On-Time Delivery</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Card 3: Total Teams */}
+            <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_16px_36px_-6px_rgba(59,130,246,0.22)] min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <img src="/total-teams-icon.png" alt="Total Teams" className="w-full h-full object-contain drop-shadow-sm" />
+                </div>
+                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider flex-shrink-0">
+                  Teams
+                </span>
+              </div>
+              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Total Teams</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">3</h3>
+                <p className="text-[10px] sm:text-[11px] font-bold text-blue-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
+                  <span className="truncate">Engineering, QA</span>
+                </p>
+              </div>
+            </div>
+
+            {/* Card 4: Total Users */}
+            <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-purple-500/40 hover:shadow-[0_16px_36px_-6px_rgba(168,85,247,0.22)] min-w-0">
+              <div className="flex items-start justify-between">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <img src="/total-users-icon.png" alt="Total Users" className="w-full h-full object-contain drop-shadow-sm" />
+                </div>
+                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/20 uppercase tracking-wider flex-shrink-0">
+                  RBAC
+                </span>
+              </div>
+              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
+                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Total Users</p>
+                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">5</h3>
+                <p className="text-[10px] sm:text-[11px] font-bold text-purple-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
+                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-pulse flex-shrink-0"></span>
+                  <span className="truncate">RBAC Active</span>
                 </p>
               </div>
             </div>
@@ -542,8 +542,8 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             {/* Card 1: Active Projects */}
             <div className="glass-card-dashboard group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_16px_36px_-6px_rgba(59,130,246,0.22)] min-w-0">
               <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <FolderGit2 className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
+                <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                  <img src="/active-projects-icon.png" alt="Active Projects" className="w-full h-full object-contain drop-shadow-sm" />
                 </div>
                 <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider flex-shrink-0">
                   Active
