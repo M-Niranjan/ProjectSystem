@@ -397,16 +397,16 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               {/* 3: Org Settings */}
               <button
                 onClick={() => setView('organization')}
-                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-slate-500/40 hover:shadow-[0_14px_32px_-6px_rgba(100,116,139,0.22)] w-full min-w-0"
+                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-sky-500/40 hover:shadow-[0_14px_32px_-6px_rgba(14,165,233,0.22)] w-full min-w-0"
               >
                 <div className="flex items-start justify-between w-full">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
                     <img src="/org-settings-icon.png" alt="Org Settings" className="w-full h-full object-contain drop-shadow-sm" />
                   </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
+                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-sky-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
                 </div>
                 <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors truncate">Org Settings</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-sky-500 transition-colors truncate">Org Settings</p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Working defaults</p>
                 </div>
               </button>
