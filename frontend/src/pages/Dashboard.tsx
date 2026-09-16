@@ -360,45 +360,65 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-4 w-full min-w-0">
+              {/* 1: User Directory */}
               <button
                 onClick={() => setView('users')}
-                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-purple-500/40 hover:shadow-[0_14px_32px_-6px_rgba(168,85,247,0.22)] w-full min-w-0"
+                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-red-500/40 hover:shadow-[0_14px_32px_-6px_rgba(239,68,68,0.22)] w-full min-w-0"
               >
                 <div className="flex items-start justify-between w-full">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                    <Users className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-purple-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <img src="/user-directory-icon.png" alt="User Directory" className="w-full h-full object-contain drop-shadow-sm" />
                   </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-purple-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
+                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-red-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
                 </div>
                 <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-purple-400 transition-colors truncate">User Directory</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-red-500 transition-colors truncate">User Directory</p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Create & assign roles</p>
                 </div>
               </button>
 
+              {/* 2: Roles & Perms */}
               <button
                 onClick={() => setView('roles')}
                 className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-blue-500/40 hover:shadow-[0_14px_32px_-6px_rgba(59,130,246,0.22)] w-full min-w-0"
               >
                 <div className="flex items-start justify-between w-full">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                    <Shield className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-blue-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <img src="/roles-perms-icon.png" alt="Role & perms" className="w-full h-full object-contain drop-shadow-sm" />
                   </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
+                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-blue-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
                 </div>
                 <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-blue-400 transition-colors truncate">Roles & Perms</p>
+                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-blue-500 transition-colors truncate">Roles & Perms</p>
                   <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">RBAC matrix</p>
                 </div>
               </button>
 
+              {/* 3: Org Settings */}
+              <button
+                onClick={() => setView('organization')}
+                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-slate-500/40 hover:shadow-[0_14px_32px_-6px_rgba(100,116,139,0.22)] w-full min-w-0"
+              >
+                <div className="flex items-start justify-between w-full">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <img src="/org-settings-icon.png" alt="Org Settings" className="w-full h-full object-contain drop-shadow-sm" />
+                  </div>
+                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
+                </div>
+                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
+                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-slate-700 dark:group-hover:text-slate-300 transition-colors truncate">Org Settings</p>
+                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Working defaults</p>
+                </div>
+              </button>
+
+              {/* 4: Team Config */}
               <button
                 onClick={() => setView('teams')}
                 className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-indigo-500/40 hover:shadow-[0_14px_32px_-6px_rgba(99,102,241,0.22)] w-full min-w-0"
               >
                 <div className="flex items-start justify-between w-full">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-indigo-500/15 border border-indigo-500/25 flex items-center justify-center text-indigo-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                    <FolderGit2 className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-indigo-400" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <img src="/team-config-icon.png" alt="Team Config" className="w-full h-full object-contain drop-shadow-sm" />
                   </div>
                   <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-indigo-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
                 </div>
@@ -408,29 +428,14 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 </div>
               </button>
 
-              <button
-                onClick={() => setView('organization')}
-                className="glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-amber-500/40 hover:shadow-[0_14px_32px_-6px_rgba(245,158,11,0.22)] w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-xl bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                    <Settings className="w-4.5 h-4.5 sm:w-5 sm:h-5 text-amber-400" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-amber-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-amber-400 transition-colors truncate">Org Settings</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Working defaults</p>
-                </div>
-              </button>
-
+              {/* 5: Audit Logs */}
               <button
                 onClick={() => setView('audit-logs')}
-                className="col-span-2 sm:col-span-1 md:col-span-1 glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-row sm:flex-col justify-between items-center sm:items-start text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_14px_32px_-6px_rgba(168,85,247,0.22)] w-full min-w-0"
+                className="col-span-2 sm:col-span-1 md:col-span-1 glass-card-dashboard group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-row sm:flex-col justify-between items-center sm:items-start text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 hover:border-emerald-500/40 hover:shadow-[0_14px_32px_-6px_rgba(16,185,129,0.22)] w-full min-w-0"
               >
                 <div className="flex items-center sm:items-start justify-between sm:w-full gap-3 sm:gap-0">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                    <img src="/audit-icon.png" alt="Audit Logs" className="w-6 h-6 sm:w-7 sm:h-7 object-contain drop-shadow-sm" />
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
+                    <img src="/audit-icon.png" alt="Audit Logs" className="w-full h-full object-contain drop-shadow-sm" />
                   </div>
                   <div className="sm:hidden min-w-0">
                     <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-400 transition-colors truncate">Audit Logs</p>

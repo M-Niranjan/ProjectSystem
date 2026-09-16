@@ -186,8 +186,8 @@ export function UserManagementView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-            <Users className="w-6 h-6 text-blue-500" /> User Management
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
+            <img src="/user-directory-icon.png" alt="User Directory" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> User Directory
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Admin directory to add, edit, activate/deactivate, and assign roles across the organization.
@@ -585,8 +585,8 @@ export function RolesPermissionsView() {
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-            <Shield className="w-6 h-6 text-purple-500" /> Role & Permission Matrix
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
+            <img src="/roles-perms-icon.png" alt="Role & Perms" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Role & Permission Matrix
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Configure module permissions and access control limits per system role.
@@ -669,8 +669,8 @@ export function OrganizationSettingsView() {
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-          <Sparkles className="w-6 h-6 text-blue-500" /> Organization Settings
+        <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
+          <img src="/org-settings-icon.png" alt="Org Settings" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Organization Settings
         </h1>
         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
           Manage system configuration, working hours, departments, and project defaults.

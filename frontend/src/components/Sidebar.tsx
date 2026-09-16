@@ -81,16 +81,28 @@ export default function Sidebar() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const UserDirNavIcon = ({ className }: { className?: string }) => (
+    <img src="/user-directory-icon.png" alt="Users Directory" className={`${className || 'w-5 h-5'} object-contain`} />
+  );
+  const RolesNavIcon = ({ className }: { className?: string }) => (
+    <img src="/roles-perms-icon.png" alt="Roles & Permissions" className={`${className || 'w-5 h-5'} object-contain`} />
+  );
+  const OrgNavIcon = ({ className }: { className?: string }) => (
+    <img src="/org-settings-icon.png" alt="Org Settings" className={`${className || 'w-5 h-5'} object-contain`} />
+  );
+  const TeamsNavIcon = ({ className }: { className?: string }) => (
+    <img src="/team-config-icon.png" alt="Team Config" className={`${className || 'w-5 h-5'} object-contain`} />
+  );
   const AuditNavIcon = ({ className }: { className?: string }) => (
     <img src="/audit-icon.png" alt="Audit" className={`${className || 'w-5.5 h-5.5'} object-contain`} />
   );
 
   const adminMenuItems: SidebarItem[] = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
-    { name: 'Users Directory', view: 'users', icon: Users },
-    { name: 'Roles & Permissions', view: 'roles', icon: Shield },
-    { name: 'Teams Overview', view: 'teams', icon: FolderGit2 },
-    { name: 'Organization', view: 'organization', icon: Sparkles },
+    { name: 'User Directory', view: 'users', icon: UserDirNavIcon },
+    { name: 'Roles & Permissions', view: 'roles', icon: RolesNavIcon },
+    { name: 'Org Settings', view: 'organization', icon: OrgNavIcon },
+    { name: 'Team Config', view: 'teams', icon: TeamsNavIcon },
     { name: 'Audit Logs', view: 'audit-logs', icon: AuditNavIcon },
     { name: 'Settings', view: 'settings', icon: Settings },
   ];

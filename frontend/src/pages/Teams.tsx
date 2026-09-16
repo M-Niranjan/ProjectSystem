@@ -255,8 +255,8 @@ export default function Teams() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
-            Team Hub
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
+            <img src="/team-config-icon.png" alt="Team Config" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Team Hub
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Manage organization members, assign roles, and review designations.
