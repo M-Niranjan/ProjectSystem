@@ -1,8 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FolderGit2, Star, Trash2, LayoutGrid, List, Search, Plus, Calendar, DollarSign, Users, X, Info, Check, Pencil } from 'lucide-react';
+import { FolderGit2, Star, Trash2, LayoutGrid, List, Search, Plus, Calendar, DollarSign, Users, X, Info, Check, Pencil, ChevronDown, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
+import TeamMemberPickerModal from '../components/TeamMemberPickerModal';
+
+interface CurrencyOption {
+  code: string;
+  symbol: string;
+  name: string;
+}
+
+const CURRENCIES: CurrencyOption[] = [
+  { code: 'USD', symbol: '$', name: 'US Dollar' },
+  { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+  { code: 'EUR', symbol: '€', name: 'Euro' },
+  { code: 'GBP', symbol: '£', name: 'British Pound' },
+  { code: 'JPY', symbol: '¥', name: 'Japanese Yen' },
+  { code: 'AED', symbol: 'AED', name: 'UAE Dirham' },
+  { code: 'CAD', symbol: 'C$', name: 'Canadian Dollar' },
+  { code: 'AUD', symbol: 'A$', name: 'Australian Dollar' },
+];
 
 interface Project {
   id: number;
@@ -34,10 +52,13 @@ export default function Projects() {
   const [status, setStatus] = useState('ACTIVE');
   const [priority, setPriority] = useState('MEDIUM');
   const [budget, setBudget] = useState('10000');
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption>(CURRENCIES[0]);
+  const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState(false);
   const [deadline, setDeadline] = useState('');
   const [colorLabel, setColorLabel] = useState('#3B82F6');
   const [memberEmail, setMemberEmail] = useState('');
   const [addedEmails, setAddedEmails] = useState<string[]>([]);
+  const [isPickerOpen, setIsPickerOpen] = useState(false);
 
   // Default Mock Projects
   const mockProjects: Project[] = [
@@ -535,16 +556,65 @@ export default function Projects() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Budget ($)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      Budget ({selectedCurrency.symbol} {selectedCurrency.code})
+                    </label>
                     <div className="relative">
-                      <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      {/* Currency Selector Pill */}
+                      <button
+                        type="button"
+                        onClick={() => setCurrencyDropdownOpen(!currencyDropdownOpen)}
+                        className="absolute left-1.5 top-1/2 -translate-y-1/2 px-2 py-1 bg-slate-200/50 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 rounded-lg border border-slate-300/50 dark:border-white/10 text-slate-800 dark:text-white font-black text-xs flex items-center gap-1 cursor-pointer transition-colors z-10"
+                        title="Change Currency"
+                      >
+                        <span>{selectedCurrency.symbol}</span>
+                        <ChevronDown className="w-3 h-3 text-slate-400" />
+                      </button>
+
                       <input
                         type="number"
                         placeholder="10000"
                         value={budget}
                         onChange={(e) => setBudget(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                        className="w-full pl-16 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
                       />
+
+                      {/* Currency Dropdown */}
+                      <AnimatePresence>
+                        {currencyDropdownOpen && (
+                          <>
+                            <div className="fixed inset-0 z-20" onClick={() => setCurrencyDropdownOpen(false)} />
+                            <motion.div
+                              initial={{ opacity: 0, y: -4, scale: 0.95 }}
+                              animate={{ opacity: 1, y: 0, scale: 1 }}
+                              exit={{ opacity: 0, y: -4, scale: 0.95 }}
+                              className="absolute left-0 top-full mt-1.5 w-52 p-1.5 glass-panel rounded-xl border border-slate-200/60 dark:border-white/10 shadow-2xl z-30 max-h-48 overflow-y-auto"
+                            >
+                              {CURRENCIES.map((curr) => (
+                                <button
+                                  key={curr.code}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedCurrency(curr);
+                                    setCurrencyDropdownOpen(false);
+                                  }}
+                                  className={`w-full px-2.5 py-1.5 rounded-lg flex items-center justify-between text-xs font-semibold cursor-pointer transition-colors ${
+                                    selectedCurrency.code === curr.code
+                                      ? 'bg-blue-600 text-white font-bold'
+                                      : 'text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-white/10'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-extrabold w-5 text-center">{curr.symbol}</span>
+                                    <span className="truncate">{curr.name}</span>
+                                  </div>
+                                  <span className="text-[10px] opacity-70 font-mono uppercase">{curr.code}</span>
+                                </button>
+                              ))}
+                            </motion.div>
+                          </>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </div>
 
@@ -582,32 +652,74 @@ export default function Projects() {
 
                 {/* Team invites */}
                 <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Invite Team Members</label>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Invite Team Members</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsPickerOpen(true)}
+                      className="px-2.5 py-1 bg-blue-600/10 hover:bg-blue-600/20 border border-blue-500/30 text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 rounded-lg font-bold text-[11px] flex items-center gap-1.5 cursor-pointer transition-all shadow-xs"
+                      title="Choose from registered team members"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" />
+                      <span>Choose Team Members</span>
+                    </button>
+                  </div>
                   <div className="flex gap-2">
                     <input
                       type="email"
                       placeholder="teammate@company.com"
                       value={memberEmail}
                       onChange={(e) => setMemberEmail(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          addMemberEmail();
+                        }
+                      }}
                       className="flex-1 px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
                     />
                     <button
                       type="button"
                       onClick={addMemberEmail}
-                      className="px-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                      className="px-4 py-2 bg-slate-100 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-800 dark:text-white rounded-xl font-black text-xs cursor-pointer transition-colors"
                     >
-                      Invite
+                      Add
                     </button>
                   </div>
                   
                   {addedEmails.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto pt-1">
-                      {addedEmails.map(email => (
-                        <span key={email} className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-lg text-[9px] font-black border border-blue-500/15">
-                          {email}
-                          <button type="button" onClick={() => removeAddedEmail(email)} className="text-slate-400 hover:text-slate-600"><X className="w-3 h-3" /></button>
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex items-center justify-between text-[10px] font-bold text-slate-400 px-0.5">
+                        <span className="flex items-center gap-1">
+                          <Users className="w-3 h-3 text-blue-500" />
+                          <span>Invited Teammates ({addedEmails.length})</span>
                         </span>
-                      ))}
+                        <button
+                          type="button"
+                          onClick={() => setAddedEmails([])}
+                          className="text-red-400 hover:text-red-300 transition-colors cursor-pointer text-[10px]"
+                        >
+                          Clear all
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto pr-1">
+                        {addedEmails.map(email => (
+                          <span
+                            key={email}
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-500 dark:text-blue-400 rounded-lg text-[10px] font-bold shadow-xs"
+                          >
+                            <span className="truncate max-w-[170px]">{email}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeAddedEmail(email)}
+                              className="text-blue-400 hover:text-blue-600 dark:hover:text-white cursor-pointer ml-0.5"
+                              title="Remove"
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </span>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -633,6 +745,17 @@ export default function Projects() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Team Member Picker Modal */}
+      <TeamMemberPickerModal
+        isOpen={isPickerOpen}
+        onClose={() => setIsPickerOpen(false)}
+        alreadySelectedEmails={addedEmails}
+        onConfirm={(newSelected) => {
+          const merged = Array.from(new Set([...addedEmails, ...newSelected]));
+          setAddedEmails(merged);
+        }}
+      />
     </div>
   );
 }

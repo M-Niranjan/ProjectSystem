@@ -385,7 +385,7 @@ startxref
               </tr>
               <tr>
                 <td className="p-2 border-r border-slate-300 font-bold">Doctor Consultation Booking API</td>
-                <td className="p-2 border-r border-slate-300">Ramesh Kumar (Team Lead)</td>
+                <td className="p-2 border-r border-slate-300">Ramesh Kumar (Employee)</td>
                 <td className="p-2 border-r border-slate-300 font-black text-red-600">HIGH</td>
                 <td className="p-2 border-r border-slate-300 font-bold text-blue-700">IN PROGRESS</td>
                 <td className="p-2 font-mono">12.0h / 9.0h</td>
@@ -427,7 +427,7 @@ startxref
               <p className="font-extrabold text-emerald-700 mt-1">✓ 100% On-Time Delivery</p>
             </div>
             <div className="border border-slate-300 p-2.5 rounded-lg bg-slate-50">
-              <p className="font-black text-slate-900 text-xs">Ramesh Kumar (Team Lead)</p>
+              <p className="font-black text-slate-900 text-xs">Ramesh Kumar (Employee)</p>
               <p className="text-slate-600 font-medium">6 Tasks • 42.0 Hours Logged</p>
               <p className="font-extrabold text-blue-700 mt-1">↑ 95% Productivity Velocity</p>
             </div>

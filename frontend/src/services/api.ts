@@ -517,8 +517,8 @@ const mockAdapter = async (config: any) => {
     const storedLogs = localStorage.getItem('mock_audit_logs');
     const defaultLogs = [
       { id: 1, user: 'Niranjan (Admin)', action: 'LOGIN', date: '2026-08-25', time: '01:15:20', activity: 'Admin logged into Prologue Workspace', status: 'SUCCESS' },
-      { id: 2, user: 'Niranjan (Admin)', action: 'ROLE_UPDATE', date: '2026-08-24', time: '18:40:12', activity: 'Assigned Ramesh to Team Lead role', status: 'SUCCESS' },
-      { id: 3, user: 'Ramesh (Team Lead)', action: 'PROJECT_CREATE', date: '2026-08-24', time: '14:22:05', activity: 'Created Hospital Management System project', status: 'SUCCESS' },
+      { id: 2, user: 'Niranjan (Admin)', action: 'ROLE_UPDATE', date: '2026-08-24', time: '18:40:12', activity: 'Assigned Ramesh to Team Employee role', status: 'SUCCESS' },
+      { id: 3, user: 'Ramesh (Employee)', action: 'TASK_SUBMIT', date: '2026-08-24', time: '14:22:05', activity: 'Submitted API Integration module for Code Review', status: 'SUCCESS' },
       { id: 4, user: 'Rahul (Employee)', action: 'TASK_SUBMIT', date: '2026-08-25', time: '00:30:10', activity: 'Submitted task Create Patient Dashboard for Code Review', status: 'PENDING_REVIEW' }
     ];
     resData = storedLogs ? JSON.parse(storedLogs) : [];

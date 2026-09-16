@@ -185,7 +185,7 @@ export default function EmployeeWorkProfilePage() {
                   <FolderGit2 className="w-3.5 h-3.5 text-purple-500" /> Project: {profile.currentProject}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <UserCheck className="w-3.5 h-3.5 text-emerald-500" /> Team Lead: Ramesh (Lead)
+                  <UserCheck className="w-3.5 h-3.5 text-emerald-500" /> Team Lead: Niranjan M (Lead)
                 </span>
               </div>
             </div>

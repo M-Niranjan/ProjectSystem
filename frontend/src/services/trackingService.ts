@@ -133,7 +133,7 @@ export async function getEmployeeProfileById(id: number | string): Promise<Emplo
     // Fallback search if not found directly in overview.employees
     if (!emp) {
       const defaultEmps: Record<string, Partial<EmployeeProfileData>> = {
-        '1001': { id: 1001, name: 'Ramesh', designation: 'Team Lead / Project Manager', department: 'Engineering', currentProject: 'Prologue SaaS Dashboard' },
+        '1001': { id: 1001, name: 'Ramesh', designation: 'Software Developer', department: 'Engineering', currentProject: 'Prologue SaaS Dashboard' },
         '1002': { id: 1002, name: 'Rahul', designation: 'Frontend Developer', department: 'Web Engineering', currentProject: 'Hospital Management System' },
         '1003': { id: 1003, name: 'Manju', designation: 'Backend Developer', department: 'Engineering', currentProject: 'Workflow Integration Suite' },
         '1004': { id: 1004, name: 'Vinay', designation: 'QA Developer', department: 'Quality Assurance', currentProject: 'Hospital Management System' },
