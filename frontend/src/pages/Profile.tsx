@@ -112,6 +112,10 @@ export default function Profile() {
   };
 
   const startCamera = async () => {
+    if (!navigator.mediaDevices?.getUserMedia) {
+      alert("Camera access requires secure connection (HTTPS). Please use 'Choose Photo' to select an image from your device.");
+      return;
+    }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 300, height: 300 } });
       setCameraStream(stream);
@@ -123,7 +127,7 @@ export default function Profile() {
         }
       }, 100);
     } catch (err) {
-      alert("Unable to access camera. Please check device permissions.");
+      alert("Unable to access camera. Please check camera permissions or use 'Choose Photo'.");
     }
   };
 
@@ -521,7 +525,7 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Full Name</label>
                     <input
@@ -544,7 +548,7 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Department</label>
                     <input
@@ -577,7 +581,7 @@ export default function Profile() {
                 </div>
 
                 {/* Contact links */}
-                <div className="grid grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Phone</label>
                     <input

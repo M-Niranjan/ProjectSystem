@@ -22,6 +22,7 @@ export default function Navbar() {
     toggleTheme, 
     activeLanguage, 
     setLanguage, 
+    activeView,
     setView, 
     setVoiceOverlay, 
     setPomodoroTimer,
@@ -362,7 +363,7 @@ export default function Navbar() {
           {showNotifications && (
             <div 
               ref={notificationsRef}
-              className="absolute right-0 mt-2 w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl z-50 overflow-hidden rounded-xl"
+              className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl z-50 overflow-hidden rounded-xl"
             >
               <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                 <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Notifications</span>
@@ -442,12 +443,18 @@ export default function Navbar() {
         {user && (
           <button
             onClick={() => setView('profile')}
-            className="flex items-center gap-2 pl-2 border-l border-zinc-200 dark:border-zinc-800 cursor-pointer"
+            className={`flex items-center gap-2 pl-2 border-l border-zinc-200 dark:border-zinc-800 cursor-pointer p-1 rounded-xl transition-all ${
+              activeView === 'profile'
+                ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
+            }`}
+            title="View Profile Resume"
+            aria-label="View My Profile"
           >
             <img
               src={user.profilePhoto || getAvatarByName(user.name)}
               alt="Avatar"
-              className="w-8 h-8 rounded-lg object-cover"
+              className="w-8 h-8 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
             />
           </button>
         )}

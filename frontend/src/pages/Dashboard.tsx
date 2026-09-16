@@ -638,8 +638,9 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
 
               <button
+                type="button"
                 onClick={() => setView('reviews')}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5"
+                className="w-full sm:w-auto justify-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5"
               >
                 Review & Approve Task <ArrowRight className="w-4 h-4" />
               </button>

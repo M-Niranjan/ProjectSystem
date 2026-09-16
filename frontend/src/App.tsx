@@ -337,9 +337,9 @@ function AppContent() {
                     {/* Role Specific Modules */}
                     <Route path="/team-tracking" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><TeamWorkTracking /></RoleGuard>} />
                     <Route path="/employee/:id/work-profile" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><EmployeeWorkProfilePage /></RoleGuard>} />
-                    <Route path="/step-verification" element={<RoleGuard allowedRoles={['ROLE_MANAGER']}><StepVerificationDashboard /></RoleGuard>} />
-                    <Route path="/reviews" element={<RoleGuard allowedRoles={['ROLE_MANAGER']}><TaskReviews /></RoleGuard>} />
-                    <Route path="/performance" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'ROLE_MANAGER']}><MyPerformance /></RoleGuard>} />
+                    <Route path="/step-verification" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><StepVerificationDashboard /></RoleGuard>} />
+                    <Route path="/reviews" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><TaskReviews /></RoleGuard>} />
+                    <Route path="/performance" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee', 'ROLE_MANAGER', 'ROLE_ADMIN', 'admin']}><MyPerformance /></RoleGuard>} />
 
                     <Route path="*" element={<RoleDashboardRedirect />} />
                   </Routes>

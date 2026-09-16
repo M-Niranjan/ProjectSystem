@@ -13,6 +13,7 @@ import {
   MessageSquare,
   BarChart3,
   UserCircle,
+  User,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +31,7 @@ import { useAuthStore } from '../store/useAuthStore';
 interface SidebarItem {
   name: string;
   view: string;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{ className?: string }>;
 }
 
 const VIEW_TO_PATH: Record<string, string> = {
@@ -69,12 +70,15 @@ const getDashboardPath = (role?: string | null) => {
 
 export default function Sidebar() {
   const navigate = useNavigate();
+  const { user, logout } = useAuthStore();
   const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
-  const { logout, user } = useAuthStore();
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    const checkMobile = () => {
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+    };
     checkMobile();
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
@@ -105,7 +109,9 @@ export default function Sidebar() {
     { name: 'Roles & Permissions', view: 'roles', icon: RolesNavIcon },
     { name: 'Org Settings', view: 'organization', icon: OrgNavIcon },
     { name: 'Team Config', view: 'teams', icon: TeamsNavIcon },
+    { name: 'Task Reviews', view: 'reviews', icon: Award },
     { name: 'Audit Logs', view: 'audit-logs', icon: AuditNavIcon },
+    { name: 'Profile', view: 'profile', icon: User },
     { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
@@ -122,6 +128,7 @@ export default function Sidebar() {
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
+    { name: 'Profile', view: 'profile', icon: User },
     { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
@@ -134,6 +141,7 @@ export default function Sidebar() {
     { name: 'Calendar', view: 'calendar', icon: Calendar },
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
+    { name: 'Profile', view: 'profile', icon: User },
     { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
   ];
 
@@ -270,29 +278,48 @@ export default function Sidebar() {
         <div className="px-3 space-y-2">
           {user && (
             showExpanded ? (
-              <div className="p-3 bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 rounded-xl flex items-center gap-3.5 overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  setView('profile');
+                  if (isMobile) toggleSidebar();
+                }}
+                className={`w-full p-2.5 rounded-xl flex items-center gap-3.5 overflow-hidden transition-all text-left cursor-pointer group ${
+                  activeView === 'profile'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'bg-zinc-100 dark:bg-zinc-900/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-800'
+                }`}
+                title="View My Profile"
+              >
                 <img
                   src={user.profilePhoto || getAvatarByName(user.name)}
                   alt="avatar"
-                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0"
+                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 ring-1 ring-zinc-300 dark:ring-zinc-700 group-hover:scale-105 transition-transform"
                 />
-                <div className="truncate">
-                  <p className="text-[14.5px] font-semibold text-zinc-900 dark:text-zinc-100 truncate">{user.name}</p>
-                  <p className="text-[11.5px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider font-mono truncate font-medium">{user.role.replace('ROLE_', '')}</p>
+                <div className="truncate flex-1">
+                  <p className={`text-[14px] font-semibold truncate ${activeView === 'profile' ? 'text-white' : 'text-zinc-900 dark:text-zinc-100'}`}>{user.name}</p>
+                  <p className={`text-[11px] uppercase tracking-wider font-mono truncate font-medium ${activeView === 'profile' ? 'text-blue-100' : 'text-zinc-500 dark:text-zinc-400'}`}>{user.role.replace('ROLE_', '')}</p>
                 </div>
-              </div>
+              </button>
             ) : (
-              <div className="flex justify-center group relative">
+              <button
+                type="button"
+                onClick={() => {
+                  setView('profile');
+                  if (isMobile) toggleSidebar();
+                }}
+                className="w-full flex justify-center group relative cursor-pointer"
+                title={`View Profile: ${user.name}`}
+              >
                 <img
                   src={user.profilePhoto || getAvatarByName(user.name)}
                   alt="avatar"
-                  className="w-10 h-10 rounded-lg object-cover cursor-pointer"
-                  title={user.name}
+                  className="w-10 h-10 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-2 hover:ring-blue-500 transition-all"
                 />
                 <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
                   {user.name} ({user.role.replace('ROLE_', '')})
                 </div>
-              </div>
+              </button>
             )
           )}
           
