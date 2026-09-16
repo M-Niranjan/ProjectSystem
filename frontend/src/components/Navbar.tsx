@@ -233,12 +233,12 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between px-4 print:hidden ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[92px]'} transition-all duration-200 ease-in-out`}>
+    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between px-3 sm:px-4 print:hidden ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[92px]'} transition-all duration-200 ease-in-out`}>
       {/* Search Input bar */}
-      <div className="flex items-center gap-2 flex-1 max-w-md">
+      <div className="flex items-center gap-2 flex-1 max-w-md min-w-0">
         <button
           onClick={toggleSidebar}
-          className="md:hidden p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 cursor-pointer"
+          className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
           title="Toggle Navigation Menu"
         >
           <Menu className="w-4 h-4" />
@@ -246,11 +246,11 @@ export default function Navbar() {
 
         <div 
           onClick={triggerSearchPalette}
-          className="w-full flex items-center justify-between gap-1.5 sm:gap-2 px-2.5 sm:px-3 py-1.5 bg-zinc-100/70 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 rounded-lg text-zinc-500 text-xs cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors select-none"
+          className="w-full h-9 flex items-center justify-between gap-1.5 sm:gap-2 px-3 bg-zinc-100/70 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-500 text-xs cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors select-none"
         >
-          <div className="flex items-center gap-1.5 sm:gap-2 truncate">
+          <div className="flex items-center gap-2 truncate">
             <Search className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-            <span className="truncate sm:inline">Search...</span>
+            <span className="truncate text-xs">Search...</span>
           </div>
           <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded font-mono">
             ⌘K
@@ -259,7 +259,7 @@ export default function Navbar() {
 
         <button
           onClick={() => setVoiceOverlay(true)}
-          className="hidden sm:flex w-8 h-8 items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-indigo-600/10 text-zinc-500 hover:text-indigo-600 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
+          className="hidden sm:flex w-9 h-9 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-indigo-600/10 text-zinc-500 hover:text-indigo-600 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
           title="Voice command palette"
         >
           <Mic className="w-3.5 h-3.5" />
@@ -269,13 +269,14 @@ export default function Navbar() {
       {/* Right Navbar Items */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {user?.role !== 'ROLE_EMPLOYEE' && (
-          <div className="relative">
+          <div className="relative flex-shrink-0">
             <button
               ref={quickCreateButtonRef}
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-medium text-xs shadow-xs transition-colors cursor-pointer"
+              className="w-9 h-9 md:w-auto md:px-3 h-9 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-xs shadow-xs transition-colors cursor-pointer"
+              title="Create new project or task"
             >
-              <Plus className="w-3.5 h-3.5" />
+              <Plus className="w-4 h-4 flex-shrink-0" />
               <span className="hidden md:inline">Create</span>
             </button>
             
@@ -310,17 +311,18 @@ export default function Navbar() {
 
         <button
           onClick={toggleTheme}
-          className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
+          className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer flex-shrink-0"
           title="Toggle Light/Dark Theme"
         >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-700" />}
+          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />}
         </button>
 
-        <div className="hidden sm:block relative">
+        <div className="hidden sm:block relative flex-shrink-0">
           <button
             ref={languagesButtonRef}
             onClick={() => setShowLanguages(!showLanguages)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer font-medium text-xs"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer font-medium text-xs"
+            title="Language"
           >
             <Globe className="w-4 h-4" />
           </button>
@@ -346,11 +348,12 @@ export default function Navbar() {
           )}
         </div>
 
-        <div className="relative">
+        <div className="relative flex-shrink-0">
           <button
             ref={notificationButtonRef}
             onClick={() => setShowNotifications(!showNotifications)}
-            className="w-8 h-8 flex items-center justify-center rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer relative"
+            className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer relative"
+            title="Notifications"
           >
             <Bell className="w-4 h-4" />
             {notifications.length > 0 && (
@@ -441,22 +444,25 @@ export default function Navbar() {
         </div>
 
         {user && (
-          <button
-            onClick={() => setView('profile')}
-            className={`flex items-center gap-2 pl-2 border-l border-zinc-200 dark:border-zinc-800 cursor-pointer p-1 rounded-xl transition-all ${
-              activeView === 'profile'
-                ? 'ring-2 ring-blue-500 bg-blue-500/10'
-                : 'hover:bg-zinc-100 dark:hover:bg-zinc-800'
-            }`}
-            title="View Profile Resume"
-            aria-label="View My Profile"
-          >
-            <img
-              src={user.profilePhoto || getAvatarByName(user.name)}
-              alt="Avatar"
-              className="w-8 h-8 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
-            />
-          </button>
+          <div className="flex items-center gap-1.5 sm:gap-2 pl-0.5 sm:pl-1 flex-shrink-0">
+            <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 flex-shrink-0" />
+            <button
+              onClick={() => setView('profile')}
+              className={`w-9 h-9 flex items-center justify-center rounded-xl cursor-pointer transition-all flex-shrink-0 ${
+                activeView === 'profile'
+                  ? 'ring-2 ring-blue-500 bg-blue-500/10'
+                  : 'hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
+              }`}
+              title="View Profile Resume"
+              aria-label="View My Profile"
+            >
+              <img
+                src={user.profilePhoto || getAvatarByName(user.name)}
+                alt="Avatar"
+                className="w-7 h-7 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
+              />
+            </button>
+          </div>
         )}
       </div>
 
