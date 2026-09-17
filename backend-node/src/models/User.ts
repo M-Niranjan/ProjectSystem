@@ -18,6 +18,7 @@ export interface UserAttributes {
   department?: string;
   experience?: number;
   skills?: string;
+  gender?: string;
   profilePhoto?: string;
   phone?: string;
   githubUrl?: string;
@@ -45,6 +46,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare department: string;
   declare experience: number;
   declare skills: string;
+  declare gender: string;
   declare profilePhoto: string;
   declare phone: string;
   declare githubUrl: string;
@@ -94,6 +96,7 @@ User.init(
     department: DataTypes.STRING,
     experience: DataTypes.INTEGER,
     skills: DataTypes.TEXT,
+    gender: DataTypes.STRING,
     profilePhoto: DataTypes.TEXT,
     phone: DataTypes.STRING,
     githubUrl: DataTypes.STRING,

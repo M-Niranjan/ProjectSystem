@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, X, Search, Check, CheckSquare, Square, Shield, Briefcase, Code, UserCheck, Sparkles } from 'lucide-react';
 import api from '../services/api';
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 
 export interface DirectoryMember {
   id: number | string;
   name: string;
   email: string;
   role: string;
+  gender?: string;
   designation?: string;
   department?: string;
   profilePhoto?: string;
@@ -325,7 +326,7 @@ export default function TeamMemberPickerModal({
 
                         {/* Avatar */}
                         <img
-                          src={member.profilePhoto || getAvatarByName(member.name)}
+                          src={resolveAvatar(member.profilePhoto, member.name, member.gender)}
                           alt={member.name}
                           className="w-10 h-10 rounded-full object-cover border border-slate-200 dark:border-white/10 flex-shrink-0 shadow-xs"
                         />

@@ -43,7 +43,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
 import { supabase } from '../services/supabase';
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import {
@@ -504,7 +504,7 @@ export default function Messages() {
                         <div className="flex items-center gap-2.5 truncate">
                           <div className="relative flex-shrink-0">
                             <img
-                              src={contact.profilePhoto || getAvatarByName(contact.name)}
+                              src={resolveAvatar(contact.profilePhoto, contact.name, (contact as any).gender)}
                               alt="avatar"
                               className={`w-7.5 h-7.5 rounded-xl object-cover ring-2 transition-all ${
                                 isActive ? 'ring-white/40' : 'ring-blue-500/20 group-hover:scale-105'
@@ -535,7 +535,7 @@ export default function Messages() {
         {user && (
           <div className="p-3 border-t border-slate-200/50 dark:border-white/10 m-2 bg-slate-100/60 dark:bg-white/5 rounded-2xl flex items-center gap-2.5">
             <img
-              src={user.profilePhoto || getAvatarByName(user.name)}
+              src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
               alt="avatar"
               className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/30"
             />
@@ -577,7 +577,7 @@ export default function Messages() {
               <div className="flex items-center gap-2.5">
                 <div className="relative">
                   <img
-                    src={activeContactObj?.profilePhoto || getAvatarByName(activeContactObj?.name || 'Contact')}
+                    src={resolveAvatar(activeContactObj?.profilePhoto, activeContactObj?.name || 'Contact', (activeContactObj as any)?.gender)}
                     alt="avatar"
                     className="w-8.5 h-8.5 rounded-xl object-cover ring-2 ring-blue-500/30"
                   />
@@ -663,7 +663,7 @@ export default function Messages() {
                   className={`group relative flex gap-3 text-xs ${isMe ? 'flex-row-reverse' : ''}`}
                 >
                   <img
-                    src={msg.sender.profilePhoto || getAvatarByName(msg.sender.name)}
+                    src={resolveAvatar(msg.sender.profilePhoto, msg.sender.name, (msg.sender as any).gender)}
                     alt="avatar"
                     className="w-8.5 h-8.5 rounded-xl object-cover ring-1 ring-blue-500/20 flex-shrink-0"
                   />

@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle } from 'lucide-react';
@@ -10,6 +10,7 @@ interface TeamMember {
   name: string;
   email: string;
   role: string;
+  gender?: 'Male' | 'Female' | string;
   designation?: string;
   department?: string;
   experience?: number;
@@ -36,6 +37,7 @@ export default function Teams() {
   const [inviteDept, setInviteDept] = useState('Technology');
   const [inviteExp, setInviteExp] = useState(2);
   const [inviteSkills, setInviteSkills] = useState('');
+  const [inviteGender, setInviteGender] = useState<'Male' | 'Female'>('Male');
   const [profilePhoto, setProfilePhoto] = useState('');
 
   // Teammate View details modal state
@@ -108,6 +110,7 @@ export default function Teams() {
     setInviteDept(member.department || 'Technology');
     setInviteExp(member.experience || 2);
     setInviteSkills(member.skills || '');
+    setInviteGender((member.gender as any) || 'Male');
     setProfilePhoto(member.profilePhoto || '');
     setIsInviteOpen(true);
   };
@@ -124,6 +127,7 @@ export default function Teams() {
     setInviteDept('Technology');
     setInviteExp(2);
     setInviteSkills('');
+    setInviteGender('Male');
     setProfilePhoto('');
     setIsInviteOpen(true);
   };
@@ -203,15 +207,17 @@ export default function Teams() {
       return;
     }
 
+    const defaultAvatar = inviteGender === 'Female' ? WOMEN_AVATAR : MEN_AVATAR;
     const payload: any = {
       name: inviteName,
       email: inviteEmail,
+      gender: inviteGender,
       role: inviteRole,
       designation: inviteDesignation || 'Teammate',
       department: inviteDept,
       experience: Number(inviteExp),
       skills: inviteSkills,
-      profilePhoto: profilePhoto || undefined
+      profilePhoto: profilePhoto || defaultAvatar
     };
     if (invitePassword.trim()) {
       payload.password = invitePassword.trim();
@@ -298,7 +304,7 @@ export default function Teams() {
             <div className="flex gap-4">
               <div className="relative flex-shrink-0">
                 <img
-                  src={member.profilePhoto || getAvatarByName(member.name)}
+                  src={resolveAvatar(member.profilePhoto, member.name, member.gender)}
                   alt="Avatar"
                   className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
                 />
@@ -407,9 +413,9 @@ export default function Teams() {
                       />
                     ) : (
                       <img
-                        src={profilePhoto || getAvatarByName(inviteName || 'seed')}
+                        src={resolveAvatar(profilePhoto, inviteName, inviteGender)}
                         alt="Teammate avatar preview"
-                        className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
+                        className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/20 shadow-md"
                       />
                     )}
                   </div>
@@ -465,6 +471,57 @@ export default function Teams() {
                         Reset
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Gender selector for Admin and Team Leader */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center justify-between">
+                    <span>Gender (Profile Icon)</span>
+                    <span className="text-[9px] text-blue-500 dark:text-blue-400 normal-case font-bold">Auto-sets default avatar</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInviteGender('Male');
+                        if (!profilePhoto || profilePhoto === WOMEN_AVATAR) {
+                          setProfilePhoto(MEN_AVATAR);
+                        }
+                      }}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        inviteGender === 'Male'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={MEN_AVATAR} alt="Male Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Male</p>
+                        <p className="text-[9px] opacity-75">Men Icon</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setInviteGender('Female');
+                        if (!profilePhoto || profilePhoto === MEN_AVATAR) {
+                          setProfilePhoto(WOMEN_AVATAR);
+                        }
+                      }}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        inviteGender === 'Female'
+                          ? 'border-pink-500 bg-pink-500/15 text-pink-600 dark:text-pink-400 ring-2 ring-pink-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={WOMEN_AVATAR} alt="Female Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-pink-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Female</p>
+                        <p className="text-[9px] opacity-75">Women Icon</p>
+                      </div>
+                    </button>
                   </div>
                 </div>
 
@@ -631,15 +688,20 @@ export default function Teams() {
               <div className="flex flex-col items-center space-y-3">
                 <div className="relative">
                   <img
-                    src={viewingMember.profilePhoto || getAvatarByName(viewingMember.name)}
+                    src={resolveAvatar(viewingMember.profilePhoto, viewingMember.name, viewingMember.gender)}
                     alt="avatar"
-                    className="w-20 h-20 rounded-2xl object-cover ring-2 ring-blue-500/20"
+                    className="w-20 h-20 rounded-2xl object-cover ring-2 ring-blue-500/20 shadow-lg"
                   />
                   <span className="absolute bottom-0 right-0 w-4.5 h-4.5 rounded-full bg-green-500 border-4 border-slate-200 dark:border-slate-900 animate-pulse"></span>
                 </div>
                 <div>
                   <h3 className="text-base font-black text-slate-800 dark:text-white">{viewingMember.name}</h3>
                   <p className="text-xs font-bold text-blue-500 mt-0.5">{viewingMember.designation || 'Software Engineer'}</p>
+                  {viewingMember.gender && (
+                    <span className="inline-block mt-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-white/5 border border-slate-200/40 dark:border-white/10 text-slate-500 dark:text-slate-400">
+                      {viewingMember.gender}
+                    </span>
+                  )}
                 </div>
               </div>
 

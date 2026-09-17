@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
 import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2, Sparkles, Activity, Lock, Settings } from 'lucide-react';
@@ -661,7 +661,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   .map(emp => (
                   <div key={emp.id} className="py-3 flex items-center justify-between text-xs">
                     <div className="flex items-center gap-3">
-                      <img src={emp.profilePhoto || getAvatarByName(emp.name)} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
+                      <img src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
                       <div>
                         <p className="font-black text-slate-800 dark:text-white">{emp.name}</p>
                         <p className="text-[10px] text-slate-400 font-bold">{emp.designation || 'Software Engineer'}</p>

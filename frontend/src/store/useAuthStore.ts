@@ -12,6 +12,7 @@ interface User {
   department?: string;
   experience?: number;
   skills?: string;
+  gender?: 'Male' | 'Female' | 'Other' | string;
   profilePhoto?: string;
   phone?: string;
   githubUrl?: string;
@@ -152,7 +153,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
                   : 'Engineering'),
             experience: (userData as any).experience || 5,
             skills: (userData as any).skills || '',
-            profilePhoto: firebaseUser.photoURL || undefined,
+            gender: (userData as any).gender || 'Male',
+            profilePhoto: (firebaseUser.photoURL && !firebaseUser.photoURL.includes('unsplash.com')) ? firebaseUser.photoURL : ((userData as any).profilePhoto && !(userData as any).profilePhoto.includes('unsplash.com')) ? (userData as any).profilePhoto : undefined,
             createdAt: (userData as any).createdAt || new Date().toISOString(),
           };
 
@@ -250,7 +252,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
             department: role === 'ROLE_ADMIN' ? 'Administration' : role === 'ROLE_MANAGER' ? 'Management' : 'Engineering',
             experience: 5,
             skills: 'Project Management, Collaboration',
-            profilePhoto: firebaseUser.photoURL || undefined,
+            gender: 'Male',
+            profilePhoto: (firebaseUser.photoURL && !firebaseUser.photoURL.includes('unsplash.com')) ? firebaseUser.photoURL : undefined,
             createdAt: new Date().toISOString(),
           };
         }

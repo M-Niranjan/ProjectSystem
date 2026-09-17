@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { DndContext, DragEndEvent, useSensor, useSensors, PointerSensor } from '@dnd-kit/core';
 import { useDroppable } from '@dnd-kit/core';
@@ -895,7 +895,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
           )}
           {task.assignee && (
             <img
-              src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+              src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
               alt="assignee"
               className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-blue-500/20"
               title={`Assignee: ${task.assignee.name}`}
@@ -903,7 +903,7 @@ function KanbanCard({ task, onClick, onActionClick, onSendBackClick }: CardProps
           )}
           {task.reviewer && (
             <img
-              src={task.reviewer.profilePhoto || getAvatarByName(task.reviewer.name)}
+              src={resolveAvatar(task.reviewer.profilePhoto, task.reviewer.name, (task.reviewer as any).gender)}
               alt="reviewer"
               className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-purple-500/20 border border-purple-500/50"
               title={`Reviewer: ${task.reviewer.name}`}

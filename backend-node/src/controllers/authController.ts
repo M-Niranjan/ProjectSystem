@@ -85,7 +85,7 @@ export class AuthController {
         { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
       );
 
-      const userObj = { id: decoded.uid, email: decoded.email || profile.email, name: profile.name, role: verifiedRole, ...profile };
+      const userObj = { ...profile, id: decoded.uid, email: decoded.email || profile.email, name: profile.name, role: verifiedRole };
 
       return res.json({ accessToken: token, user: userObj });
     } catch (err: any) {

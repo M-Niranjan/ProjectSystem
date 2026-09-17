@@ -298,12 +298,13 @@ const mockAdapter = async (config: any) => {
     } else {
       resData = getProjects();
     }
-  } else if (url.includes('/api/teams') || url.includes('/api/admin/create-team-leader') || url.includes('/api/admin/create-employee')) {
+  } else if (url.includes('/api/teams') || url.includes('/api/admin/create-team-leader') || url.includes('/api/admin/create-employee') || url.includes('/api/users/team-leaders') || url.includes('/api/users/employees')) {
     if (method === 'post') {
       const teammates = getTeammates();
       const newTeammate = {
         id: Date.now(),
         ...data,
+        gender: data.gender || 'Male',
         role: data.role || 'ROLE_EMPLOYEE',
         designation: data.designation || 'Teammate',
         department: data.department || 'Technology',

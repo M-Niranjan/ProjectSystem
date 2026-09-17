@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Users, Shield, FolderGit2, Sparkles, FileText, Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, Filter, Eye, EyeOff, AlertCircle, Key, Lock, Settings } from 'lucide-react';
 import api from '../services/api';
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 
 import { normalizeRole } from '../services/authRoles';
 import { upsertFirestoreUserDoc, deleteFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
@@ -23,6 +23,7 @@ export function UserManagementView() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [gender, setGender] = useState<'Male' | 'Female'>('Male');
   const [role, setRole] = useState('ROLE_EMPLOYEE');
   const [designation, setDesignation] = useState('');
   const [department, setDepartment] = useState('Engineering');
@@ -72,6 +73,7 @@ export function UserManagementView() {
     setEmail(u.email);
     setPassword('');
     setShowPassword(false);
+    setGender((u.gender as any) || 'Male');
     setRole(u.role);
     setDesignation(u.designation || '');
     setDepartment(u.department || 'Engineering');
@@ -85,6 +87,7 @@ export function UserManagementView() {
     setEmail('');
     setPassword('');
     setShowPassword(false);
+    setGender('Male');
     setRole('ROLE_EMPLOYEE');
     setDesignation('');
     setDepartment('Engineering');
@@ -129,12 +132,15 @@ export function UserManagementView() {
       setModalError('Password must be at least 6 characters long!');
       return;
     }
+    const defaultAvatar = gender === 'Female' ? WOMEN_AVATAR : MEN_AVATAR;
     const payload: any = { 
       name: name.trim(), 
       email: email.trim().toLowerCase(), 
+      gender,
       role, 
       designation: designation || (role === 'ROLE_ADMIN' ? 'System Administrator' : role === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'), 
       department: department || 'Engineering', 
+      profilePhoto: editingUser?.profilePhoto || defaultAvatar,
       active: true 
     };
     if (password.trim()) {
@@ -248,7 +254,7 @@ export function UserManagementView() {
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3 min-w-0">
                     <img
-                      src={u.profilePhoto || getAvatarByName(u.name || u.email)}
+                      src={resolveAvatar(u.profilePhoto, u.name || u.email, u.gender)}
                       alt="avatar"
                       className="w-10 h-10 rounded-xl object-cover ring-2 ring-blue-500/10 shrink-0"
                     />
@@ -340,7 +346,7 @@ export function UserManagementView() {
                   <tr key={u.id || u.uid} className="hover:bg-white/5 transition-colors">
                     <td className="p-4 whitespace-nowrap flex items-center gap-3">
                       <img
-                        src={u.profilePhoto || getAvatarByName(u.name || u.email)}
+                        src={resolveAvatar(u.profilePhoto, u.name || u.email, u.gender)}
                         alt="avatar"
                         className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/10 shrink-0"
                       />
@@ -425,6 +431,46 @@ export function UserManagementView() {
                     <span>{modalError}</span>
                   </div>
                 )}
+                <div>
+                  <label className="text-[10px] font-black uppercase text-slate-400 flex items-center justify-between mb-1.5">
+                    <span>Gender (Profile Icon)</span>
+                    <span className="text-[9px] text-blue-500 font-bold normal-case">Sets Men/Women avatar</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => setGender('Male')}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        gender === 'Male'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={MEN_AVATAR} alt="Male Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Male</p>
+                        <p className="text-[9px] opacity-75">Men Icon</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setGender('Female')}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        gender === 'Female'
+                          ? 'border-pink-500 bg-pink-500/15 text-pink-600 dark:text-pink-400 ring-2 ring-pink-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={WOMEN_AVATAR} alt="Female Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-pink-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Female</p>
+                        <p className="text-[9px] opacity-75">Women Icon</p>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 <div>
                   <label className="text-[10px] font-black uppercase text-slate-400">Full Name</label>
                   <input

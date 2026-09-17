@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
@@ -159,7 +159,7 @@ export default function EmployeeWorkProfilePage() {
           <div className="flex items-center gap-5">
             <div className="relative shrink-0">
               <img
-                src={profile.profilePhoto || getAvatarByName(profile.name)}
+                src={resolveAvatar(profile.profilePhoto, profile.name, (profile as any).gender)}
                 alt="avatar"
                 className="w-20 h-20 rounded-2xl object-cover ring-4 ring-blue-500/20 shadow-md"
               />

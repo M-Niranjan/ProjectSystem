@@ -19,7 +19,7 @@ export class TeamController {
         return res.status(403).json({ message: 'Forbidden: Only System Administrators can provision Team Leaders.' });
       }
 
-      const { name, email, password, designation, department, status } = req.body;
+      const { name, email, password, designation, department, status, gender, profilePhoto } = req.body;
       if (!email || !name) {
         return res.status(400).json({ message: 'Name and Email are required.' });
       }
@@ -55,6 +55,8 @@ export class TeamController {
           status: status || 'active',
           designation: designation || 'Team Leader / Project Lead',
           department: department || 'Engineering',
+          gender: gender || 'Male',
+          profilePhoto: profilePhoto || null,
           createdBy: req.firebaseUid,
           createdAt: FieldValue.serverTimestamp(),
         });
@@ -81,6 +83,8 @@ export class TeamController {
           experience: 3,
           skills: 'Project Management',
           status: status || 'active',
+          gender: gender || 'Male',
+          profilePhoto: profilePhoto || null,
         });
       } catch (dbErr) {
         console.warn('Local database sync skipped, Firestore user created successfully:', dbErr);
@@ -131,7 +135,7 @@ export class TeamController {
         }
       }
 
-      const { name, email, password, designation, department, status, teamLeaderId } = req.body;
+      const { name, email, password, designation, department, status, teamLeaderId, gender, profilePhoto } = req.body;
       if (!email || !name) {
         return res.status(400).json({ message: 'Name and Email are required.' });
       }
@@ -179,6 +183,8 @@ export class TeamController {
           teamLeaderId: assignedTL,
           designation: designation || (assignedRole === 'admin' ? 'System Administrator' : 'Software Engineer'),
           department: department || 'Engineering',
+          gender: gender || 'Male',
+          profilePhoto: profilePhoto || null,
           createdBy: req.firebaseUid,
           createdAt: FieldValue.serverTimestamp(),
         });
@@ -205,6 +211,8 @@ export class TeamController {
           experience: 1,
           skills: 'Software Engineering',
           status: status || 'active',
+          gender: gender || 'Male',
+          profilePhoto: profilePhoto || null,
         });
       } catch (dbErr) {
         console.warn('Local database sync skipped, Firestore user created successfully:', dbErr);

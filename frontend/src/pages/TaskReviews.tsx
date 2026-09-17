@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Award, CheckCircle2, AlertCircle, MessageSquare, Clock, ArrowRight, User, Folder, Check, X, RefreshCw, CheckCheck, Sparkles, Shield } from 'lucide-react';
 import api from '../services/api';
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
 
 interface ReviewTask {
@@ -13,7 +13,7 @@ interface ReviewTask {
   reviewStatus?: string;
   submittedForReview?: boolean;
   project?: { id: number; name?: string; title?: string };
-  assignee?: { id: number; name: string; role?: string; email?: string };
+  assignee?: { id: number; name: string; role?: string; email?: string; profilePhoto?: string; gender?: string };
   actualTime?: number;
   estimatedTime?: number;
   priority?: string;
@@ -302,7 +302,7 @@ export default function TaskReviews() {
                 <div className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
                     <img
-                      src={getAvatarByName(task.assignee?.name || 'Employee')}
+                      src={resolveAvatar(task.assignee?.profilePhoto, task.assignee?.name || 'Employee', (task.assignee as any)?.gender)}
                       alt="avatar"
                       className="w-6 h-6 rounded-full object-cover ring-1 ring-blue-500/20"
                     />
@@ -399,7 +399,7 @@ export default function TaskReviews() {
                     <span className="text-[9px] font-black uppercase text-slate-400">Submitted By</span>
                     <p className="font-extrabold text-blue-500 flex items-center gap-1.5 mt-0.5">
                       <img
-                        src={getAvatarByName(selectedTask.assignee?.name || 'Employee')}
+                        src={resolveAvatar(selectedTask.assignee?.profilePhoto, selectedTask.assignee?.name || 'Employee', (selectedTask.assignee as any)?.gender)}
                         alt="avatar"
                         className="w-4 h-4 rounded-full object-cover"
                       />

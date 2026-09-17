@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
@@ -38,6 +38,7 @@ export default function Profile() {
   const [editBio, setEditBio] = useState('');
   const [editEducation, setEditEducation] = useState('');
   const [editPhoto, setEditPhoto] = useState('');
+  const [editGender, setEditGender] = useState<'Male' | 'Female'>('Male');
   const [editResumeBase64, setEditResumeBase64] = useState('');
   const [editResumeFileName, setEditResumeFileName] = useState('');
 
@@ -82,6 +83,7 @@ export default function Profile() {
     setEditPortfolio(user.portfolioUrl || '');
     setEditBio(user.bio || '');
     setEditEducation(user.education || '');
+    setEditGender((user.gender as any) || 'Male');
     setEditPhoto(user.profilePhoto || '');
     setEditResumeBase64(user.resumeBase64 || '');
     setEditResumeFileName(user.resumeFileName || '');
@@ -161,18 +163,20 @@ export default function Profile() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    const defaultAvatar = editGender === 'Female' ? WOMEN_AVATAR : MEN_AVATAR;
     const payload = {
       name: editName,
       designation: editDesignation,
       department: editDept,
       experience: Number(editExp),
       skills: editSkills,
+      gender: editGender,
       phone: editPhone,
       githubUrl: editGithub,
       portfolioUrl: editPortfolio,
       bio: editBio,
       education: editEducation,
-      profilePhoto: editPhoto || null,
+      profilePhoto: editPhoto || defaultAvatar,
       resumeBase64: editResumeBase64 || null,
       resumeFileName: editResumeFileName || null
     };
@@ -223,7 +227,7 @@ export default function Profile() {
           <div className="glass-panel p-6 text-center space-y-4 flex flex-col items-center relative">
             <div className="relative">
               <img
-                src={user.profilePhoto || getAvatarByName(user.name)}
+                src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                 alt="Profile"
                 className="w-28 h-28 rounded-2xl object-cover ring-4 ring-blue-500/20"
               />
@@ -464,9 +468,9 @@ export default function Profile() {
                       />
                     ) : (
                       <img
-                        src={editPhoto || getAvatarByName(editName || 'seed')}
-                        alt="Teammate avatar preview"
-                        className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
+                        src={resolveAvatar(editPhoto, editName, editGender)}
+                        alt="Profile avatar preview"
+                        className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/20 shadow-md"
                       />
                     )}
                   </div>
@@ -522,6 +526,57 @@ export default function Profile() {
                         Reset
                       </button>
                     )}
+                  </div>
+                </div>
+
+                {/* Gender selector */}
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center justify-between">
+                    <span>Gender (Profile Icon)</span>
+                    <span className="text-[9px] text-blue-500 dark:text-blue-400 font-bold normal-case">Default avatar icon</span>
+                  </label>
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditGender('Male');
+                        if (!editPhoto || editPhoto === WOMEN_AVATAR) {
+                          setEditPhoto(MEN_AVATAR);
+                        }
+                      }}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        editGender === 'Male'
+                          ? 'border-blue-500 bg-blue-500/15 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={MEN_AVATAR} alt="Male Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-blue-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Male</p>
+                        <p className="text-[9px] opacity-75">Men Icon</p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditGender('Female');
+                        if (!editPhoto || editPhoto === MEN_AVATAR) {
+                          setEditPhoto(WOMEN_AVATAR);
+                        }
+                      }}
+                      className={`flex items-center gap-2.5 p-2 rounded-xl border transition-all cursor-pointer ${
+                        editGender === 'Female'
+                          ? 'border-pink-500 bg-pink-500/15 text-pink-600 dark:text-pink-400 ring-2 ring-pink-500/20'
+                          : 'border-slate-200/50 dark:border-white/5 bg-white/5 hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                      }`}
+                    >
+                      <img src={WOMEN_AVATAR} alt="Female Icon" className="w-8 h-8 rounded-lg object-cover ring-1 ring-pink-500/30 shrink-0" />
+                      <div className="text-left min-w-0">
+                        <p className="text-xs font-black">Female</p>
+                        <p className="text-[9px] opacity-75">Women Icon</p>
+                      </div>
+                    </button>
                   </div>
                 </div>
 

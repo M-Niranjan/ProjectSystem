@@ -51,6 +51,7 @@ export class UserController {
       if (profileDetails.department !== undefined) user.department = profileDetails.department;
       if (profileDetails.experience !== undefined) user.experience = profileDetails.experience;
       if (profileDetails.skills !== undefined) user.skills = profileDetails.skills;
+      if (profileDetails.gender !== undefined) user.gender = profileDetails.gender;
       if (profileDetails.profilePhoto !== undefined) user.profilePhoto = profileDetails.profilePhoto;
       if (profileDetails.phone !== undefined) user.phone = profileDetails.phone;
       if (profileDetails.githubUrl !== undefined) user.githubUrl = profileDetails.githubUrl;

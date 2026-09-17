@@ -16,7 +16,7 @@ import {
   Info
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { getAvatarByName } from '../../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../../services/avatar';
 import {
   ChannelItem,
   ContactItem,
@@ -106,7 +106,7 @@ export default function ConversationDetailsPanel({
             <div className="flex flex-col items-center">
               <div className="relative mb-2">
                 <img
-                  src={contact?.profilePhoto || getAvatarByName(contact?.name || 'Teammate')}
+                  src={resolveAvatar(contact?.profilePhoto, contact?.name || 'Teammate', (contact as any)?.gender)}
                   alt="avatar"
                   className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-500/30 shadow-md"
                 />
@@ -240,7 +240,7 @@ export default function ConversationDetailsPanel({
                       <div className="flex items-center gap-2.5 truncate">
                         <div className="relative">
                           <img
-                            src={m.profilePhoto || getAvatarByName(m.name)}
+                            src={resolveAvatar(m.profilePhoto, m.name, (m as any).gender)}
                             alt="avatar"
                             className="w-7 h-7 rounded-lg object-cover ring-1 ring-blue-500/20"
                           />

@@ -127,12 +127,12 @@ export class FirebaseAdminService {
     }
   }
 
-  public static async getFirestoreUserDoc(uid: string) {
+  public static async getFirestoreUserDoc(uid: string): Promise<Record<string, any> | null> {
     if (!firebaseFirestore) return null;
     try {
       const doc = await firebaseFirestore.collection('users').doc(uid).get();
       if (doc.exists) {
-        return { uid: doc.id, id: doc.id, ...doc.data() };
+        return { uid: doc.id, id: doc.id, ...doc.data() } as Record<string, any>;
       }
       return null;
     } catch (err) {
@@ -141,7 +141,7 @@ export class FirebaseAdminService {
     }
   }
 
-  public static async getUserByEmailFromFirestore(email: string) {
+  public static async getUserByEmailFromFirestore(email: string): Promise<Record<string, any> | null> {
     if (!firebaseFirestore) return null;
     try {
       const snapshot = await firebaseFirestore.collection('users')
@@ -150,7 +150,7 @@ export class FirebaseAdminService {
         .get();
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
-        return { uid: doc.id, id: doc.id, ...doc.data() };
+        return { uid: doc.id, id: doc.id, ...doc.data() } as Record<string, any>;
       }
       return null;
     } catch (err) {
@@ -159,7 +159,7 @@ export class FirebaseAdminService {
     }
   }
 
-  public static async getAllFirestoreUsers() {
+  public static async getAllFirestoreUsers(): Promise<Record<string, any>[]> {
     if (!firebaseFirestore) return [];
     try {
       const snapshot = await firebaseFirestore.collection('users').get();
@@ -167,7 +167,7 @@ export class FirebaseAdminService {
         id: doc.id,
         uid: doc.id,
         ...doc.data()
-      }));
+      })) as Record<string, any>[];
     } catch (err) {
       console.error('Error getting all Firestore users:', err);
       return [];
@@ -183,7 +183,7 @@ export class FirebaseAdminService {
       const docs = snapshot.docs.map(doc => ({ id: doc.id, uid: doc.id, ...doc.data() }));
       const ownDoc = await this.getFirestoreUserDoc(teamLeaderUid);
       if (ownDoc && !docs.some(d => d.uid === teamLeaderUid)) {
-        docs.unshift(ownDoc);
+        docs.unshift(ownDoc as any);
       }
       return docs;
     } catch (err) {

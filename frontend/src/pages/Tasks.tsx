@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
@@ -435,7 +435,7 @@ export default function Tasks() {
                   }`}
                 >
                   <img
-                    src={member.profilePhoto || getAvatarByName(member.name)}
+                    src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
                     alt="avatar"
                     className="w-4 h-4 rounded-full object-cover ring-1 ring-blue-500/30"
                   />
@@ -625,7 +625,7 @@ export default function Tasks() {
                 <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/5">
                   <div className="flex items-center gap-3">
                     <img
-                      src={member.profilePhoto || getAvatarByName(member.name)}
+                      src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
                       alt="avatar"
                       className="w-9 h-9 rounded-xl object-cover ring-2 ring-blue-500/30"
                     />
@@ -754,7 +754,7 @@ export default function Tasks() {
                           {task.assignee ? (
                             <>
                               <img
-                                src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+                                src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                                 alt="avatar"
                                 className="w-4 h-4 rounded-full object-cover"
                               />
@@ -769,7 +769,7 @@ export default function Tasks() {
                         task.assignee ? (
                           <div className="flex items-center gap-1.5">
                             <img
-                              src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+                              src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                               alt="avatar"
                               className="w-5 h-5 rounded-full object-cover ring-1 ring-blue-500/10"
                             />
@@ -899,7 +899,7 @@ export default function Tasks() {
                               {task.assignee ? (
                                 <>
                                   <img
-                                    src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+                                    src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                                     alt="avatar"
                                     className="w-4 h-4 rounded-full object-cover"
                                   />
@@ -914,7 +914,7 @@ export default function Tasks() {
                             task.assignee ? (
                               <div className="flex items-center gap-1.5 truncate">
                                 <img
-                                  src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+                                  src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                                   alt="avatar"
                                   className="w-5 h-5 rounded-full object-cover ring-1 ring-blue-500/10 flex-shrink-0"
                                 />
@@ -978,7 +978,7 @@ export default function Tasks() {
                 >
                   <div className="flex items-center gap-2.5">
                     <img
-                      src={member.profilePhoto || getAvatarByName(member.name)}
+                      src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
                       alt="avatar"
                       className="w-7 h-7 rounded-xl object-cover ring-1 ring-blue-500/20"
                     />

@@ -1,37 +1,74 @@
-export const getAvatarByName = (name?: string) => {
-  if (!name) return 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256&auto=format&fit=crop&q=80';
-  
-  const lower = name.toLowerCase();
+import menAvatar from '../assets/avatars/men.png';
+import womenAvatar from '../assets/avatars/women.png';
 
-  if (lower.includes('niranjan')) {
-    return 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&auto=format&fit=crop&q=80';
-  }
-  if (lower.includes('ramesh')) {
-    return 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&auto=format&fit=crop&q=80';
-  }
-  if (lower.includes('rahul')) {
-    return 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=256&auto=format&fit=crop&q=80';
-  }
-  if (lower.includes('manju')) {
-    return 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=256&auto=format&fit=crop&q=80';
-  }
-  if (lower.includes('vinay')) {
-    return 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=256&auto=format&fit=crop&q=80';
-  }
+export const MEN_AVATAR = menAvatar;
+export const WOMEN_AVATAR = womenAvatar;
 
-  const avatars = [
-    'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=256&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=256&auto=format&fit=crop&q=80'
-  ];
-  let sum = 0;
-  for (let i = 0; i < name.length; i++) {
-    sum += name.charCodeAt(i);
+/**
+ * Returns the default icon according to gender ('Male' | 'Female' | 'men' | 'women')
+ */
+export const getAvatarByGender = (gender?: string): string => {
+  if (!gender) return MEN_AVATAR;
+  const g = gender.toLowerCase().trim();
+  if (g.startsWith('f') || g.includes('wom')) {
+    return WOMEN_AVATAR;
   }
-  return avatars[sum % avatars.length];
+  return MEN_AVATAR;
 };
+
+/**
+ * Known female names heuristic fallback when gender is not explicitly saved
+ */
+const FEMALE_NAMES = new Set([
+  'ananya', 'priya', 'pooja', 'sneha', 'kavya', 'divya', 'sarah', 'emily',
+  'neha', 'shreya', 'swati', 'deepa', 'meera', 'aarti', 'jyoti', 'rekha',
+  'sunita', 'radha', 'lakshmi', 'anita', 'geeta', 'rita', 'mona', 'sonia',
+  'woman', 'women', 'female', 'girl', 'lady'
+]);
+
+/**
+ * Returns either the Men or Women avatar icon based on gender or name.
+ */
+export const getAvatarByName = (name?: string, gender?: string): string => {
+  if (gender) {
+    return getAvatarByGender(gender);
+  }
+
+  if (!name) return MEN_AVATAR;
+
+  const lower = name.toLowerCase().trim();
+
+  // Check if any word or name segment matches female names
+  const tokens = lower.split(/[\s._-]+/);
+  for (const token of tokens) {
+    if (FEMALE_NAMES.has(token)) {
+      return WOMEN_AVATAR;
+    }
+  }
+
+  return MEN_AVATAR;
+};
+
+/**
+ * Resolves a profile photo URL. If the photo is undefined, empty, or an old Unsplash stock photo,
+ * it returns the clean Men or Women icon based on gender/name.
+ */
+export const resolveAvatar = (
+  photo?: string | null,
+  name?: string,
+  gender?: string
+): string => {
+  if (
+    photo &&
+    photo.trim() !== '' &&
+    !photo.includes('images.unsplash.com') &&
+    !photo.includes('photo-15') &&
+    !photo.includes('photo-14') &&
+    !photo.includes('photo-16')
+  ) {
+    return photo;
+  }
+
+  return getAvatarByName(name, gender);
+};
+

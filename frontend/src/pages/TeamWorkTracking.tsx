@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -662,7 +662,7 @@ export default function TeamWorkTracking() {
                           <div className="flex items-center gap-3">
                             <div className="relative">
                               <img
-                                src={emp.profilePhoto || getAvatarByName(emp.name)}
+                                src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)}
                                 alt="avatar"
                                 className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/20 group-hover:scale-105 transition-transform"
                               />
@@ -1091,7 +1091,7 @@ function EmployeeWorkProfileModal({
         <div className="flex items-start justify-between border-b border-slate-200/50 dark:border-white/10 pb-4">
           <div className="flex items-center gap-4">
             <img
-              src={profile.profilePhoto || getAvatarByName(profile.name)}
+              src={resolveAvatar(profile.profilePhoto, profile.name, (profile as any).gender)}
               alt="avatar"
               className="w-14 h-14 rounded-2xl object-cover ring-4 ring-blue-500/20"
             />

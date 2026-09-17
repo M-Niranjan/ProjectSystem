@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -292,7 +292,7 @@ export default function Sidebar() {
                 title="View My Profile"
               >
                 <img
-                  src={user.profilePhoto || getAvatarByName(user.name)}
+                  src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
                   className="w-10 h-10 rounded-lg object-cover flex-shrink-0 ring-1 ring-zinc-300 dark:ring-zinc-700 group-hover:scale-105 transition-transform"
                 />
@@ -312,7 +312,7 @@ export default function Sidebar() {
                 title={`View Profile: ${user.name}`}
               >
                 <img
-                  src={user.profilePhoto || getAvatarByName(user.name)}
+                  src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
                   className="w-10 h-10 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-2 hover:ring-blue-500 transition-all"
                 />

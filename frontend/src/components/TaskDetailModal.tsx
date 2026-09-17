@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar, User, Shield, Clock, Play, Pause, Square, Sparkles, MessageSquare, Send, Paperclip, CheckSquare, ListTodo, Plus, Info, Link, AlertCircle, UserCheck } from 'lucide-react';
@@ -362,7 +362,7 @@ export default function TaskDetailModal() {
                     return (
                       <div key={c.id} className="flex gap-3 text-xs">
                         <img
-                          src={c.user.profilePhoto || getAvatarByName(c.user.name)}
+                          src={resolveAvatar(c.user.profilePhoto, c.user.name, (c.user as any).gender)}
                           alt="avatar"
                           className="w-7 h-7 rounded-lg object-cover ring-1 ring-blue-500/10 flex-shrink-0"
                         />
@@ -447,7 +447,7 @@ export default function TaskDetailModal() {
                   {task.assignee ? (
                     <div className="flex items-center gap-1.5">
                       <img
-                        src={task.assignee.profilePhoto || getAvatarByName(task.assignee.name)}
+                        src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                         alt="avatar"
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-blue-500/10"
                       />
@@ -474,7 +474,7 @@ export default function TaskDetailModal() {
                     </span>
                     <div className="flex items-center gap-1.5">
                       <img
-                        src={task.reviewer.profilePhoto || getAvatarByName(task.reviewer.name)}
+                        src={resolveAvatar(task.reviewer.profilePhoto, task.reviewer.name, (task.reviewer as any).gender)}
                         alt="avatar"
                         className="w-5.5 h-5.5 rounded-full object-cover ring-1 ring-purple-500/10"
                       />

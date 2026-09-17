@@ -1,4 +1,4 @@
-import { getAvatarByName } from '../services/avatar';
+import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight, Menu } from 'lucide-react';
@@ -457,7 +457,7 @@ export default function Navbar() {
               aria-label="View My Profile"
             >
               <img
-                src={user.profilePhoto || getAvatarByName(user.name)}
+                src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                 alt="Avatar"
                 className="w-7 h-7 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
               />
