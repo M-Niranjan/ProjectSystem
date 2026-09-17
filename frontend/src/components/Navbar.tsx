@@ -233,7 +233,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between px-3 sm:px-4 print:hidden ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[92px]'} transition-all duration-200 ease-in-out`}>
+    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 print:hidden ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[92px]'} transition-all duration-200 ease-in-out`}>
       {/* Search Input bar */}
       <div className="flex items-center gap-2 flex-1 max-w-md min-w-0">
         <button
