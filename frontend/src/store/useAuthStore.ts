@@ -81,6 +81,49 @@ export const useAuthStore = create<AuthState>((set, get) => {
           });
 
           if (!firebaseUser) {
+            const savedToken = (typeof window !== 'undefined')
+              ? (localStorage.getItem('token') || sessionStorage.getItem('token'))
+              : null;
+
+            if (savedToken) {
+              try {
+                const meRes = await api.get('/api/auth/me');
+                if (meRes.data && (meRes.data.id || meRes.data.email)) {
+                  const roleEnum = normalizeRole(meRes.data.role);
+                  if (roleEnum) {
+                    const activeUser: User = {
+                      id: meRes.data.id,
+                      email: meRes.data.email,
+                      name: meRes.data.name || (meRes.data.email ? meRes.data.email.split('@')[0] : 'User'),
+                      role: roleEnum,
+                      designation: meRes.data.designation || (roleEnum === 'ROLE_ADMIN' ? 'System Administrator' : roleEnum === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
+                      department: meRes.data.department || (roleEnum === 'ROLE_ADMIN' ? 'Executive' : roleEnum === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
+                      experience: meRes.data.experience || 5,
+                      skills: meRes.data.skills || '',
+                      gender: meRes.data.gender || 'Male',
+                      profilePhoto: meRes.data.profilePhoto,
+                      phone: meRes.data.phone,
+                      githubUrl: meRes.data.githubUrl,
+                      portfolioUrl: meRes.data.portfolioUrl,
+                      bio: meRes.data.bio,
+                      education: meRes.data.education,
+                      createdAt: meRes.data.createdAt || new Date().toISOString(),
+                    };
+
+                    set({
+                      user: activeUser,
+                      token: savedToken,
+                      loading: false,
+                      error: null,
+                    });
+                    return;
+                  }
+                }
+              } catch (meErr) {
+                console.warn('[Auth] Backend session restore failed:', meErr);
+              }
+            }
+
             if (typeof window !== 'undefined') {
               sessionStorage.removeItem('token');
               localStorage.removeItem('token');
@@ -95,7 +138,17 @@ export const useAuthStore = create<AuthState>((set, get) => {
             return;
           }
 
-          const userData = await fetchFirestoreUserDoc(firebaseUser.uid);
+          let userData = await fetchFirestoreUserDoc(firebaseUser.uid);
+
+          if (!userData) {
+            // Fallback: check if the backend /api/auth/me recognizes the user
+            try {
+              const meRes = await api.get('/api/auth/me');
+              if (meRes.data && (meRes.data.id || meRes.data.email)) {
+                userData = meRes.data;
+              }
+            } catch (_fallbackErr) {}
+          }
 
           if (!userData) {
             if (typeof window !== 'undefined') {

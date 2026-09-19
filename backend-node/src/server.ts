@@ -69,6 +69,28 @@ const initializeServer = async () => {
   try {
     await connectDB();
     await sequelize.sync();
+
+    // Ensure all model columns exist non-destructively in SQLite tables
+    try {
+      const models = sequelize.models;
+      for (const [_, model] of Object.entries(models)) {
+        if ((model as any).tableName) {
+          const tableName = (model as any).tableName;
+          const [cols] = await sequelize.query(`PRAGMA table_info(${tableName});`);
+          const existing = (cols as any[]).map((c: any) => c.name);
+          const modelCols = Object.keys((model as any).rawAttributes);
+          for (const col of modelCols) {
+            if (!existing.includes(col)) {
+              try {
+                await sequelize.query(`ALTER TABLE ${tableName} ADD COLUMN ${col} TEXT;`);
+                console.log(`Non-destructive schema sync: Added missing column ${col} to table ${tableName}`);
+              } catch (_alterErr) {}
+            }
+          }
+        }
+      }
+    } catch (_syncErr) {}
+
     await seedInitialAdmin();
     console.log('Database synced cleanly and initial Admin provisioned.');
 

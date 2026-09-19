@@ -44,7 +44,8 @@ export default function CommandPalette() {
     { id: 'nav-cal', title: 'Go to Calendar', subtitle: 'Review task milestones and scheduling', icon: Calendar, category: 'Navigation', action: () => setView('calendar') },
     { id: 'nav-time', title: 'Go to Gantt Timeline', subtitle: 'View project schedule Gantt chart', icon: Clock, category: 'Navigation', action: () => setView('timeline') },
     { id: 'nav-team', title: 'Go to Team Hub', subtitle: 'Review member assignments and roles', icon: Users, category: 'Navigation', action: () => setView('teams') },
-    { id: 'nav-prof', title: 'Go to Profile Resume', subtitle: 'View your completed achievements and logs', icon: User, category: 'Navigation', action: () => setView('profile') },
+    { id: 'nav-prof', title: 'Go to Profile Resume', subtitle: 'View your completed achievements and details', icon: User, category: 'Navigation', action: () => setView('profile') },
+    { id: 'nav-act', title: 'Go to Workspace Activity', subtitle: 'View verified audit log and workspace activity feed', icon: Clock, category: 'Navigation', action: () => setView('workspace-activity') },
     { id: 'nav-sett', title: 'Go to Hub Settings', subtitle: 'Manage workspace configuration options', icon: Settings, category: 'Navigation', action: () => setView('settings') },
     // Actions
     { id: 'act-theme', title: 'Toggle Light/Dark Mode', subtitle: 'Switch the workspace appearance theme', icon: Sun, category: 'Actions', action: () => toggleTheme() },

@@ -571,8 +571,12 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response && error.response.status === 401 && !error.config?.url?.includes('/api/auth/login')) {
+    const url = error.config?.url || '';
+    const isAuthCheck = url.includes('/api/auth/login') || url.includes('/api/auth/firebase-login') || url.includes('/api/auth/me');
+
+    if (error.response && error.response.status === 401 && !isAuthCheck) {
       localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
       window.dispatchEvent(new Event('auth-logout'));
     }
     return Promise.reject(error);

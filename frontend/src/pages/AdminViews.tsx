@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Shield, FolderGit2, Sparkles, FileText, Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, Filter, Eye, EyeOff, AlertCircle, Key, Lock, Settings } from 'lucide-react';
+import { Users, Shield, FolderGit2, Sparkles, FileText, Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, Filter, Eye, EyeOff, AlertCircle, Key, Lock, Settings, KeyRound, Building2, ScrollText } from 'lucide-react';
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 
@@ -192,8 +192,11 @@ export function UserManagementView() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
-            <img src="/user-directory-icon.png" alt="User Directory" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> User Directory
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.2)] shrink-0">
+              <Users className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+            </div>
+            User Directory
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Admin directory to add, edit, activate/deactivate, and assign roles across the organization.
@@ -631,8 +634,11 @@ export function RolesPermissionsView() {
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
-            <img src="/roles-perms-icon.png" alt="Role & Perms" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Role & Permission Matrix
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.2)] shrink-0">
+              <KeyRound className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+            </div>
+            Role & Permission Matrix
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Configure module permissions and access control limits per system role.
@@ -715,8 +721,11 @@ export function OrganizationSettingsView() {
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0 max-w-4xl">
       <div>
-        <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
-          <img src="/org-settings-icon.png" alt="Org Settings" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Organization Settings
+        <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
+          <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.2)] shrink-0">
+            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+          </div>
+          Organization Settings
         </h1>
         <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
           Manage system configuration, working hours, departments, and project defaults.
@@ -817,8 +826,11 @@ export function AuditLogsView() {
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
-            <img src="/audit-icon.png" alt="Audit" className="w-7 h-7 object-contain drop-shadow-sm" /> Security & Audit Logs
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.2)] shrink-0">
+              <ScrollText className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+            </div>
+            Security & Audit Logs
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Real-time system activity history: user logins, role updates, administrative actions, and task reviews.

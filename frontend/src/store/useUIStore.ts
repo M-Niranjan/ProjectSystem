@@ -150,6 +150,7 @@ const getInitialView = (): string => {
       '/roles': 'roles',
       '/organization': 'organization',
       '/audit-logs': 'audit-logs',
+      '/workspace-activity': 'workspace-activity',
       '/team-tracking': 'team-tracking',
       '/step-verification': 'step-verification',
       '/reviews': 'reviews',

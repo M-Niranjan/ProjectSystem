@@ -29,7 +29,7 @@ export class AuthController {
 
       if (!user) {
         return res.status(403).json({
-          message: 'Your account has not been provisioned. Please contact your administrator.'
+          message: 'Access Denied: This email account has not been authorized. Only administrator-approved email accounts can log in.'
         });
       }
 
@@ -100,12 +100,25 @@ export class AuthController {
         return res.status(401).send('Unauthorized');
       }
 
-      const user = await User.findByPk(req.user.id, {
-        attributes: { exclude: ['password'] },
-      });
+      let user = null;
+      try {
+        if (typeof req.user.id === 'number') {
+          user = await User.findByPk(req.user.id, {
+            attributes: { exclude: ['password'] },
+          });
+        }
+      } catch (dbErr) {
+        console.warn('Database error in me lookup:', dbErr);
+      }
 
       if (!user) {
-        return res.status(404).send('Current user not found');
+        return res.json({
+          id: req.user.id,
+          email: req.user.email,
+          name: req.user.name || (req.user.email ? req.user.email.split('@')[0] : 'User'),
+          role: req.user.role,
+          status: 'active',
+        });
       }
 
       return res.json(user);

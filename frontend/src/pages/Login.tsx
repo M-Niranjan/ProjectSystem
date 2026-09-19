@@ -4,14 +4,15 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Mail, Lock, User as UserIcon, Briefcase, Award, Eye, EyeOff, Shield, 
-  ArrowRight, KeyRound, CheckCircle2, X, RefreshCw, ShieldCheck, AlertCircle,
+import {
+  Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound,
+  CheckCircle2, X, ShieldCheck, AlertCircle,
   Sun, Moon
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
-import { signInWithGoogle, signInWithEmailPassword, fetchFirestoreUserDoc } from '../services/firebase';
+import api from '../services/api';
+import { signInWithEmailPassword, fetchFirestoreUserDoc } from '../services/firebase';
 import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 
 // Validation Schemas
@@ -20,23 +21,10 @@ const loginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const signupSchema = z.object({
-  email: z.string().email('Please enter a valid email address'),
-  password: z.string().min(6, 'Password must be at least 6 characters'),
-  name: z.string().min(2, 'Name must be at least 2 characters'),
-  role: z.enum(['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_EMPLOYEE']),
-  designation: z.string().min(2, 'Designation is required'),
-  department: z.string().min(2, 'Department is required'),
-  experience: z.preprocess((val) => Number(val), z.number().min(0, 'Experience must be positive')),
-  skills: z.string().optional(),
-});
-
 export default function Login() {
   const navigate = useNavigate();
-  const [isLogin, setIsLogin] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
-  const [rememberMe, setRememberMe] = useState(true);
-  const [socialLoading, setSocialLoading] = useState<string | null>(null);
+  const [rememberMe] = useState(true);
 
   // Forgot password OTP step modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -45,13 +33,12 @@ export default function Login() {
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  
+
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccessMsg, setForgotSuccessMsg] = useState('');
   const [forgotErrorMsg, setForgotErrorMsg] = useState('');
 
-  const { loginWithFirebase, register, requestOtp, verifyOtp, resetPasswordWithOtp, error, loading, clearError } = useAuthStore();
+  const { login, requestOtp, verifyOtp, resetPasswordWithOtp, error, loading, clearError } = useAuthStore();
   const { darkMode, toggleTheme } = useUIStore();
 
   const {
@@ -71,142 +58,101 @@ export default function Login() {
   React.useEffect(() => {
     resetLoginForm({ email: '', password: '' });
     clearError();
+    // Wipe any delayed browser autofill after DOM render
+    const timer = setTimeout(() => {
+      resetLoginForm({ email: '', password: '' });
+    }, 150);
+    return () => clearTimeout(timer);
   }, [resetLoginForm, clearError]);
-
-  const {
-    register: registerSignup,
-    handleSubmit: handleSignupSubmit,
-    formState: { errors: signupErrors },
-    reset: resetSignupForm
-  } = useForm({
-    resolver: zodResolver(signupSchema),
-    defaultValues: {
-      role: 'ROLE_EMPLOYEE',
-    }
-  });
 
   const onLoginSubmit = async (data: any) => {
     clearError();
+    useAuthStore.setState({ loading: true, error: null });
     const email = (data.email || '').trim();
     const password = (data.password || '').trim();
 
-    // 1. Authenticate with Firebase Authentication using signInWithEmailAndPassword
-    let userCredential;
+    // 1. First attempt Firebase Authentication
+    let firebaseSuccess = false;
     try {
-      userCredential = await signInWithEmailPassword(email, password);
+      const userCredential = await signInWithEmailPassword(email, password);
+      const user = userCredential.user;
+      if (user && user.uid) {
+        let userData = await fetchFirestoreUserDoc(user.uid);
+        if (!userData) {
+          // Fallback to backend /api/auth/me using the Firebase ID token
+          try {
+            const fbToken = await user.getIdToken();
+            const meRes = await api.get('/api/auth/me', {
+              headers: { Authorization: `Bearer ${fbToken}` }
+            });
+            if (meRes.data && (meRes.data.id || meRes.data.email)) {
+              userData = meRes.data;
+            }
+          } catch { }
+        }
+
+        const rawRole = (userData as any)?.role ?? (userData as any)?.roleCode;
+        const normalizedRole = normalizeRole(rawRole);
+        if (normalizedRole) {
+          const targetRoute = getDashboardPathForRole(normalizedRole);
+          if (targetRoute) {
+            const loggedInUser = {
+              id: user.uid,
+              email: user.email || email,
+              name: (userData as any)?.name || (userData as any)?.displayName || user.displayName || email.split('@')[0],
+              role: normalizedRole,
+              designation: (userData as any)?.designation || (normalizedRole === 'ROLE_ADMIN' ? 'System Administrator' : normalizedRole === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
+              department: (userData as any)?.department || (normalizedRole === 'ROLE_ADMIN' ? 'Executive' : normalizedRole === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
+              experience: (userData as any)?.experience || 5,
+              skills: (userData as any)?.skills || '',
+              createdAt: (userData as any)?.createdAt || new Date().toISOString(),
+            };
+
+            const token = await user.getIdToken();
+            const storage = rememberMe ? localStorage : sessionStorage;
+            storage.setItem('token', token);
+            if (rememberMe) {
+              sessionStorage.setItem('token', token);
+            } else {
+              localStorage.removeItem('token');
+            }
+            useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
+            resetLoginForm();
+            navigate(targetRoute, { replace: true });
+            firebaseSuccess = true;
+            return;
+          }
+        }
+      }
     } catch (firebaseErr: any) {
-      console.warn("Firebase Auth error:", firebaseErr?.code || firebaseErr?.message);
-      let errorMsg = 'Invalid email or password! Please check your credentials.';
-      if (
-        firebaseErr?.code === 'auth/user-not-found' ||
-        firebaseErr?.code === 'auth/wrong-password' ||
-        firebaseErr?.code === 'auth/invalid-credential'
-      ) {
-        errorMsg = 'Invalid email or password! Please check your credentials.';
-      } else if (firebaseErr?.code === 'auth/too-many-requests') {
-        errorMsg = 'Access to this account has been temporarily disabled due to many failed login attempts. Please try again later or reset your password.';
-      } else if (firebaseErr?.code === 'auth/network-request-failed') {
-        errorMsg = 'Network connection error. Please check your internet connection.';
-      } else if (firebaseErr?.message) {
-        errorMsg = firebaseErr.message;
+      console.warn('Firebase Auth unhandled/skipped, attempting backend login:', firebaseErr?.code || firebaseErr?.message);
+    }
+
+    // 2. If not logged in via Firebase, attempt Backend API login
+    if (!firebaseSuccess) {
+      try {
+        const ok = await login({ email, password }, rememberMe);
+        if (ok) {
+          const currentUser = useAuthStore.getState().user;
+          const role = normalizeRole(currentUser?.role);
+          const targetRoute = getDashboardPathForRole(role);
+          if (targetRoute) {
+            resetLoginForm();
+            navigate(targetRoute, { replace: true });
+            return;
+          }
+        }
+      } catch (backendErr: any) {
+        console.error('Backend login error:', backendErr);
       }
-      useAuthStore.setState({ error: errorMsg, loading: false });
-      return;
     }
 
-    // 2. Extract authenticated Firebase User and exact UID
-    const user = userCredential.user;
-    if (!user || !user.uid) {
-      useAuthStore.setState({ error: "Authentication failed. Could not retrieve user ID.", loading: false });
-      return;
-    }
-
-    // 3. Find user's document in Firestore 'users' collection using exact UID: doc(db, 'users', user.uid)
-    const userData = await fetchFirestoreUserDoc(user.uid);
-
-    // 4. If the document does not exist: deny access
-    if (!userData) {
-      console.warn("Firestore document not found: users/" + user.uid);
-      useAuthStore.setState({ 
-        error: "User profile not found. Please contact your administrator.", 
-        loading: false,
-        user: null,
-        token: null
-      });
-      return;
-    }
-
-    // 5. Read the role field strictly from that document
-    const rawRole = (userData as any).role ?? (userData as any).roleCode;
-    const normalizedRole = normalizeRole(rawRole);
-
-    if (!normalizedRole) {
-      console.warn("Invalid user role found in Firestore:", rawRole);
-      useAuthStore.setState({ 
-        error: "Invalid user role. Please contact your administrator.", 
-        loading: false,
-        user: null,
-        token: null
-      });
-      return;
-    }
-
-    // 6. Redirect based strictly on verified role
-    const targetRoute = getDashboardPathForRole(normalizedRole);
-    if (!targetRoute) {
-      useAuthStore.setState({ error: 'Invalid user role. Please contact the administrator.', loading: false, user: null, token: null });
-      return;
-    }
-    const roleEnum = normalizedRole;
-
-    const loggedInUser = {
-      id: user.uid,
-      email: user.email || email,
-      name: (userData as any).name || (userData as any).displayName || user.displayName || email.split('@')[0],
-      role: roleEnum,
-      designation: (userData as any).designation || (roleEnum === 'ROLE_ADMIN' ? 'System Administrator' : roleEnum === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
-      department: (userData as any).department || (roleEnum === 'ROLE_ADMIN' ? 'Executive' : roleEnum === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
-      experience: (userData as any).experience || 5,
-      skills: (userData as any).skills || '',
-      createdAt: (userData as any).createdAt || new Date().toISOString(),
-    };
-
-    const token = await user.getIdToken();
-    const storage = rememberMe ? localStorage : sessionStorage;
-    storage.setItem('token', token);
-    if (rememberMe) {
-      sessionStorage.setItem('token', token);
+    const currentError = useAuthStore.getState().error;
+    if (!currentError) {
+      useAuthStore.setState({ error: 'Access Denied: This email account has not been authorized. Only administrator-approved email accounts can log in.', loading: false });
     } else {
-      localStorage.removeItem('token');
+      useAuthStore.setState({ loading: false });
     }
-    useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
-    resetLoginForm();
-    navigate(targetRoute, { replace: true });
-  };
-
-  const onSignupSubmit = async (data: any) => {
-    clearError();
-    const success = await register(data);
-    if (success) {
-      resetSignupForm();
-      const currentUser = useAuthStore.getState().user;
-      const userRole = currentUser?.role;
-      const normalizedUserRole = normalizeRole(userRole);
-      if (normalizedUserRole === 'ROLE_ADMIN') {
-        navigate('/admin/dashboard', { replace: true });
-      } else if (normalizedUserRole === 'ROLE_MANAGER') {
-        navigate('/team-lead/dashboard', { replace: true });
-      } else if (normalizedUserRole === 'ROLE_EMPLOYEE') {
-        navigate('/employee/dashboard', { replace: true });
-      } else {
-        useAuthStore.setState({ error: "Invalid user role. Please contact the administrator." });
-      }
-    }
-  };
-
-  const toggleForm = () => {
-    clearError();
-    setIsLogin(!isLogin);
   };
 
   const handleOpenForgotModal = () => {
@@ -340,255 +286,118 @@ export default function Login() {
         </div>
 
         {/* Auth Card Container */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
           className="w-full glass-card-login rounded-3xl p-8 sm:p-9 shadow-2xl transition-all border border-slate-200/80 dark:border-white/15"
         >
-          {isLogin ? (
-            /* ================= SIGN IN FORM ================= */
-            <div>
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Welcome Back
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Sign in to your account
-                </p>
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl p-3 mb-5 text-xs font-medium flex items-center gap-2"
-                >
-                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-                  <span>{error}</span>
-                </motion.div>
-              )}
-
-              <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-4">
-                {/* Email Field */}
-                <div>
-                  <div className="relative">
-                    <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type="email"
-                      placeholder="Email address"
-                      autoComplete="email"
-                      {...registerLogin('email')}
-                      className="w-full pl-10 pr-4 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
-                    />
-                  </div>
-                  {loginErrors.email && (
-                    <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.email.message as string}</p>
-                  )}
-                </div>
-
-                {/* Password Field */}
-                <div>
-                  <div className="relative">
-                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      placeholder="Password"
-                      autoComplete="current-password"
-                      {...registerLogin('password')}
-                      className="w-full pl-10 pr-10 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  {loginErrors.password && (
-                    <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.password.message as string}</p>
-                  )}
-                </div>
-
-                {/* Forgot Password Link */}
-                <div className="flex justify-end pt-0.5">
-                  <button
-                    type="button"
-                    onClick={handleOpenForgotModal}
-                    className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
-                </div>
-
-                {/* Submit Sign In Button */}
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.99] text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? (
-                    <>
-                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Signing in...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>Sign In</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </>
-                  )}
-                </button>
-              </form>
-
-              {/* Divider */}
-              <div className="relative my-6 text-center">
-                <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200 dark:border-white/10" />
-                </div>
-                <span className="relative px-3 bg-transparent text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  OR
-                </span>
-              </div>
-
-              {/* Toggle to Sign Up */}
-              <div className="text-center">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Don't have an account?{' '}
-                  <button
-                    type="button"
-                    onClick={toggleForm}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer ml-1"
-                  >
-                    Sign Up
-                  </button>
-                </p>
-              </div>
+          <div>
+            <div className="text-center mb-6">
+              <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                Welcome Back
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Sign in to your account
+              </p>
             </div>
-          ) : (
-            /* ================= SIGN UP FORM ================= */
-            <div>
-              <div className="text-center mb-6">
-                <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
-                  Create Account
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Get started with TaskFlow
-                </p>
-              </div>
 
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0, y: -6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl p-3 mb-5 text-xs font-medium flex items-center gap-2"
-                >
-                  <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
-                  <span>{error}</span>
-                </motion.div>
-              )}
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -6 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl p-3 mb-5 text-xs font-medium flex items-center gap-2"
+              >
+                <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
+                <span>{error}</span>
+              </motion.div>
+            )}
 
-              <form onSubmit={handleSignupSubmit(onSignupSubmit)} className="space-y-3">
-                <div>
-                  <input
-                    type="text"
-                    placeholder="Full Name"
-                    {...registerSignup('name')}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 backdrop-blur-md"
-                  />
-                  {signupErrors.name && (
-                    <p className="text-[10px] text-rose-500 font-medium mt-0.5">{signupErrors.name.message as string}</p>
-                  )}
-                </div>
+            <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-4" autoComplete="off">
+              {/* Hidden decoy fields to divert browser credential autofill */}
+              <input type="text" name="prevent_autofill_user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
+              <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
 
-                <div>
+              {/* Email Field */}
+              <div>
+                <div className="relative">
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
                     type="email"
                     placeholder="Email address"
-                    {...registerSignup('email')}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 backdrop-blur-md"
+                    autoComplete="new-password"
+                    {...registerLogin('email')}
+                    className="w-full pl-10 pr-4 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
                   />
-                  {signupErrors.email && (
-                    <p className="text-[10px] text-rose-500 font-medium mt-0.5">{signupErrors.email.message as string}</p>
-                  )}
                 </div>
+                {loginErrors.email && (
+                  <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.email.message as string}</p>
+                )}
+              </div>
 
-                <div>
+              {/* Password Field */}
+              <div>
+                <div className="relative">
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                   <input
-                    type="password"
-                    placeholder="Password (min. 6 characters)"
-                    {...registerSignup('password')}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 backdrop-blur-md"
+                    type={showPassword ? 'text' : 'password'}
+                    placeholder="Password"
+                    autoComplete="new-password"
+                    {...registerLogin('password')}
+                    className="w-full pl-10 pr-10 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
                   />
-                  {signupErrors.password && (
-                    <p className="text-[10px] text-rose-500 font-medium mt-0.5">{signupErrors.password.message as string}</p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <select
-                      {...registerSignup('role')}
-                      className="w-full px-3 py-2.5 bg-white/90 dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-xs font-medium outline-none focus:border-blue-500"
-                    >
-                      <option value="ROLE_EMPLOYEE">Employee</option>
-                      <option value="ROLE_MANAGER">Manager</option>
-                      <option value="ROLE_ADMIN">Admin</option>
-                    </select>
-                  </div>
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Designation"
-                      {...registerSignup('designation')}
-                      className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <input
-                      type="text"
-                      placeholder="Department"
-                      {...registerSignup('department')}
-                      className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
-                    />
-                  </div>
-                  <div>
-                    <input
-                      type="number"
-                      placeholder="Years Exp"
-                      {...registerSignup('experience')}
-                      className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all cursor-pointer mt-2"
-                >
-                  {loading ? 'Creating account...' : 'Create Account'}
-                </button>
-              </form>
-
-              <div className="text-center mt-5">
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                  Already have an account?{' '}
                   <button
                     type="button"
-                    onClick={toggleForm}
-                    className="text-blue-600 dark:text-blue-400 font-bold hover:underline cursor-pointer ml-1"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
                   >
-                    Sign In
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
-                </p>
+                </div>
+                {loginErrors.password && (
+                  <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.password.message as string}</p>
+                )}
               </div>
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end pt-0.5">
+                <button
+                  type="button"
+                  onClick={handleOpenForgotModal}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 hover:underline cursor-pointer"
+                >
+                  Forgot Password?
+                </button>
+              </div>
+
+              {/* Submit Sign In Button */}
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.99] text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+              >
+                {loading ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Signing in...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Sign In</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            </form>
+
+            {/* Restricted Workspace Notice */}
+            <div className="mt-6 pt-5 border-t border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-center">
+              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Restricted Workspace &bull; Only administrator-approved email accounts can log in.
+              </p>
             </div>
-          )}
+          </div>
         </motion.div>
       </div>
 

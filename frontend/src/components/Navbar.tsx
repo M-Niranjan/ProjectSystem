@@ -235,31 +235,41 @@ export default function Navbar() {
   return (
     <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between gap-3 sm:gap-4 px-3 sm:px-4 print:hidden ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[92px]'} transition-all duration-200 ease-in-out`}>
       {/* Search Input bar */}
-      <div className="flex items-center gap-2 flex-1 max-w-md min-w-0">
+      <div className="flex items-center gap-1.5 sm:gap-2 flex-1 max-w-md min-w-0">
         <button
           onClick={toggleSidebar}
-          className="md:hidden w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
+          className="md:hidden w-8.5 h-8.5 sm:w-9 sm:h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-800/80 hover:bg-zinc-200 dark:hover:bg-zinc-700/80 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
           title="Toggle Navigation Menu"
         >
           <Menu className="w-4 h-4" />
         </button>
 
+        {/* Mobile Search Icon Button */}
+        <button
+          onClick={triggerSearchPalette}
+          className="sm:hidden w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors cursor-pointer flex-shrink-0"
+          title="Search"
+        >
+          <Search className="w-3.5 h-3.5" />
+        </button>
+
+        {/* Tablet / Desktop Search Bar */}
         <div 
           onClick={triggerSearchPalette}
-          className="w-full h-9 flex items-center justify-between gap-1.5 sm:gap-2 px-3 bg-zinc-100/70 dark:bg-zinc-900/70 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-500 text-xs cursor-pointer hover:border-zinc-300 dark:hover:border-zinc-700 transition-colors select-none"
+          className="hidden sm:flex w-full h-9 items-center justify-between gap-1.5 sm:gap-2 px-3.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-slate-400 text-xs cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-all select-none shadow-inner"
         >
           <div className="flex items-center gap-2 truncate">
-            <Search className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-            <span className="truncate text-xs">Search...</span>
+            <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
+            <span className="truncate text-xs text-slate-600 dark:text-slate-400">Search...</span>
           </div>
-          <kbd className="hidden md:inline-block px-1.5 py-0.5 text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-500 rounded font-mono">
-            ⌘K
+          <kbd className="hidden md:inline-block px-2 py-0.5 text-[10px] bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 rounded-full font-mono">
+            3SK
           </kbd>
         </div>
 
         <button
           onClick={() => setVoiceOverlay(true)}
-          className="hidden sm:flex w-9 h-9 items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-indigo-600/10 text-zinc-500 hover:text-indigo-600 border border-zinc-200 dark:border-zinc-800 transition-colors cursor-pointer flex-shrink-0"
+          className="hidden sm:flex w-9 h-9 items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors cursor-pointer flex-shrink-0"
           title="Voice command palette"
         >
           <Mic className="w-3.5 h-3.5" />
@@ -273,11 +283,11 @@ export default function Navbar() {
             <button
               ref={quickCreateButtonRef}
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="w-9 h-9 md:w-auto md:px-3 h-9 flex items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-medium text-xs shadow-xs transition-colors cursor-pointer"
+              className="h-8.5 w-8.5 sm:w-auto px-0 sm:px-3.5 flex items-center justify-center gap-1.5 bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 dark:border-teal-500/40 hover:border-teal-400 rounded-full font-bold text-xs shadow-xs transition-all cursor-pointer flex-shrink-0"
               title="Create new project or task"
             >
-              <Plus className="w-4 h-4 flex-shrink-0" />
-              <span className="hidden md:inline">Create</span>
+              <Plus className="w-3.5 h-3.5 flex-shrink-0" />
+              <span className="hidden sm:inline">Create</span>
             </button>
             
             {showQuickCreate && (
@@ -311,17 +321,17 @@ export default function Navbar() {
 
         <button
           onClick={toggleTheme}
-          className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer flex-shrink-0"
+          className="w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
           title="Toggle Light/Dark Theme"
         >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-700 dark:text-zinc-300" />}
+          {darkMode ? <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
         </button>
 
         <div className="hidden sm:block relative flex-shrink-0">
           <button
             ref={languagesButtonRef}
             onClick={() => setShowLanguages(!showLanguages)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer font-medium text-xs"
+            className="w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer font-medium text-xs flex-shrink-0"
             title="Language"
           >
             <Globe className="w-4 h-4" />
@@ -352,12 +362,12 @@ export default function Navbar() {
           <button
             ref={notificationButtonRef}
             onClick={() => setShowNotifications(!showNotifications)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer relative"
+            className="relative w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
             title="Notifications"
           >
             <Bell className="w-4 h-4" />
             {notifications.length > 0 && (
-              <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-bold text-white ring-2 ring-white dark:ring-zinc-900">
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-[#0a0b0f]">
                 {notifications.length}
               </span>
             )}
@@ -366,7 +376,7 @@ export default function Navbar() {
           {showNotifications && (
             <div 
               ref={notificationsRef}
-              className="absolute right-0 mt-2 w-[calc(100vw-32px)] max-w-sm sm:w-80 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xl z-50 overflow-hidden rounded-xl"
+              className="fixed sm:absolute top-14 sm:top-full left-3 right-3 sm:left-auto sm:right-0 mt-1.5 sm:mt-2 sm:w-80 max-w-sm ml-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden rounded-2xl sm:rounded-xl"
             >
               <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                 <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Notifications</span>
@@ -445,13 +455,13 @@ export default function Navbar() {
 
         {user && (
           <div className="flex items-center gap-1.5 sm:gap-2 pl-0.5 sm:pl-1 flex-shrink-0">
-            <div className="h-5 w-px bg-zinc-200 dark:bg-zinc-800 flex-shrink-0" />
+            <div className="h-5 w-px bg-white/10 flex-shrink-0" />
             <button
               onClick={() => setView('profile')}
-              className={`w-9 h-9 flex items-center justify-center rounded-xl cursor-pointer transition-all flex-shrink-0 ${
+              className={`w-8.5 h-8.5 flex items-center justify-center rounded-full cursor-pointer transition-all flex-shrink-0 ${
                 activeView === 'profile'
-                  ? 'ring-2 ring-blue-500 bg-blue-500/10'
-                  : 'hover:bg-zinc-100 dark:hover:bg-zinc-800/80'
+                  ? 'ring-2 ring-cyan-400 bg-cyan-500/10'
+                  : 'hover:opacity-85'
               }`}
               title="View Profile Resume"
               aria-label="View My Profile"
@@ -459,7 +469,7 @@ export default function Navbar() {
               <img
                 src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                 alt="Avatar"
-                className="w-7 h-7 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700"
+                className="w-8.5 h-8.5 rounded-full object-cover ring-1 ring-white/20 hover:scale-105 transition-transform"
               />
             </button>
           </div>

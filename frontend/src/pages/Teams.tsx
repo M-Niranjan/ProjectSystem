@@ -1,7 +1,7 @@
 import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle } from 'lucide-react';
+import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle, Network } from 'lucide-react';
 import api from '../services/api';
 import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 
@@ -261,8 +261,11 @@ export default function Teams() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2.5">
-            <img src="/team-config-icon.png" alt="Team Config" className="w-7 h-7 object-contain drop-shadow-sm shrink-0" /> Team Hub
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
+            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] shrink-0">
+              <Network className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
+            </div>
+            Team Hub
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Manage organization members, assign roles, and review designations.

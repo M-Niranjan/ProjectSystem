@@ -19,9 +19,14 @@ import {
   ChevronRight,
   Sparkles,
   Shield,
+  ShieldCheck,
   Award,
   Activity,
-  ShieldCheck,
+  KeyRound,
+  Building2,
+  Network,
+  ScrollText,
+  Settings2,
   X
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -59,6 +64,7 @@ const VIEW_TO_PATH: Record<string, string> = {
   'audit-logs': '/audit-logs',
   reviews: '/reviews',
   performance: '/performance',
+  'workspace-activity': '/workspace-activity',
 };
 
 const getDashboardPath = (role?: string | null) => {
@@ -84,35 +90,17 @@ export default function Sidebar() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const UserDirNavIcon = ({ className }: { className?: string }) => (
-    <img src="/user-directory-icon.png" alt="Users Directory" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-  const RolesNavIcon = ({ className }: { className?: string }) => (
-    <img src="/roles-perms-icon.png" alt="Roles & Permissions" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-  const OrgNavIcon = ({ className }: { className?: string }) => (
-    <img src="/org-settings-icon.png" alt="Org Settings" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-  const TeamsNavIcon = ({ className }: { className?: string }) => (
-    <img src="/team-config-icon.png" alt="Team Config" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-  const AuditNavIcon = ({ className }: { className?: string }) => (
-    <img src="/audit-icon.png" alt="Audit" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-  const SettingsNavIcon = ({ className }: { className?: string }) => (
-    <img src="/settings-icon.png" alt="Settings" className={`${className || 'w-5 h-5'} object-contain`} />
-  );
-
   const adminMenuItems: SidebarItem[] = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
-    { name: 'User Directory', view: 'users', icon: UserDirNavIcon },
-    { name: 'Roles & Permissions', view: 'roles', icon: RolesNavIcon },
-    { name: 'Org Settings', view: 'organization', icon: OrgNavIcon },
-    { name: 'Team Config', view: 'teams', icon: TeamsNavIcon },
+    { name: 'User Directory', view: 'users', icon: Users },
+    { name: 'Roles & Permissions', view: 'roles', icon: KeyRound },
+    { name: 'Org Settings', view: 'organization', icon: Building2 },
+    { name: 'Team Config', view: 'teams', icon: Network },
     { name: 'Task Reviews', view: 'reviews', icon: Award },
-    { name: 'Audit Logs', view: 'audit-logs', icon: AuditNavIcon },
+    { name: 'Audit Logs', view: 'audit-logs', icon: ScrollText },
+    { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
     { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
+    { name: 'Settings', view: 'settings', icon: Settings2 },
   ];
 
   const teamLeadMenuItems: SidebarItem[] = [
@@ -128,8 +116,9 @@ export default function Sidebar() {
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
+    { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
     { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
+    { name: 'Settings', view: 'settings', icon: Settings2 },
   ];
 
   const employeeMenuItems: SidebarItem[] = [
@@ -141,8 +130,9 @@ export default function Sidebar() {
     { name: 'Calendar', view: 'calendar', icon: Calendar },
     { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
+    { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
     { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: SettingsNavIcon },
+    { name: 'Settings', view: 'settings', icon: Settings2 },
   ];
 
   const allowedItems = user?.role === 'ROLE_ADMIN'
@@ -249,13 +239,13 @@ export default function Sidebar() {
                   }}
                   className={`w-full flex items-center ${
                     showExpanded ? 'gap-3.5 px-3.5 py-2.5 justify-start' : 'justify-center py-2.5'
-                  } rounded-xl text-[15px] font-medium transition-all duration-150 cursor-pointer group relative ${
+                  } rounded-xl text-[14.5px] font-medium transition-all duration-150 cursor-pointer group relative ${
                     isActive
-                      ? 'bg-blue-600 text-white font-semibold shadow-md shadow-blue-500/20'
-                      : 'text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800/60 hover:text-zinc-900 dark:hover:text-zinc-100'
+                      ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-white/15 shadow-sm dark:shadow-black/40'
+                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : 'text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-zinc-100'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
 
                   {showExpanded && (
                     <span className="truncate tracking-normal">
@@ -286,19 +276,19 @@ export default function Sidebar() {
                 }}
                 className={`w-full p-2.5 rounded-xl flex items-center gap-3.5 overflow-hidden transition-all text-left cursor-pointer group ${
                   activeView === 'profile'
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'bg-zinc-100 dark:bg-zinc-900/80 hover:bg-zinc-200/80 dark:hover:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-800'
+                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border border-slate-200 dark:border-white/15 shadow-md'
+                    : 'bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10'
                 }`}
                 title="View My Profile"
               >
                 <img
                   src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
-                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 ring-1 ring-zinc-300 dark:ring-zinc-700 group-hover:scale-105 transition-transform"
+                  className="w-10 h-10 rounded-lg object-cover flex-shrink-0 ring-1 ring-slate-200 dark:ring-white/10 group-hover:scale-105 transition-transform"
                 />
                 <div className="truncate flex-1">
-                  <p className={`text-[14px] font-semibold truncate ${activeView === 'profile' ? 'text-white' : 'text-zinc-900 dark:text-zinc-100'}`}>{user.name}</p>
-                  <p className={`text-[11px] uppercase tracking-wider font-mono truncate font-medium ${activeView === 'profile' ? 'text-blue-100' : 'text-zinc-500 dark:text-zinc-400'}`}>{user.role.replace('ROLE_', '')}</p>
+                  <p className={`text-[14px] font-bold truncate ${activeView === 'profile' ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-zinc-100'}`}>{user.name}</p>
+                  <p className="text-[11px] uppercase tracking-wider font-mono truncate font-semibold text-slate-500 dark:text-zinc-400">{user.role.replace('ROLE_', '')}</p>
                 </div>
               </button>
             ) : (
@@ -314,7 +304,7 @@ export default function Sidebar() {
                 <img
                   src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
-                  className="w-10 h-10 rounded-lg object-cover ring-1 ring-zinc-300 dark:ring-zinc-700 hover:ring-2 hover:ring-blue-500 transition-all"
+                  className="w-10 h-10 rounded-lg object-cover ring-1 ring-white/10 hover:ring-2 hover:ring-cyan-500 transition-all"
                 />
                 <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
                   {user.name} ({user.role.replace('ROLE_', '')})
@@ -327,12 +317,12 @@ export default function Sidebar() {
             onClick={handleLogout}
             title="Sign Out"
             className={`w-full flex items-center ${
-              showExpanded ? 'gap-3 px-3.5 py-2.5 justify-start' : 'justify-center py-2.5'
-            } rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 text-[14.5px] font-medium transition-colors cursor-pointer group relative`}
+              showExpanded ? 'gap-3 px-3.5 py-2 justify-start' : 'justify-center py-2'
+            } rounded-xl text-rose-500 hover:text-rose-400 hover:bg-rose-500/10 text-[14px] font-bold transition-colors cursor-pointer group relative`}
           >
-            <LogOut className="w-5 h-5 flex-shrink-0" />
+            <LogOut className="w-4.5 h-4.5 text-rose-500 flex-shrink-0" />
             {showExpanded && (
-              <span className="font-semibold">Sign Out</span>
+              <span>Sign Out</span>
             )}
           </button>
         </div>

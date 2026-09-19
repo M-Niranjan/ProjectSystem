@@ -18,6 +18,8 @@ export interface AuthRequest extends Request {
 
 const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970';
 
+import jwt from 'jsonwebtoken';
+
 export const authenticateToken = async (req: AuthRequest, res: Response, next: NextFunction) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
@@ -26,28 +28,90 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
     return res.status(401).json({ message: 'Access Token Required' });
   }
 
+  // 1. First attempt verification as a local Backend JWT
+  try {
+    const decodedJwt = jwt.verify(token, JWT_SECRET) as any;
+    if (decodedJwt && (decodedJwt.id || decodedJwt.email)) {
+      let databaseUser = null;
+      try {
+        if (decodedJwt.id && typeof decodedJwt.id === 'number') {
+          databaseUser = await User.findByPk(decodedJwt.id);
+        } else if (decodedJwt.email) {
+          databaseUser = await User.findOne({ where: { email: decodedJwt.email.toLowerCase() } });
+        }
+      } catch (dbErr) {
+        console.warn('Database user lookup warning for JWT user:', dbErr);
+      }
+
+      const role = normalizeRole(databaseUser?.role || decodedJwt.role || 'ROLE_EMPLOYEE') as Role;
+      req.user = {
+        id: databaseUser ? databaseUser.id : (typeof decodedJwt.id === 'number' ? decodedJwt.id : 900000),
+        email: decodedJwt.email || databaseUser?.email || '',
+        role,
+        name: databaseUser?.name || decodedJwt.name || (decodedJwt.email ? decodedJwt.email.split('@')[0] : 'User'),
+        uid: String(decodedJwt.id || ''),
+      };
+      return next();
+    }
+  } catch (_jwtErr) {
+    // Not a valid local JWT, proceed to verify as a Firebase ID token
+  }
+
+  // 2. Attempt verification as a Google Firebase ID token
   try {
     const decoded = await FirebaseAdminService.verifyIdToken(token);
     req.firebaseUid = decoded.uid;
 
-    const profile = await FirebaseAdminService.getFirestoreUserDoc(decoded.uid);
-    const role = normalizeRole(String(profile?.role || ''));
-    if (!profile || !role) {
-      return res.status(403).json({ message: 'User profile or role is not configured.' });
+    let profile: any = null;
+    try {
+      profile = await FirebaseAdminService.getFirestoreUserDoc(decoded.uid);
+    } catch (fsErr) {
+      console.warn('Firestore user doc lookup warning:', fsErr);
     }
 
-    const databaseUser = await User.findOne({ where: { email: decoded.email || profile.email } });
+    let databaseUser = null;
+    try {
+      const emailLookup = decoded.email || profile?.email;
+      if (emailLookup) {
+        databaseUser = await User.findOne({ where: { email: emailLookup.toLowerCase() } });
+      }
+    } catch (dbErr) {
+      console.warn('Database user lookup warning for Firebase user:', dbErr);
+    }
+
+    const rawRole = profile?.role || profile?.roleCode || databaseUser?.role;
+    const role = normalizeRole(String(rawRole || ''));
+
+    // Strictly deny access if the account has not been provisioned by an admin
+    if (!profile && !databaseUser) {
+      return res.status(403).json({
+        message: 'Access Denied: Your email account has not been authorized by an administrator.'
+      });
+    }
+
+    if (databaseUser && databaseUser.status && databaseUser.status.toLowerCase() !== 'active') {
+      return res.status(403).json({
+        message: 'Access Denied: Your account is inactive or has been disabled. Please contact your administrator.'
+      });
+    }
+
+    if (!role) {
+      return res.status(403).json({
+        message: 'Access Denied: No authorized role assigned to this account.'
+      });
+    }
+
     req.user = {
       id: databaseUser ? databaseUser.id : 900000,
-      email: decoded.email || String(profile.email || ''),
+      email: decoded.email || String(profile?.email || ''),
       role: role as Role,
-      name: String(profile.name || decoded.name || ''),
+      name: String(profile?.name || decoded.name || databaseUser?.name || decoded.email?.split('@')[0] || 'User'),
       uid: decoded.uid,
     };
-    next();
-  } catch (err) {
-    console.error('Firebase token verification failed:', err);
-    return res.status(401).json({ message: 'Invalid or expired Firebase ID token.' });
+    return next();
+  } catch (err: any) {
+    console.error('Authentication token verification failed:', err?.message || err);
+    return res.status(401).json({ message: 'Invalid or expired access token.' });
   }
 };
 

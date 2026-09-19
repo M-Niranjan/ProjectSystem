@@ -3,7 +3,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   User, Award, Shield, FileText, CheckCircle, Clock, Zap, Star, 
-  Mail, Phone, Globe, UploadCloud, X, Check, Pencil, Camera, Briefcase 
+  Mail, Phone, Globe, UploadCloud, X, Check, Pencil, Camera, Briefcase,
+  GraduationCap 
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
@@ -14,16 +15,8 @@ const Github = (props: React.SVGProps<SVGSVGElement>) => (
   </svg>
 );
 
-interface Activity {
-  id: number;
-  action: string;
-  details: string;
-  createdAt: string;
-}
-
 export default function Profile() {
   const { user, updateProfile } = useAuthStore();
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Form states
@@ -46,27 +39,6 @@ export default function Profile() {
   const [isCameraActive, setIsCameraActive] = useState(false);
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
-
-  // Default Mock Activities
-  const mockActivities = [
-    { id: 1, action: 'CREATE', details: 'Initialized project: Prologue SaaS Dashboard', createdAt: '2026-07-14T08:00:00Z' },
-    { id: 2, action: 'UPDATE', details: 'Moved task: "Revamp login page" to IN_PROGRESS', createdAt: '2026-07-14T08:15:00Z' },
-    { id: 3, action: 'COMMENT', details: 'Added comment: "Matches radius variables" on task 101', createdAt: '2026-07-14T08:45:00Z' }
-  ];
-
-  const fetchActivities = async () => {
-    if (!user) return;
-    try {
-      const res = await api.get(`/api/logs/user/${user.id}`);
-      setActivities(Array.isArray(res.data) ? res.data : mockActivities);
-    } catch (err) {
-      setActivities(mockActivities);
-    }
-  };
-
-  useEffect(() => {
-    fetchActivities();
-  }, [user]);
 
   if (!user) return <div className="text-center p-8">Loading profile...</div>;
 
@@ -201,225 +173,253 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12">
-      {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
-            Profile Resume
-          </h1>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            View your profile details, designations, skills, and audit logs.
-          </p>
-        </div>
-
-        <button
-          onClick={handleOpenEdit}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/10 cursor-pointer transition-all transform hover:-translate-y-0.5"
-        >
-          <Pencil className="w-4 h-4" /> Edit Profile Details
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Side: Profile Identity Card & Resume */}
-        <div className="space-y-6">
-          <div className="glass-panel p-6 text-center space-y-4 flex flex-col items-center relative">
-            <div className="relative">
+    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+      {/* ========================================================================= */}
+      {/* 1. HORIZONTAL IDENTITY HEADER (Photo Left, Name & Details Right) */}
+      {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* 1. HORIZONTAL IDENTITY HEADER (Photo Left, Name & Details Right) */}
+      {/* ========================================================================= */}
+      <div className="pb-6 border-b border-slate-200/60 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+        {/* Left: Avatar + Identification & Stats */}
+        <div className="flex flex-row items-start gap-3.5 sm:gap-5 min-w-0 flex-1">
+          <div className="relative group shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl overflow-hidden ring-2 sm:ring-4 ring-blue-500/25 dark:ring-blue-500/35 shadow-md transition-transform duration-300 group-hover:scale-105">
               <img
                 src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                 alt="Profile"
-                className="w-28 h-28 rounded-2xl object-cover ring-4 ring-blue-500/20"
+                className="w-full h-full object-cover"
               />
-              <span className="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
             </div>
-
-            <div>
-              <h2 className="text-lg font-black text-slate-800 dark:text-white">{user.name}</h2>
-              <p className="text-xs font-bold text-blue-500 mt-0.5">{user.designation || 'Software Engineer'}</p>
-              <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">{user.department || 'Technology'}</p>
-            </div>
-
-            <div className="w-full border-t border-slate-200/30 dark:border-white/5 pt-4 flex justify-around text-center text-xs">
-              <div>
-                <p className="text-xs font-black text-slate-800 dark:text-white">{user.experience || 5}y</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Experience</p>
-              </div>
-              <div>
-                <p className="text-xs font-black text-slate-800 dark:text-white">{skillsList.length}</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Skills</p>
-              </div>
-              <div>
-                <p className="text-xs font-black text-slate-800 dark:text-white">4</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Projects</p>
-              </div>
-            </div>
+            <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0a0b0f] ring-2 ring-emerald-500/40 animate-pulse" title="Active in Workspace" />
           </div>
 
-          {/* Resume Upload & Download Card */}
-          <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <FileText className="w-4 h-4 text-blue-500" /> Resume Profile
-            </h3>
+          <div className="space-y-1 min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-slate-900 dark:text-white truncate">
+                {user.name}
+              </h1>
+              <span className="px-2 py-0.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
+                {user.role?.replace('ROLE_', '') || 'MEMBER'}
+              </span>
+            </div>
 
-            {user.resumeBase64 ? (
-              <div className="space-y-3 p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-center">
-                <FileText className="w-10 h-10 text-red-500 mx-auto" />
-                <div className="min-w-0">
-                  <p className="text-xs font-black text-slate-800 dark:text-slate-100 truncate">{user.resumeFileName || 'Resume.pdf'}</p>
-                  <p className="text-[9px] text-slate-400 font-bold uppercase mt-0.5">PDF Portfolio Attachment</p>
-                </div>
-                <button
-                  onClick={downloadResume}
-                  className="w-full py-2 bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-red-500/10 transition-all"
-                >
-                  Download / View Resume
-                </button>
-              </div>
-            ) : (
-              <div className="py-6 text-center text-xs font-bold text-slate-400 border border-dashed border-slate-300/40 dark:border-white/5 rounded-xl space-y-2">
-                <UploadCloud className="w-8 h-8 mx-auto text-slate-400" />
-                <p>No resume uploaded yet.</p>
-                <p className="text-[10px] text-slate-400 font-medium">Click "Edit Profile Details" below to attach a PDF resume.</p>
-              </div>
-            )}
-          </div>
+            <p className="text-xs sm:text-sm lg:text-[15px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+              <span>{user.designation || 'Senior Software Developer'}</span>
+              <span className="text-slate-300 dark:text-slate-700">•</span>
+              <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{user.department || 'Engineering'}</span>
+            </p>
 
-          {/* Contact Details Pane */}
-          <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Phone className="w-4 h-4 text-emerald-500" /> Contact Info
-            </h3>
+            <p className="text-[11px] lg:text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-2 max-w-xl pt-0.5">
+              Enterprise workspace member managing agile workflows, task pipelines, and project deliverables.
+            </p>
 
-            <div className="space-y-3 text-xs font-bold text-slate-600 dark:text-slate-300">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                <span className="truncate">{user.email}</span>
+            {/* Compact Inline Stats Pill */}
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1.5">
+              <div className="px-2.5 py-1 rounded-lg bg-slate-100/80 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 flex items-center gap-1.5 text-[11px]">
+                <Clock className="w-3 h-3 text-blue-500 shrink-0" />
+                <span className="font-bold text-slate-900 dark:text-white">{user.experience || 5}y</span>
+                <span className="text-[9px] text-slate-400 uppercase font-semibold">Experience</span>
               </div>
-              {user.phone && (
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                  <span>{user.phone}</span>
-                </div>
-              )}
-              {user.githubUrl && (
-                <a 
-                  href={user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`}
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
-                >
-                  <Github className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">GitHub Profile</span>
-                </a>
-              )}
-              {user.portfolioUrl && (
-                <a 
-                  href={user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`}
-                  target="_blank" 
-                  rel="noreferrer"
-                  className="flex items-center gap-2 text-slate-400 hover:text-slate-850 dark:hover:text-white transition-colors"
-                >
-                  <Globe className="w-4 h-4 flex-shrink-0" />
-                  <span className="truncate">Personal Portfolio</span>
-                </a>
-              )}
             </div>
           </div>
         </div>
 
-        {/* Right Side: Skills, About, Education, Achievements */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* About Me Bio */}
-          <div className="glass-panel p-6 space-y-3">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <User className="w-4 h-4 text-blue-500" /> Professional Summary
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-bold">
-              {user.bio || "No summary provided. Edit your profile to write a career overview."}
-            </p>
-          </div>
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2.5 shrink-0 pt-1 md:pt-0">
+          <button
+            onClick={handleOpenEdit}
+            className="flex-1 sm:flex-none justify-center px-4 py-2.5 lg:px-5 lg:py-3 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <Pencil className="w-3.5 h-3.5" /> Edit Profile Details
+          </button>
+          {user.resumeBase64 && (
+            <button
+              onClick={downloadResume}
+              className="flex-1 sm:flex-none justify-center px-4 py-2.5 lg:px-5 lg:py-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/10 text-slate-800 dark:text-white rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-y-0"
+            >
+              <FileText className="w-3.5 h-3.5 text-rose-500" /> Resume
+            </button>
+          )}
+        </div>
+      </div>
 
-          {/* Education background */}
-          <div className="glass-panel p-6 space-y-3">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Briefcase className="w-4 h-4 text-emerald-500" /> Education & Qualifications
-            </h3>
-            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-bold whitespace-pre-line">
-              {user.education || "No education history specified yet."}
-            </p>
-          </div>
+      {/* ========================================================================= */}
+      {/* 2. DESKTOP: Two-column layout with glassmorphic sidebar & main panel     */}
+      {/*    MOBILE: Single column stacked flow (unchanged)                         */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
-          {/* Skills & achievements */}
-          <div className="glass-panel p-6 space-y-6">
-            <div className="space-y-3">
-              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Zap className="w-4 h-4 text-amber-500" /> Core Competencies
-              </h3>
-              <div className="flex flex-wrap gap-2">
-                {skillsList.map((skill, idx) => (
-                  <span
-                    key={idx}
-                    className="px-3 py-1.5 bg-blue-500/10 hover:bg-blue-500/20 text-blue-500 border border-blue-500/15 rounded-xl text-xs font-black transition-colors"
-                  >
-                    {skill}
-                  </span>
-                ))}
-              </div>
-            </div>
+        {/* ──── LEFT SIDEBAR PANEL (Desktop: fixed-width card) ──── */}
+        <div className="w-full lg:w-[320px] xl:w-[340px] lg:shrink-0 space-y-0">
+          <div className="lg:sticky lg:top-[100px] space-y-5 lg:space-y-0">
 
-            {/* Achievements */}
-            <div className="space-y-3 border-t border-slate-200/30 dark:border-white/5 pt-6">
-              <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Award className="w-4 h-4 text-violet-500" /> Earned Certificates & Badges
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5">
-                  <div className="w-10 h-10 rounded-lg bg-yellow-500/10 text-yellow-500 flex items-center justify-center flex-shrink-0">
-                    <Star className="w-5 h-5 fill-current" />
+            {/* On desktop, wrap in a single glass card */}
+            <div className="lg:p-5 lg:rounded-2xl lg:bg-white/60 lg:dark:bg-white/[0.03] lg:border lg:border-slate-200/50 lg:dark:border-white/[0.06] lg:shadow-sm lg:space-y-5">
+
+              {/* Direct Channels */}
+              <div className="space-y-3">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Phone className="w-3.5 h-3.5 text-emerald-500" /> Channels & Socials
+                </h3>
+
+                <div className="space-y-2 text-xs">
+                  <div className="flex items-center gap-3 py-1.5 text-slate-700 dark:text-slate-300">
+                    <Mail className="w-4 h-4 text-blue-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase">Email</p>
+                      <p className="font-bold truncate text-slate-800 dark:text-slate-200">{user.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">Prologue Pioneer</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Assigned to first 3 SaaS projects.</p>
-                  </div>
+
+                  {user.phone && (
+                    <div className="flex items-center gap-3 py-1.5 text-slate-700 dark:text-slate-300">
+                      <Phone className="w-4 h-4 text-emerald-500 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">Phone</p>
+                        <p className="font-bold truncate text-slate-800 dark:text-slate-200">{user.phone}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  {user.githubUrl && (
+                    <a
+                      href={user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between gap-3 py-1.5 text-slate-700 dark:text-slate-300 hover:text-blue-500 dark:hover:text-blue-400 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Github className="w-4 h-4 text-violet-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Repository</p>
+                          <p className="font-bold truncate">GitHub Profile</p>
+                        </div>
+                      </div>
+                      <span className="text-slate-400 group-hover:text-blue-500 transition-colors">↗</span>
+                    </a>
+                  )}
+
+                  {user.portfolioUrl && (
+                    <a
+                      href={user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center justify-between gap-3 py-1.5 text-slate-700 dark:text-slate-300 hover:text-cyan-500 dark:hover:text-cyan-400 transition-colors group"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <Globe className="w-4 h-4 text-cyan-500 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-slate-400 font-bold uppercase">Portfolio</p>
+                          <p className="font-bold truncate">Personal Website</p>
+                        </div>
+                      </div>
+                      <span className="text-slate-400 group-hover:text-cyan-500 transition-colors">↗</span>
+                    </a>
+                  )}
                 </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5">
-                  <div className="w-10 h-10 rounded-lg bg-green-500/10 text-green-500 flex items-center justify-center flex-shrink-0">
-                    <CheckCircle className="w-5 h-5" />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-100">Milestones Master</h4>
-                    <p className="text-[10px] text-slate-400 font-semibold mt-0.5">Successfully finished 15+ subtasks.</p>
-                  </div>
-                </div>
               </div>
-            </div>
-          </div>
 
-          {/* Recent Audit Activities */}
-          <div className="glass-panel p-6 space-y-4">
-            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-blue-500" /> Recent Audit Activity History
-            </h3>
-            <div className="divide-y divide-slate-100 dark:divide-white/5">
-              {(Array.isArray(activities) ? activities : []).slice(0, 5).map((act) => (
-                <div key={act.id} className="py-3 flex items-center justify-between text-xs gap-4 font-bold">
-                  <div className="flex items-center gap-3 truncate">
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-black uppercase flex-shrink-0 ${
-                      act.action === 'CREATE' ? 'bg-green-500/10 text-green-500' :
-                      act.action === 'UPDATE' ? 'bg-blue-500/10 text-blue-500' :
-                      'bg-slate-500/10 text-slate-400'
-                    }`}>
-                      {act.action}
+              {/* Attached Resume */}
+              <div className="space-y-3 pt-4 border-t border-slate-200/50 dark:border-white/5">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <FileText className="w-3.5 h-3.5 text-rose-500" /> Career Dossier (PDF)
+                </h3>
+                {user.resumeBase64 ? (
+                  <div className="flex items-center justify-between gap-3 py-2">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <FileText className="w-5 h-5 text-rose-500 shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-900 dark:text-white truncate">{user.resumeFileName || 'Resume.pdf'}</p>
+                        <p className="text-[10px] text-slate-400">PDF Document</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={downloadResume}
+                      className="px-3 py-1 bg-rose-500 hover:bg-rose-600 text-white rounded-lg text-xs font-bold cursor-pointer transition-colors shrink-0"
+                    >
+                      Download
+                    </button>
+                  </div>
+                ) : (
+                  <p className="text-xs text-slate-400 font-medium italic">
+                    No resume attached. Click "Edit Profile Details" to upload a PDF.
+                  </p>
+                )}
+              </div>
+
+              {/* Core Competencies & Skills — shown in sidebar on desktop */}
+              <div className="space-y-2.5 pt-4 border-t border-slate-200/50 dark:border-white/5">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Zap className="w-3.5 h-3.5 text-amber-500" /> Core Competencies & Stack
+                </h3>
+                <div className="flex flex-wrap gap-1.5 pt-0.5">
+                  {skillsList.map((skill, idx) => (
+                    <span
+                      key={idx}
+                      className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-white/10 hover:border-cyan-500/50 transition-colors"
+                    >
+                      {skill}
                     </span>
-                    <span className="text-slate-700 dark:text-slate-300 truncate">{act.details}</span>
-                  </div>
-                  <span className="text-[10px] text-slate-400 font-bold flex-shrink-0">
-                    {new Date(act.createdAt).toLocaleDateString()}
-                  </span>
+                  ))}
                 </div>
-              ))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ──── RIGHT MAIN PANEL (Desktop: wider content area) ──── */}
+        <div className="flex-1 min-w-0 space-y-6">
+
+          {/* Professional Overview Card */}
+          <div className="lg:p-6 lg:rounded-2xl lg:bg-white/60 lg:dark:bg-white/[0.03] lg:border lg:border-slate-200/50 lg:dark:border-white/[0.06] lg:shadow-sm space-y-3">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <User className="w-3.5 h-3.5 text-blue-500" /> Professional Career Overview
+            </h3>
+            <div className="border-l-2 border-blue-500/60 pl-3.5 py-1">
+              <p className="text-xs sm:text-sm lg:text-[14px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
+                {user.bio || "No summary provided. Edit your profile to write a career overview."}
+              </p>
+            </div>
+          </div>
+
+          {/* Education & Qualifications Card */}
+          <div className="lg:p-6 lg:rounded-2xl lg:bg-white/60 lg:dark:bg-white/[0.03] lg:border lg:border-slate-200/50 lg:dark:border-white/[0.06] lg:shadow-sm space-y-3">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <GraduationCap className="w-3.5 h-3.5 text-emerald-500" /> Education & Qualifications
+            </h3>
+            <div className="border-l-2 border-emerald-500/60 pl-3.5 py-1">
+              <p className="text-xs sm:text-sm lg:text-[14px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium whitespace-pre-line">
+                {user.education || "No education history specified yet. Update details via Edit Profile."}
+              </p>
+            </div>
+          </div>
+
+          {/* Verified Achievements & Badges Card */}
+          <div className="lg:p-6 lg:rounded-2xl lg:bg-white/60 lg:dark:bg-white/[0.03] lg:border lg:border-slate-200/50 lg:dark:border-white/[0.06] lg:shadow-sm space-y-3">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Award className="w-3.5 h-3.5 text-violet-500" /> Earned Certificates & Badges
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div className="flex items-center gap-3 p-3 lg:p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/40 dark:border-white/5 hover:border-yellow-500/30 transition-colors">
+                <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-lg bg-yellow-500/15 text-yellow-500 flex items-center justify-center shrink-0">
+                  <Star className="w-4 h-4 lg:w-5 lg:h-5 fill-current" />
+                </div>
+                <div>
+                  <h4 className="text-xs lg:text-sm font-black text-slate-900 dark:text-white">Prologue Pioneer</h4>
+                  <p className="text-[10px] lg:text-[11px] text-slate-400 font-medium">Assigned to first 3 SaaS projects.</p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 p-3 lg:p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/40 dark:border-white/5 hover:border-emerald-500/30 transition-colors">
+                <div className="w-9 h-9 lg:w-11 lg:h-11 rounded-lg bg-emerald-500/15 text-emerald-500 flex items-center justify-center shrink-0">
+                  <CheckCircle className="w-4 h-4 lg:w-5 lg:h-5" />
+                </div>
+                <div>
+                  <h4 className="text-xs lg:text-sm font-black text-slate-900 dark:text-white">Milestones Master</h4>
+                  <p className="text-[10px] lg:text-[11px] text-slate-400 font-medium">Successfully finished 15+ subtasks.</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -34,6 +34,7 @@ import Tasks from './pages/Tasks';
 import TeamWorkTracking from './pages/TeamWorkTracking';
 import StepVerificationDashboard from './pages/StepVerificationDashboard';
 import EmployeeWorkProfilePage from './pages/EmployeeWorkProfilePage';
+import WorkspaceActivity from './pages/WorkspaceActivity';
 
 // Admin & Role Specific Views
 import { UserManagementView, RolesPermissionsView, OrganizationSettingsView, AuditLogsView } from './pages/AdminViews';
@@ -67,6 +68,7 @@ const VIEW_TO_PATH: Record<string, string> = {
   'audit-logs': '/audit-logs',
   reviews: '/reviews',
   performance: '/performance',
+  'workspace-activity': '/workspace-activity',
 };
 
 const PATH_TO_VIEW: Record<string, string> = {
@@ -109,6 +111,7 @@ const PATH_TO_VIEW: Record<string, string> = {
   '/team-lead/step-verification': 'step-verification',
   '/reviews': 'reviews',
   '/performance': 'performance',
+  '/workspace-activity': 'workspace-activity',
 };
 
 function getViewFromPath(pathname: string) {
@@ -202,6 +205,7 @@ function AppContent() {
   const navigate = useNavigate();
   const isNavigatingFromUI = useRef(false);
   const isInitialRouteSync = useRef(true);
+  const lastActiveViewNav = useRef<string | null>(null);
 
   // Initialize theme mode and validate existing session JWT token on load
   useEffect(() => {
@@ -215,14 +219,22 @@ function AppContent() {
 
     if (isInitialRouteSync.current) return;
 
-    if (getViewFromPath(location.pathname) === activeView) return;
+    // If the current path already resolves to the active view, skip
+    if (getViewFromPath(location.pathname) === activeView) {
+      lastActiveViewNav.current = null;
+      return;
+    }
+
+    // If we already navigated for this view, skip
+    if (lastActiveViewNav.current === activeView) return;
 
     const targetPath = getPathFromView(activeView, user.role);
     if (targetPath && location.pathname !== targetPath) {
+      lastActiveViewNav.current = activeView;
       isNavigatingFromUI.current = true;
       navigate(targetPath);
     }
-  }, [activeView]);
+  }, [activeView, location.pathname]);
 
   // 2. Sync location.pathname -> activeView (when user clicks back/forward or enters URL)
   useEffect(() => {
@@ -286,8 +298,7 @@ function AppContent() {
           {/* Header Frosted Navbar */}
           <Navbar />
 
-          {/* Main Workspace Frame with Smooth Motion Animations */}
-          <main className="flex-1 pt-18 sm:pt-24 px-3 sm:px-6 md:px-8 w-full max-w-7xl mx-auto min-w-0 max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:max-w-none">
+          <main className="flex-1 main-workspace-frame px-3 sm:px-6 md:px-8 w-full max-w-7xl mx-auto min-w-0 max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:max-w-none">
             <AnimatePresence mode="wait">
               <motion.div
                 key={location.pathname}
@@ -323,6 +334,7 @@ function AppContent() {
                     <Route path="/settings" element={<Settings />} />
                     <Route path="/profile" element={<Profile />} />
                     <Route path="/documents" element={<Documents />} />
+                    <Route path="/workspace-activity" element={<WorkspaceActivity />} />
 
                     {/* Admin Specific Views (Restricted to ROLE_ADMIN) */}
                     <Route path="/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><UserManagementView /></RoleGuard>} />
