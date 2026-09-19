@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, Shield, FolderGit2, Sparkles, FileText, Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, Filter, Eye, EyeOff, AlertCircle, Key, Lock, Settings, KeyRound, Building2, ScrollText } from 'lucide-react';
+import { Users, Shield, FolderGit2, Sparkles, FileText, Search, Plus, Pencil, Trash2, CheckCircle2, XCircle, Filter, Eye, EyeOff, AlertCircle, Key, Lock, Settings, KeyRound, Building2, ScrollText, X } from 'lucide-react';
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 
@@ -99,6 +99,14 @@ export function UserManagementView() {
     setIsModalOpen(true);
   };
 
+  const handleInputFocus = (e: React.FocusEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const target = e.currentTarget;
+    // Delay slightly to give mobile keyboard time to slide up, then smoothly center the input
+    setTimeout(() => {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 250);
+  };
+
   const handleToggleStatus = async (user: any) => {
     const updated = { ...user, active: !user.active };
     try {
@@ -175,7 +183,10 @@ export function UserManagementView() {
           });
         }
       } catch (err: any) {
-        const errorMsg = err.response?.data?.message || err.message || 'Account provisioning failed.';
+        let errorMsg = err.response?.data?.message || err.message || 'Account provisioning failed.';
+        if (err.message === 'Network Error' || !err.response) {
+          errorMsg = `Network Error: Unable to reach backend server at ${api.defaults.baseURL || 'http://192.168.29.230:8080'}. Please ensure your mobile phone is connected to the same Wi-Fi network and your PC's Wi-Fi network profile is set to Private.`;
+        }
         setModalError(errorMsg);
         return;
       }
@@ -420,23 +431,42 @@ export function UserManagementView() {
       <AnimatePresence>
         {isModalOpen && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 overscroll-contain touch-none select-none"
-            onWheel={(e) => e.stopPropagation()}
-            onTouchMove={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain"
           >
-            <div onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"></div>
+            {/* Backdrop */}
+            <div 
+              onClick={() => setIsModalOpen(false)} 
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm touch-none"
+            />
+
+            {/* Modal Card */}
             <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="glass-panel p-6 w-full max-w-md relative z-10 shadow-2xl space-y-4"
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              className="glass-panel p-5 sm:p-6 w-full max-w-md relative z-10 shadow-2xl space-y-4 max-h-[85dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain my-auto border border-slate-200/50 dark:border-white/10 rounded-2xl sm:rounded-3xl"
               onClick={(e) => e.stopPropagation()}
             >
-              <h2 className="text-md font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-blue-500" /> {editingUser ? 'Edit User Credentials' : 'Create Organization User'}
-              </h2>
+              <div className="flex items-center justify-between pb-1">
+                <h2 className="text-md font-black text-slate-800 dark:text-white flex items-center gap-2">
+                  <Users className="w-5 h-5 text-blue-500" /> {editingUser ? 'Edit User Credentials' : 'Create Organization User'}
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                  title="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
 
-              <form onSubmit={handleSaveUser} className="space-y-3">
+              <form onSubmit={handleSaveUser} className="space-y-3.5" autoComplete="off">
+                {/* Hidden dummy fields to prevent browser / mobile password managers from auto-filling admin credentials */}
+                <input type="text" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+                <input type="password" style={{ display: 'none' }} tabIndex={-1} autoComplete="off" />
+
                 {modalError && (
                   <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-500 text-xs font-bold flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
@@ -483,29 +513,35 @@ export function UserManagementView() {
                   </div>
                 </div>
 
-                <div>
+                <div className="scroll-mt-6">
                   <label className="text-[10px] font-black uppercase text-slate-400">Full Name</label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
+                    onFocus={handleInputFocus}
                     className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none focus:border-blue-500/50"
                   />
                 </div>
 
-                <div>
+                <div className="scroll-mt-6">
                   <label className="text-[10px] font-black uppercase text-slate-400">Email Address</label>
                   <input
                     type="email"
                     required
+                    autoComplete="off"
+                    name="admin_create_user_email"
+                    id="admin_create_user_email"
+                    placeholder="Enter user email address"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onFocus={handleInputFocus}
                     className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none focus:border-blue-500/50"
                   />
                 </div>
 
-                <div>
+                <div className="scroll-mt-6">
                   <label className="text-[10px] font-black uppercase text-slate-400">
                     Password {editingUser ? '(Leave blank to keep current)' : ''}
                   </label>
@@ -514,15 +550,19 @@ export function UserManagementView() {
                       type={showPassword ? 'text' : 'password'}
                       required={!editingUser}
                       minLength={6}
+                      autoComplete="new-password"
+                      name="admin_create_user_password"
+                      id="admin_create_user_password"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
+                      onFocus={handleInputFocus}
                       placeholder={editingUser ? '•••••••• (unchanged)' : 'Enter initial account password'}
-                      className="w-full pl-3 pr-10 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none focus:border-blue-500/50"
+                      className="w-full pl-3 pr-10 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none focus:border-blue-500/50 focus:ring-1 focus:ring-blue-500/30 transition-all"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer p-1"
                       title={showPassword ? "Hide password" : "Show password"}
                     >
                       {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -530,12 +570,13 @@ export function UserManagementView() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-3 scroll-mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase text-slate-400">System Role</label>
                     <select
                       value={role}
                       onChange={(e) => setRole(e.target.value)}
+                      onFocus={handleInputFocus}
                       className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
                     >
                       <option value="ROLE_ADMIN" className="dark:bg-slate-900">Admin</option>
@@ -550,35 +591,37 @@ export function UserManagementView() {
                       type="text"
                       value={department}
                       onChange={(e) => setDepartment(e.target.value)}
+                      onFocus={handleInputFocus}
                       className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none"
                     />
                   </div>
                 </div>
 
-                <div>
+                <div className="scroll-mt-6">
                   <label className="text-[10px] font-black uppercase text-slate-400">Designation</label>
                   <input
                     type="text"
                     value={designation}
                     onChange={(e) => setDesignation(e.target.value)}
+                    onFocus={handleInputFocus}
                     placeholder="e.g. Senior Software Architect"
                     className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold outline-none"
                   />
                 </div>
 
-                <div className="flex justify-end gap-2 pt-3">
+                <div className="flex justify-end gap-2 pt-4 pb-2 sticky bottom-0 bg-slate-100/90 dark:bg-slate-900/90 backdrop-blur-md -mx-5 sm:-mx-6 -mb-5 sm:-mb-6 px-5 sm:px-6 py-3 border-t border-slate-200/30 dark:border-white/5 rounded-b-2xl sm:rounded-b-3xl z-20">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold text-slate-400 hover:bg-white/10"
+                    className="px-4 py-2 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold text-slate-400 hover:bg-white/10 cursor-pointer"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-lg"
+                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-lg shadow-blue-500/20 cursor-pointer"
                   >
-                    Save Changes
+                    {editingUser ? 'Save Changes' : 'Create User'}
                   </button>
                 </div>
               </form>

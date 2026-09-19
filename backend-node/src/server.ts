@@ -94,8 +94,8 @@ const initializeServer = async () => {
     await seedInitialAdmin();
     console.log('Database synced cleanly and initial Admin provisioned.');
 
-    app.listen(PORT, () => {
-      console.log(`Node.js Express Server running on http://localhost:${PORT}`);
+    app.listen(Number(PORT), '0.0.0.0', () => {
+      console.log(`Node.js Express Server running on http://0.0.0.0:${PORT}`);
     });
   } catch (error) {
     console.error('Failed to initialize server:', error);
