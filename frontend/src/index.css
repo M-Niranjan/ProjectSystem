@@ -60,6 +60,10 @@
     --blur-glass: 20px;
   }
 
+  html {
+    scrollbar-gutter: stable;
+  }
+
   body {
     background-color: var(--bg-main);
     color: var(--text-primary);
@@ -68,6 +72,11 @@
     -moz-osx-font-smoothing: grayscale;
     transition: background-color 0.25s ease, color 0.25s ease;
     overflow-x: hidden;
+  }
+
+  .modal-backdrop-lock {
+    overscroll-behavior: contain;
+    touch-action: none;
   }
 
   .dark body, body:where(.dark, .dark *) {

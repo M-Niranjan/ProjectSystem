@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore, AccentColor, DisplayDensity, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export default function Settings() {
   const { user, updateProfile } = useAuthStore();
@@ -26,6 +27,9 @@ export default function Settings() {
   const [successMsg, setSuccessMsg] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [updatedDetailsSummary, setUpdatedDetailsSummary] = useState<{ email: string; name: string; passChanged: boolean } | null>(null);
+
+  // Lock background scrolling when the success modal is active
+  useScrollLock(showSuccessModal);
 
   // Account form state
   const [name, setName] = useState(user?.name || '');
@@ -225,12 +229,17 @@ export default function Settings() {
       {/* Success Popup Modal */}
       <AnimatePresence>
         {showSuccessModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-xs overscroll-contain touch-none select-none"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
               className="w-full max-w-md bg-white dark:bg-slate-900 border border-emerald-500/30 rounded-3xl p-6 shadow-2xl space-y-4 text-center select-none"
+              onClick={(e) => e.stopPropagation()}
             >
               <div className="w-16 h-16 mx-auto rounded-full bg-emerald-500/20 text-emerald-500 border border-emerald-500/40 flex items-center justify-center animate-bounce">
                 <CheckCircle2 className="w-10 h-10" />

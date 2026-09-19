@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { Capacitor } from '@capacitor/core';
 
 // Force-clear stale mock data when the mock version changes
 const MOCK_VERSION = 'v12-completely-clean-no-default-users';
@@ -549,13 +550,33 @@ const mockAdapter = async (config: any) => {
   };
 };
 
+export const getApiBaseUrl = (): string => {
+  const customUrl = localStorage.getItem('custom_api_base_url');
+  if (customUrl && customUrl.trim()) {
+    return customUrl.trim();
+  }
+
+  const envUrl = import.meta.env.VITE_API_BASE_URL || '';
+
+  // If running in Capacitor on Android, localhost points to the phone itself.
+  // Replace localhost / 127.0.0.1 with the host computer's LAN IP.
+  if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android') {
+    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
+      return 'http://192.168.29.230:8080';
+    }
+  }
+
+  return envUrl;
+};
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || '',
+  baseURL: getApiBaseUrl(),
 });
 
-// Interceptor to append JWT token
+// Interceptor to append JWT token and ensure dynamic baseURL
 api.interceptors.request.use(
   (config) => {
+    config.baseURL = getApiBaseUrl();
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

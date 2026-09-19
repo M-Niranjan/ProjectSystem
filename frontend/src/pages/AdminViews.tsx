@@ -6,6 +6,7 @@ import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../ser
 
 import { normalizeRole } from '../services/authRoles';
 import { upsertFirestoreUserDoc, deleteFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 // ==========================================
 // 1. USER MANAGEMENT VIEW
@@ -17,6 +18,9 @@ export function UserManagementView() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<any>(null);
   const [modalError, setModalError] = useState<string | null>(null);
+
+  // Lock background scrolling when create/edit user modal is open
+  useScrollLock(isModalOpen);
 
   // Form state
   const [name, setName] = useState('');
@@ -415,13 +419,18 @@ export function UserManagementView() {
       {/* Edit/Create Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 overscroll-contain touch-none select-none"
+            onWheel={(e) => e.stopPropagation()}
+            onTouchMove={(e) => e.stopPropagation()}
+          >
             <div onClick={() => setIsModalOpen(false)} className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"></div>
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               className="glass-panel p-6 w-full max-w-md relative z-10 shadow-2xl space-y-4"
+              onClick={(e) => e.stopPropagation()}
             >
               <h2 className="text-md font-black text-slate-800 dark:text-white flex items-center gap-2">
                 <Users className="w-5 h-5 text-blue-500" /> {editingUser ? 'Edit User Credentials' : 'Create Organization User'}

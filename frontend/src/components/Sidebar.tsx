@@ -29,7 +29,7 @@ import {
   Settings2,
   X
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -76,6 +76,7 @@ const getDashboardPath = (role?: string | null) => {
 
 export default function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout } = useAuthStore();
   const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
   const [isMobile, setIsMobile] = useState(false);
@@ -164,8 +165,8 @@ export default function Sidebar() {
             ? { x: sidebarExpanded ? 0 : -270, width: 270 }
             : { x: 0, width: sidebarExpanded ? 270 : 76 }
         }
-        transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
-        className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden ${
+        onWheel={(e) => e.stopPropagation()}
+        className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden overscroll-contain select-none ${
           isMobile ? 'z-50 h-full' : 'z-30 h-screen'
         }`}
       >
@@ -222,30 +223,38 @@ export default function Sidebar() {
           )}
 
           {/* Menu Navigation Items */}
-          <nav className="px-3 space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto">
+          <nav className="px-3 space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto overscroll-contain">
             {allowedItems.map((item) => {
               const Icon = item.icon;
-              const isActive = activeView === item.view;
+              const targetPath = item.view === 'dashboard'
+                ? getDashboardPath(user?.role)
+                : (VIEW_TO_PATH[item.view] || getDashboardPath(user?.role));
+              const isActive = item.view === 'dashboard'
+                ? (location.pathname === '/admin/dashboard' || 
+                   location.pathname === '/team-lead/dashboard' || 
+                   location.pathname === '/employee/dashboard' || 
+                   location.pathname === '/dashboard' || 
+                   location.pathname === '/')
+                : (location.pathname === targetPath || location.pathname.startsWith(targetPath + '/'));
+
               return (
                 <button
                   key={item.view}
                   onClick={() => {
-                    setView(item.view);
-                    const targetPath = item.view === 'dashboard'
-                      ? getDashboardPath(user?.role)
-                      : (VIEW_TO_PATH[item.view] || getDashboardPath(user?.role));
-                    navigate(targetPath);
+                    if (location.pathname !== targetPath) {
+                      navigate(targetPath);
+                    }
                     if (isMobile) toggleSidebar();
                   }}
                   className={`w-full flex items-center ${
                     showExpanded ? 'gap-3.5 px-3.5 py-2.5 justify-start' : 'justify-center py-2.5'
-                  } rounded-xl text-[14.5px] font-medium transition-all duration-150 cursor-pointer group relative ${
+                  } rounded-xl text-[14.5px] font-semibold border transition-all duration-200 ease-out cursor-pointer group relative ${
                     isActive
-                      ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white font-bold border border-slate-200 dark:border-white/15 shadow-sm dark:shadow-black/40'
-                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                      ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border-slate-200/80 dark:border-white/15 shadow-sm dark:shadow-black/30'
+                      : 'border-transparent text-slate-600 dark:text-zinc-400 hover:bg-slate-100/70 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
+                  <Icon className={`w-5 h-5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
 
                   {showExpanded && (
                     <span className="truncate tracking-normal">
@@ -271,13 +280,15 @@ export default function Sidebar() {
               <button
                 type="button"
                 onClick={() => {
-                  setView('profile');
+                  if (location.pathname !== '/profile') {
+                    navigate('/profile');
+                  }
                   if (isMobile) toggleSidebar();
                 }}
-                className={`w-full p-2.5 rounded-xl flex items-center gap-3.5 overflow-hidden transition-all text-left cursor-pointer group ${
-                  activeView === 'profile'
-                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border border-slate-200 dark:border-white/15 shadow-md'
-                    : 'bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 border border-slate-200/80 dark:border-white/10'
+                className={`w-full p-2.5 rounded-xl flex items-center gap-3.5 overflow-hidden border transition-all duration-200 ease-out text-left cursor-pointer group ${
+                  location.pathname === '/profile'
+                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border-slate-200/80 dark:border-white/15 shadow-sm dark:shadow-black/30'
+                    : 'border-transparent bg-slate-50 dark:bg-white/5 hover:bg-slate-100/70 dark:hover:bg-white/10'
                 }`}
                 title="View My Profile"
               >
@@ -287,7 +298,7 @@ export default function Sidebar() {
                   className="w-10 h-10 rounded-lg object-cover flex-shrink-0 ring-1 ring-slate-200 dark:ring-white/10 group-hover:scale-105 transition-transform"
                 />
                 <div className="truncate flex-1">
-                  <p className={`text-[14px] font-bold truncate ${activeView === 'profile' ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-zinc-100'}`}>{user.name}</p>
+                  <p className={`text-[14px] font-bold truncate ${location.pathname === '/profile' ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-zinc-100'}`}>{user.name}</p>
                   <p className="text-[11px] uppercase tracking-wider font-mono truncate font-semibold text-slate-500 dark:text-zinc-400">{user.role.replace('ROLE_', '')}</p>
                 </div>
               </button>

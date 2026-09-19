@@ -213,50 +213,24 @@ function AppContent() {
     initAuth();
   }, []);
 
-  // 1. Sync activeView -> location.pathname (when user clicks a sidebar item or component button)
+  // 1. Sync location.pathname -> activeView and scroll to top cleanly on route change
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (!token || !user) return;
-
-    if (isInitialRouteSync.current) return;
-
-    // If the current path already resolves to the active view, skip
-    if (getViewFromPath(location.pathname) === activeView) {
-      lastActiveViewNav.current = null;
-      return;
-    }
-
-    // If we already navigated for this view, skip
-    if (lastActiveViewNav.current === activeView) return;
-
-    const targetPath = getPathFromView(activeView, user.role);
-    if (targetPath && location.pathname !== targetPath) {
-      lastActiveViewNav.current = activeView;
-      isNavigatingFromUI.current = true;
-      navigate(targetPath);
-    }
-  }, [activeView, location.pathname]);
-
-  // 2. Sync location.pathname -> activeView (when user clicks back/forward or enters URL)
-  useEffect(() => {
-    if (!token || !user) return;
-
-    if (isInitialRouteSync.current) {
-      isInitialRouteSync.current = false;
-      const initialView = getViewFromPath(location.pathname);
-      if (initialView !== activeView) setView(initialView);
-      return;
-    }
-
-    if (isNavigatingFromUI.current) {
-      isNavigatingFromUI.current = false;
-      return;
-    }
-
     const matchedView = getViewFromPath(location.pathname);
-    if (matchedView !== activeView) {
+    if (matchedView && matchedView !== activeView) {
       setView(matchedView);
     }
   }, [location.pathname]);
+
+  // 2. Sync activeView -> location.pathname (when external components invoke setView directly)
+  useEffect(() => {
+    if (!token || !user) return;
+    const expectedPath = getPathFromView(activeView, user.role);
+    if (expectedPath && location.pathname !== expectedPath && getViewFromPath(location.pathname) !== activeView) {
+      navigate(expectedPath);
+    }
+  }, [activeView]);
 
   if (loading) {
     return (
@@ -299,17 +273,8 @@ function AppContent() {
           <Navbar />
 
           <main className="flex-1 main-workspace-frame px-3 sm:px-6 md:px-8 w-full max-w-7xl mx-auto min-w-0 max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:max-w-none">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={location.pathname}
-                initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -15, scale: 0.98 }}
-                transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-                className="w-full h-full"
-              >
-                <ErrorBoundary>
-                  <Routes location={location}>
+            <ErrorBoundary>
+              <Routes location={location}>
                     <Route path="/" element={<RoleDashboardRedirect />} />
                     <Route path="/dashboard" element={<RoleDashboardRedirect />} />
                     <Route path="/admin/dashboard" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'admin']}><AdminDashboard /></RoleGuard>} />
@@ -355,9 +320,7 @@ function AppContent() {
 
                     <Route path="*" element={<RoleDashboardRedirect />} />
                   </Routes>
-                </ErrorBoundary>
-              </motion.div>
-            </AnimatePresence>
+            </ErrorBoundary>
           </main>
         </div>
       </div>
