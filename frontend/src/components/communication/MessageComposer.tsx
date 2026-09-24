@@ -169,7 +169,7 @@ export default function MessageComposer({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`p-4 border-t border-slate-200/50 dark:border-white/10 flex-shrink-0 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl relative transition-all ${
+      className={`p-2.5 sm:p-4 border-t border-slate-200/50 dark:border-white/10 flex-shrink-0 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl relative transition-all ${
         isDraggingOver ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''
       }`}
     >
@@ -298,19 +298,19 @@ export default function MessageComposer({
       />
 
       {/* Main Input Box */}
-      <div className="flex gap-2.5 items-end">
+      <div className="flex gap-1.5 sm:gap-2.5 items-end">
         {/* File Attachment HD Badge Button */}
         <button
           type="button"
           onClick={() => fileInputRef.current?.click()}
-          className={`w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
+          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
             attachedFile
               ? 'bg-blue-500/20 border-blue-500/40 text-blue-500 shadow-md shadow-blue-500/10'
               : 'bg-slate-100/80 dark:bg-white/5 border-slate-200/80 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400'
           }`}
           title="Attach Document or Image (or Drag & Drop)"
         >
-          <Paperclip className="w-4.5 h-4.5" />
+          <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
         </button>
 
         {/* Text Area Input */}
@@ -322,7 +322,7 @@ export default function MessageComposer({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full px-4 py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/10 transition-all font-semibold text-xs resize-none max-h-32 placeholder:text-slate-400"
+            className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm resize-none max-h-32 placeholder:text-slate-400"
           />
         </div>
 
@@ -331,14 +331,14 @@ export default function MessageComposer({
           <button
             type="button"
             onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className={`w-10 h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
+            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
               showEmojiPicker
                 ? 'bg-blue-500/20 border-blue-500/40 text-blue-500 shadow-md shadow-blue-500/10'
                 : 'bg-slate-100/80 dark:bg-white/5 border-slate-200/80 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400'
             }`}
             title="Insert Emoji"
           >
-            <Smile className="w-4.5 h-4.5" />
+            <Smile className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
           </button>
 
           {/* Emoji Popover */}
@@ -357,10 +357,10 @@ export default function MessageComposer({
           type="button"
           onClick={handleFormSubmit}
           disabled={!text.trim() && !attachedFile}
-          className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-md shadow-blue-500/20 flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-40 hover:scale-105 transition-all"
+          className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-md shadow-blue-500/20 flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-40 hover:scale-105 transition-all"
           title="Send message (Enter)"
         >
-          <Send className="w-4.5 h-4.5" />
+          <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
         </button>
       </div>
     </div>

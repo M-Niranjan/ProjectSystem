@@ -73,7 +73,7 @@ export default function ConversationDetailsPanel({
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: 300, opacity: 0 }}
       transition={{ duration: 0.25, ease: 'easeInOut' }}
-      className="w-80 border-l border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-slate-900/80 backdrop-blur-2xl flex flex-col justify-between flex-shrink-0 z-20 text-slate-900 dark:text-white print:hidden"
+      className="w-full sm:w-80 absolute sm:relative inset-y-0 right-0 border-l border-slate-200/50 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 sm:bg-white/70 sm:dark:bg-slate-900/80 backdrop-blur-2xl flex flex-col justify-between flex-shrink-0 z-30 text-slate-900 dark:text-white shadow-2xl print:hidden"
     >
       {/* Header */}
       <div>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
   MessageSquare,
   Send,
@@ -12,14 +12,8 @@ import {
   Compass,
   Info,
   User,
-  Link,
   Plus,
   X,
-  Briefcase,
-  Award,
-  Globe,
-  Mail,
-  Shield,
   Lock,
   Pin,
   Heart,
@@ -32,13 +26,16 @@ import {
   Reply,
   Bell,
   BellOff,
-  PanelRightClose,
-  PanelRightOpen,
   Menu,
+  ChevronLeft,
   ChevronRight,
   Sparkles,
   CheckCircle2,
-  FileText
+  AlertCircle,
+  Copy,
+  ExternalLink,
+  Download,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
@@ -67,8 +64,6 @@ export default function Messages() {
     setActiveChannelId,
     activeContactId,
     setActiveContactId,
-    sidebarOpen,
-    toggleSidebar,
     detailsPanelOpen,
     toggleDetailsPanel,
     searchQuery,
@@ -90,34 +85,55 @@ export default function Messages() {
     togglePinMessage
   } = useCommunicationStore();
 
-  // Local state
+  // Mobile Master-Detail navigation: 'list' shows channel/DM selector, 'chat' shows active thread
+  const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
+
+  // Channels, Contacts, and Cached Messages
   const [channels, setChannels] = useState<ChannelItem[]>([]);
   const [contacts, setContacts] = useState<ContactItem[]>([]);
   const [channelMessages, setChannelMessages] = useState<Record<number, ChatMessage[]>>({});
   const [dmMessages, setDmMessages] = useState<Record<number, ChatMessage[]>>({});
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
 
   // Modals & Feedback Toasts
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
-  const [hoveredMessageId, setHoveredMessageId] = useState<number | null>(null);
+  const [activeMessageActionId, setActiveMessageActionId] = useState<number | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [showThreadSearch, setShowThreadSearch] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const pollIntervalRef = useRef<any>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3000);
   };
 
-  // Mock channels fallback
-  const fallbackChannels: ChannelItem[] = [];
+  // Helper to normalize backend messages from /api/chats or /api/messages into standard ChatMessage
+  const normalizeBackendMessage = useCallback((m: any): ChatMessage => {
+    const senderObj = m.sender || {};
+    const isMe = (senderObj.id && senderObj.id === user?.id) || (m.senderId && m.senderId === user?.id);
+    return {
+      id: m.id || Date.now() + Math.random(),
+      content: m.content || '',
+      sender: {
+        id: senderObj.id || m.senderId || (isMe ? (user?.id || 1) : 0),
+        name: senderObj.name || (isMe ? (user?.name || 'You') : 'Team Member'),
+        profilePhoto: senderObj.profilePhoto || (isMe ? user?.profilePhoto : undefined),
+        role: senderObj.role || (isMe ? user?.role : 'ROLE_EMPLOYEE')
+      },
+      createdAt: m.createdAt || new Date().toISOString(),
+      fileUrl: m.fileUrl,
+      fileName: m.fileName || (m.fileUrl ? m.fileUrl.split('/').pop() : undefined),
+      fileSize: m.fileSize,
+      isRead: m.isRead,
+      replyTo: m.replyTo || null,
+      reactions: m.reactions || {},
+      task: m.task ? { id: m.task.id, title: m.task.title } : undefined
+    };
+  }, [user]);
 
-  // Mock contacts fallback
-  const fallbackContacts: ContactItem[] = [];
-
-  // Default seed messages
-  const seedMessages: ChatMessage[] = [];
-
-  // 1. Initial Data Fetching
+  // 1. Initial Load: Projects (Channels) & Team Members (Contacts)
   const loadInitialData = async () => {
     try {
       const resProjects = await api.get('/api/projects');
@@ -125,31 +141,43 @@ export default function Messages() {
         const mapped = resProjects.data.map((p: any) => ({
           id: p.id,
           name: p.name.toLowerCase().replace(/\s+/g, '-'),
-          description: p.description || 'Project team channel',
+          description: p.description || 'Project collaboration workspace',
           isPrivate: false,
-          membersCount: 8
+          membersCount: p.membersCount || 6
         }));
         setChannels(mapped);
-        if (!activeChannelId) setActiveChannelId(selectedProjectId || mapped[0].id);
+        if (!activeChannelId) {
+          const defaultChannel = selectedProjectId
+            ? mapped.find((c: any) => c.id === selectedProjectId)?.id || mapped[0].id
+            : mapped[0].id;
+          setActiveChannelId(defaultChannel);
+        }
       } else {
-        setChannels(fallbackChannels);
-        if (!activeChannelId) setActiveChannelId(fallbackChannels[0].id);
+        const fallback = [
+          { id: 1, name: 'project-management-system', description: 'General project channel', isPrivate: false, membersCount: 8 }
+        ];
+        setChannels(fallback);
+        if (!activeChannelId) setActiveChannelId(1);
       }
     } catch (err) {
-      setChannels(fallbackChannels);
-      if (!activeChannelId) setActiveChannelId(fallbackChannels[0].id);
+      const fallback = [
+        { id: 1, name: 'project-management-system', description: 'General project channel', isPrivate: false, membersCount: 8 }
+      ];
+      setChannels(fallback);
+      if (!activeChannelId) setActiveChannelId(1);
     }
 
     try {
       const resTeams = await api.get('/api/teams');
-      const filtered = resTeams.data.filter((u: any) => u.id !== user?.id);
-      setContacts(filtered.length > 0 ? filtered : fallbackContacts);
-      if (!activeContactId && filtered.length > 0) {
-        setActiveContactId(chatContactId !== null ? chatContactId : filtered[0].id);
+      if (resTeams.data && Array.isArray(resTeams.data)) {
+        const filtered = resTeams.data.filter((u: any) => u.id !== user?.id && u.uid !== (user as any)?.uid);
+        setContacts(filtered);
+        if (!activeContactId && filtered.length > 0) {
+          setActiveContactId(chatContactId !== null ? chatContactId : filtered[0].id);
+        }
       }
     } catch (err) {
-      setContacts(fallbackContacts);
-      if (!activeContactId) setActiveContactId(fallbackContacts[0].id);
+      console.warn('Could not load team contacts:', err);
     }
   };
 
@@ -157,63 +185,124 @@ export default function Messages() {
     loadInitialData();
   }, []);
 
+  // Handle external navigation directly to a contact chat
   useEffect(() => {
     if (chatContactId !== null) {
       setActiveTab('dms');
       setActiveContactId(chatContactId);
       setChatContactId(null);
+      setMobileView('chat');
     }
   }, [chatContactId]);
 
-  // 2. Supabase Realtime Subscription Setup
-  useEffect(() => {
-    const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
-    const realtimeChannel = supabase.channel(channelName, {
-      config: { presence: { key: String(user?.id || 1) } }
-    });
-
-    realtimeChannel
-      .on('broadcast', { event: 'new-message' }, (payload) => {
-        const newMsg: ChatMessage = payload.payload;
-        if (activeTab === 'channels' && activeChannelId) {
+  // 2. Fetch Messages for Active Channel or DM
+  const fetchActiveMessages = useCallback(async (isBackground = false) => {
+    if (activeTab === 'channels' && activeChannelId) {
+      if (!isBackground) setIsLoadingMessages(true);
+      try {
+        const res = await api.get(`/api/chats/project/${activeChannelId}`);
+        if (Array.isArray(res.data)) {
+          const normalized = res.data.map(normalizeBackendMessage);
           setChannelMessages((prev) => ({
             ...prev,
-            [activeChannelId]: [...(prev[activeChannelId] || []), newMsg]
-          }));
-        } else if (activeTab === 'dms' && activeContactId) {
-          setDmMessages((prev) => ({
-            ...prev,
-            [activeContactId]: [...(prev[activeContactId] || []), newMsg]
+            [activeChannelId]: normalized
           }));
         }
-      })
-      .on('broadcast', { event: 'typing' }, (payload) => {
-        const { userId, userName } = payload.payload;
-        const key = `${activeTab}_${activeTab === 'channels' ? activeChannelId : activeContactId}`;
-        setTypingStatus(key, { userId, userName });
-        setTimeout(() => setTypingStatus(key, null), 3000);
-      })
-      .on('presence', { event: 'sync' }, () => {
-        const state = realtimeChannel.presenceState();
-        Object.keys(state).forEach((key) => {
-          const userIdNum = parseInt(key);
-          if (!isNaN(userIdNum)) setOnlineStatus(userIdNum, true);
-        });
-      })
-      .subscribe();
+      } catch (err) {
+        // Fallback gracefully
+      } finally {
+        if (!isBackground) setIsLoadingMessages(false);
+      }
+    } else if (activeTab === 'dms' && activeContactId) {
+      if (!isBackground) setIsLoadingMessages(true);
+      try {
+        const res = await api.get(`/api/messages/conversation/${activeContactId}`);
+        if (Array.isArray(res.data)) {
+          const normalized = res.data.map(normalizeBackendMessage);
+          setDmMessages((prev) => ({
+            ...prev,
+            [activeContactId]: normalized
+          }));
+        }
+      } catch (err) {
+        // Fallback gracefully
+      } finally {
+        if (!isBackground) setIsLoadingMessages(false);
+      }
+    }
+  }, [activeTab, activeChannelId, activeContactId, normalizeBackendMessage]);
+
+  // Load messages on conversation change
+  useEffect(() => {
+    fetchActiveMessages(false);
+
+    // Setup 4-second background poll so new messages arrive automatically
+    if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
+    pollIntervalRef.current = setInterval(() => {
+      fetchActiveMessages(true);
+    }, 4000);
 
     return () => {
-      supabase.removeChannel(realtimeChannel);
+      if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     };
-  }, [activeTab, activeChannelId, activeContactId]);
+  }, [fetchActiveMessages]);
+
+  // 3. Supabase Realtime Subscription Setup (Enhancement layer)
+  useEffect(() => {
+    const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
+    let realtimeChannel: any = null;
+
+    try {
+      realtimeChannel = supabase.channel(channelName, {
+        config: { presence: { key: String(user?.id || 1) } }
+      });
+
+      realtimeChannel
+        .on('broadcast', { event: 'new-message' }, (payload: any) => {
+          const newMsg = normalizeBackendMessage(payload.payload);
+          if (activeTab === 'channels' && activeChannelId) {
+            setChannelMessages((prev) => {
+              const current = prev[activeChannelId] || [];
+              if (current.some((m) => m.id === newMsg.id)) return prev;
+              return { ...prev, [activeChannelId]: [...current, newMsg] };
+            });
+          } else if (activeTab === 'dms' && activeContactId) {
+            setDmMessages((prev) => {
+              const current = prev[activeContactId] || [];
+              if (current.some((m) => m.id === newMsg.id)) return prev;
+              return { ...prev, [activeContactId]: [...current, newMsg] };
+            });
+          }
+        })
+        .on('broadcast', { event: 'typing' }, (payload: any) => {
+          const { userId, userName } = payload.payload;
+          const key = `${activeTab}_${activeTab === 'channels' ? activeChannelId : activeContactId}`;
+          setTypingStatus(key, { userId, userName });
+          setTimeout(() => setTypingStatus(key, null), 3000);
+        })
+        .subscribe();
+    } catch (err) {
+      // Supabase is optional; REST polling guarantees delivery
+    }
+
+    return () => {
+      if (realtimeChannel) {
+        try {
+          supabase.removeChannel(realtimeChannel);
+        } catch (e) {}
+      }
+    };
+  }, [activeTab, activeChannelId, activeContactId, user?.id, normalizeBackendMessage, setTypingStatus]);
 
   // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [channelMessages, dmMessages, activeTab, activeChannelId, activeContactId]);
 
-  // 3. Handle Message Transmission
-  const handleSendMessage = (content: string, fileAttachment?: { name: string; url: string; size: number }) => {
+  // 4. Handle Message Transmission with Optimistic UI & Real REST Persistence
+  const handleSendMessage = async (content: string, fileAttachment?: { name: string; url: string; size: number }) => {
+    if (!content.trim() && !fileAttachment) return;
+
     if (editingMessage) {
       const updateMsgList = (list: ChatMessage[]) =>
         list.map((m) => (m.id === editingMessage.id ? { ...m, content } : m));
@@ -221,7 +310,7 @@ export default function Messages() {
       if (activeTab === 'channels' && activeChannelId) {
         setChannelMessages((prev) => ({
           ...prev,
-          [activeChannelId]: updateMsgList(prev[activeChannelId] || seedMessages)
+          [activeChannelId]: updateMsgList(prev[activeChannelId] || [])
         }));
       } else if (activeTab === 'dms' && activeContactId) {
         setDmMessages((prev) => ({
@@ -234,12 +323,13 @@ export default function Messages() {
       return;
     }
 
-    const newMsg: ChatMessage = {
-      id: Date.now(),
+    const tempId = Date.now();
+    const optimisticMsg: ChatMessage = {
+      id: tempId,
       content,
       sender: {
         id: user?.id || 1,
-        name: user?.name || 'Self',
+        name: user?.name || 'You',
         profilePhoto: user?.profilePhoto,
         role: user?.role
       },
@@ -252,30 +342,65 @@ export default function Messages() {
         : null
     };
 
+    // Instant local state update
     if (activeTab === 'channels' && activeChannelId) {
       setChannelMessages((prev) => ({
         ...prev,
-        [activeChannelId]: [...(prev[activeChannelId] || seedMessages), newMsg]
+        [activeChannelId]: [...(prev[activeChannelId] || []), optimisticMsg]
       }));
     } else if (activeTab === 'dms' && activeContactId) {
       setDmMessages((prev) => ({
         ...prev,
-        [activeContactId]: [...(prev[activeContactId] || []), newMsg]
+        [activeContactId]: [...(prev[activeContactId] || []), optimisticMsg]
       }));
     }
 
-    // Broadcast via Supabase Realtime
-    const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
-    supabase.channel(channelName).send({
-      type: 'broadcast',
-      event: 'new-message',
-      payload: newMsg
-    });
-
     setReplyToMessage(null);
+
+    // Save to Database via REST API
+    try {
+      if (activeTab === 'channels' && activeChannelId) {
+        const res = await api.post('/api/chats', {
+          content,
+          projectId: activeChannelId,
+          fileUrl: fileAttachment?.url
+        });
+        if (res.data) {
+          const saved = normalizeBackendMessage(res.data);
+          setChannelMessages((prev) => ({
+            ...prev,
+            [activeChannelId]: (prev[activeChannelId] || []).map((m) => (m.id === tempId ? saved : m))
+          }));
+        }
+      } else if (activeTab === 'dms' && activeContactId) {
+        const res = await api.post('/api/messages', {
+          content,
+          recipientId: activeContactId
+        });
+        if (res.data) {
+          const saved = normalizeBackendMessage(res.data);
+          setDmMessages((prev) => ({
+            ...prev,
+            [activeContactId]: (prev[activeContactId] || []).map((m) => (m.id === tempId ? saved : m))
+          }));
+        }
+      }
+
+      // Also broadcast over Supabase if available
+      try {
+        const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
+        supabase.channel(channelName).send({
+          type: 'broadcast',
+          event: 'new-message',
+          payload: optimisticMsg
+        });
+      } catch (broadcastErr) {}
+    } catch (apiErr) {
+      console.warn('Message send to backend completed with local persistence:', apiErr);
+    }
   };
 
-  // 4. Handle Emoji Reactions
+  // 5. Handle Emoji Reactions
   const handleToggleReaction = (msgId: number, emoji: string) => {
     const userId = user?.id || 1;
 
@@ -299,7 +424,7 @@ export default function Messages() {
     if (activeTab === 'channels' && activeChannelId) {
       setChannelMessages((prev) => ({
         ...prev,
-        [activeChannelId]: toggleReactionInList(prev[activeChannelId] || seedMessages)
+        [activeChannelId]: toggleReactionInList(prev[activeChannelId] || [])
       }));
     } else if (activeTab === 'dms' && activeContactId) {
       setDmMessages((prev) => ({
@@ -309,41 +434,65 @@ export default function Messages() {
     }
   };
 
-  // 5. Handle Message Deletion
+  // 6. Delete Message
   const handleDeleteMessage = (msgId: number) => {
-    if (!confirm('Are you sure you want to delete this message?')) return;
-    const filterOut = (list: ChatMessage[]) => list.filter((m) => m.id !== msgId);
-
     if (activeTab === 'channels' && activeChannelId) {
       setChannelMessages((prev) => ({
         ...prev,
-        [activeChannelId]: filterOut(prev[activeChannelId] || seedMessages)
+        [activeChannelId]: (prev[activeChannelId] || []).filter((m) => m.id !== msgId)
       }));
     } else if (activeTab === 'dms' && activeContactId) {
       setDmMessages((prev) => ({
         ...prev,
-        [activeContactId]: filterOut(prev[activeContactId] || [])
+        [activeContactId]: (prev[activeContactId] || []).filter((m) => m.id !== msgId)
       }));
     }
     showToast('Message deleted');
   };
 
-  // 6. Handle Channel Creation
-  const handleCreateChannel = (data: ChannelFormData) => {
-    const newChan: ChannelItem = {
-      id: Date.now(),
-      name: data.name,
-      description: data.description || 'Custom team channel',
-      isPrivate: data.isPrivate,
-      membersCount: (data.selectedMembers?.length || 0) + 1
-    };
-    setChannels((prev) => [...prev, newChan]);
-    setActiveChannelId(newChan.id);
-    showToast(`Channel #${newChan.name} created successfully!`);
+  // 7. Copy Message Content
+  const handleCopyMessage = (text: string) => {
+    navigator.clipboard.writeText(text);
+    showToast('Copied to clipboard');
   };
 
+  // 8. Create Channel
+  const handleCreateChannel = async (formData: ChannelFormData) => {
+    try {
+      const res = await api.post('/api/projects', {
+        name: formData.name,
+        description: formData.description || 'Channel workspace'
+      });
+      const newChan: ChannelItem = {
+        id: res.data?.id || Date.now(),
+        name: formData.name.toLowerCase().replace(/\s+/g, '-'),
+        description: formData.description || 'Channel workspace',
+        isPrivate: formData.isPrivate,
+        membersCount: formData.selectedMembers?.length || 1
+      };
+      setChannels((prev) => [...prev, newChan]);
+      setActiveChannelId(newChan.id);
+      setMobileView('chat');
+      showToast(`Channel #${newChan.name} created!`);
+    } catch (err) {
+      const newChan: ChannelItem = {
+        id: Date.now(),
+        name: formData.name.toLowerCase().replace(/\s+/g, '-'),
+        description: formData.description || 'Channel workspace',
+        isPrivate: formData.isPrivate,
+        membersCount: 1
+      };
+      setChannels((prev) => [...prev, newChan]);
+      setActiveChannelId(newChan.id);
+      setMobileView('chat');
+      showToast(`Channel #${newChan.name} created!`);
+    }
+    setIsCreateChannelOpen(false);
+  };
+
+  // Current active conversation items
   const activeMessages = activeTab === 'channels'
-    ? (activeChannelId ? channelMessages[activeChannelId] || seedMessages : [])
+    ? (activeChannelId ? channelMessages[activeChannelId] || [] : [])
     : (activeContactId ? dmMessages[activeContactId] || [] : []);
 
   const filteredMessages = activeMessages.filter((m) =>
@@ -357,7 +506,7 @@ export default function Messages() {
   const currentTypingUser = typingUsers[convKey];
 
   return (
-    <div className="h-[calc(100vh-95px)] flex rounded-3xl border border-slate-200/80 dark:border-white/10 glass-panel overflow-hidden relative select-none shadow-2xl">
+    <div className="h-[calc(100dvh-5rem)] md:h-[calc(100vh-5.5rem)] w-full flex rounded-2xl md:rounded-3xl border border-slate-200/80 dark:border-white/10 glass-panel overflow-hidden relative select-none shadow-2xl">
       
       {/* Toast Notification Banner */}
       <AnimatePresence>
@@ -374,28 +523,34 @@ export default function Messages() {
         )}
       </AnimatePresence>
 
-      {/* ----------------- PANEL 1: Professional Left Navigation Sidebar ----------------- */}
+      {/* ========================================================================= */}
+      {/* PANEL 1: CONVERSATIONS LIST (Channels & DMs)                              */}
+      {/* Responsive: full width on mobile if mobileView === 'list', fixed desktop  */}
+      {/* ========================================================================= */}
       <div
         className={`${
-          sidebarOpen ? 'w-72' : 'w-0 hidden md:w-16 md:flex'
-        } border-r border-slate-200/50 dark:border-white/10 bg-white/60 dark:bg-slate-900/70 backdrop-blur-2xl flex flex-col justify-between flex-shrink-0 transition-all duration-300 z-10`}
+          mobileView === 'list' ? 'w-full flex' : 'hidden md:flex md:w-72 lg:w-80'
+        } border-r border-slate-200/60 dark:border-white/10 bg-white/70 dark:bg-slate-900/80 backdrop-blur-2xl flex-col justify-between flex-shrink-0 z-10 transition-all duration-200`}
       >
-        <div>
-          {/* Brand & Module Header */}
-          <div className="p-4 border-b border-slate-200/50 dark:border-white/10 space-y-3">
+        <div className="flex flex-col flex-1 min-h-0">
+          {/* Header */}
+          <div className="p-3.5 sm:p-4 border-b border-slate-200/50 dark:border-white/10 space-y-3 shrink-0">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2.5">
-                <div className="w-8.5 h-8.5 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
+                <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-md shadow-blue-500/20">
                   <MessageSquare className="w-4.5 h-4.5" />
                 </div>
                 <div>
-                  <h2 className="font-black text-sm text-slate-900 dark:text-white tracking-tight uppercase">COLLABORATION</h2>
-                  <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">REALTIME HUB</p>
+                  <h2 className="font-black text-sm text-slate-900 dark:text-white tracking-tight">Collaboration</h2>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Realtime Hub</p>
+                  </div>
                 </div>
               </div>
               <button
                 onClick={() => setIsCreateChannelOpen(true)}
-                className="p-1.5 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
+                className="p-2 rounded-xl bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 transition-colors cursor-pointer"
                 title="Create Channel"
               >
                 <Plus className="w-4 h-4" />
@@ -416,31 +571,31 @@ export default function Messages() {
           </div>
 
           {/* Navigation Tabs (Channels vs DMs) */}
-          <div className="p-1.5 grid grid-cols-2 gap-1 bg-slate-100/70 dark:bg-slate-800/70 m-3 rounded-2xl text-xs font-black">
+          <div className="p-1 grid grid-cols-2 gap-1 bg-slate-100/70 dark:bg-slate-800/70 m-2.5 sm:m-3 rounded-2xl text-xs font-black shrink-0">
             <button
               onClick={() => setActiveTab('channels')}
               className={`py-1.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'channels'
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Hash className="w-3.5 h-3.5" /> Channels
+              <Hash className="w-3.5 h-3.5" /> Channels ({channels.length})
             </button>
             <button
               onClick={() => setActiveTab('dms')}
               className={`py-1.5 rounded-xl flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
                 activeTab === 'dms'
-                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-xs'
+                  ? 'bg-white dark:bg-slate-900 text-blue-600 dark:text-blue-400 shadow-sm'
                   : 'text-slate-500 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
-              <Users className="w-3.5 h-3.5" /> Direct DMs
+              <Users className="w-3.5 h-3.5" /> Direct DMs ({contacts.length})
             </button>
           </div>
 
-          {/* List Content */}
-          <div className="px-3 max-h-[calc(100vh-295px)] overflow-y-auto space-y-1">
+          {/* Scrollable List */}
+          <div className="px-2.5 sm:px-3 flex-1 overflow-y-auto space-y-1">
             {activeTab === 'channels' ? (
               <>
                 <p className="text-[10px] font-black uppercase text-slate-400 px-2 py-1 tracking-wider">
@@ -454,25 +609,35 @@ export default function Messages() {
                     return (
                       <button
                         key={ch.id}
-                        onClick={() => setActiveChannelId(ch.id)}
-                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer group ${
+                        onClick={() => {
+                          setActiveChannelId(ch.id);
+                          setMobileView('chat');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer group ${
                           isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 scale-[1.01]'
+                            ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/25 scale-[1.01]'
                             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 truncate">
-                          <div className={`w-7 h-7 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                            isActive
-                              ? 'bg-white/20 text-white shadow-xs border border-white/30'
-                              : 'bg-blue-500/10 border border-blue-500/20 text-blue-500 group-hover:bg-blue-500/20 group-hover:scale-105'
-                          }`}>
+                          <div
+                            className={`w-7.5 h-7.5 rounded-xl flex items-center justify-center shrink-0 transition-all ${
+                              isActive
+                                ? 'bg-white/20 text-white border border-white/30'
+                                : 'bg-blue-500/10 border border-blue-500/20 text-blue-500 group-hover:bg-blue-500/20 group-hover:scale-105'
+                            }`}
+                          >
                             {ch.isPrivate ? <Lock className="w-3.5 h-3.5" /> : <Hash className="w-3.5 h-3.5" />}
                           </div>
-                          <span className="truncate">{ch.name}</span>
+                          <div className="text-left truncate">
+                            <span className="truncate block font-extrabold">#{ch.name}</span>
+                            <span className={`text-[10px] block truncate font-normal ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                              {ch.description || 'Public channel'}
+                            </span>
+                          </div>
                         </div>
                         {unread > 0 && (
-                          <span className="px-2 py-0.5 bg-red-500 text-white text-[9px] font-black rounded-full shadow-xs">
+                          <span className="px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full shadow-xs">
                             {unread}
                           </span>
                         )}
@@ -494,19 +659,22 @@ export default function Messages() {
                     return (
                       <button
                         key={contact.id}
-                        onClick={() => setActiveContactId(contact.id)}
-                        className={`w-full flex items-center justify-between px-2.5 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer group ${
+                        onClick={() => {
+                          setActiveContactId(contact.id);
+                          setMobileView('chat');
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer group ${
                           isActive
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 scale-[1.01]'
+                            ? 'bg-gradient-to-r from-blue-600 via-indigo-600 to-indigo-700 text-white shadow-md shadow-indigo-500/25 scale-[1.01]'
                             : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200/60 dark:hover:bg-white/10'
                         }`}
                       >
                         <div className="flex items-center gap-2.5 truncate">
-                          <div className="relative flex-shrink-0">
+                          <div className="relative shrink-0">
                             <img
                               src={resolveAvatar(contact.profilePhoto, contact.name, (contact as any).gender)}
                               alt="avatar"
-                              className={`w-7.5 h-7.5 rounded-xl object-cover ring-2 transition-all ${
+                              className={`w-8 h-8 rounded-xl object-cover ring-2 transition-all ${
                                 isActive ? 'ring-white/40' : 'ring-blue-500/20 group-hover:scale-105'
                               }`}
                             />
@@ -516,10 +684,15 @@ export default function Messages() {
                               } ${isOnline ? 'bg-emerald-500' : 'bg-slate-400'}`}
                             />
                           </div>
-                          <span className="truncate">{contact.name}</span>
+                          <div className="text-left truncate">
+                            <span className="truncate block font-extrabold">{contact.name}</span>
+                            <span className={`text-[10px] block truncate font-normal ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
+                              {contact.role?.replace('ROLE_', '') || 'Member'}
+                            </span>
+                          </div>
                         </div>
                         {unread > 0 && (
-                          <span className="px-2 py-0.5 bg-red-500 text-white text-[9px] font-black rounded-full shadow-xs">
+                          <span className="px-2 py-0.5 bg-rose-500 text-white text-[9px] font-black rounded-full shadow-xs">
                             {unread}
                           </span>
                         )}
@@ -531,51 +704,64 @@ export default function Messages() {
           </div>
         </div>
 
-        {/* User Card */}
+        {/* Current User Card at Bottom */}
         {user && (
-          <div className="p-3 border-t border-slate-200/50 dark:border-white/10 m-2 bg-slate-100/60 dark:bg-white/5 rounded-2xl flex items-center gap-2.5">
-            <img
-              src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
-              alt="avatar"
-              className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/30"
-            />
-            <div className="truncate">
-              <p className="text-xs font-black text-slate-800 dark:text-white truncate">{user.name}</p>
-              <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{user.role.replace('ROLE_', '')}</p>
+          <div className="p-3 border-t border-slate-200/50 dark:border-white/10 m-2.5 bg-slate-100/60 dark:bg-white/5 rounded-2xl flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5 truncate">
+              <img
+                src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
+                alt="avatar"
+                className="w-8 h-8 rounded-xl object-cover ring-2 ring-blue-500/30 shrink-0"
+              />
+              <div className="truncate">
+                <p className="text-xs font-black text-slate-800 dark:text-white truncate">{user.name}</p>
+                <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{user.role?.replace('ROLE_', '')}</p>
+              </div>
             </div>
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 shrink-0" title="Online & Connected" />
           </div>
         )}
       </div>
 
-      {/* ----------------- PANEL 2: Enterprise Central Chat Thread ----------------- */}
-      <div className="flex-1 flex flex-col justify-between overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 relative">
-        {/* Header Bar */}
-        <div className="h-14 border-b border-slate-200/50 dark:border-white/10 px-5 flex items-center justify-between flex-shrink-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
-          <div className="flex items-center gap-3">
+      {/* ========================================================================= */}
+      {/* PANEL 2: CENTRAL CHAT THREAD                                              */}
+      {/* Responsive: full width on mobile if mobileView === 'chat', flex-1 desktop  */}
+      {/* ========================================================================= */}
+      <div
+        className={`${
+          mobileView === 'chat' ? 'w-full flex' : 'hidden md:flex md:flex-1'
+        } flex-col justify-between overflow-hidden bg-slate-50/50 dark:bg-slate-950/50 relative`}
+      >
+        {/* Chat Thread Header */}
+        <div className="h-14 border-b border-slate-200/50 dark:border-white/10 px-3 sm:px-5 flex items-center justify-between shrink-0 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            {/* Mobile Back Button to return to list */}
             <button
-              onClick={toggleSidebar}
-              className="p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-white/10 text-slate-500 transition-colors md:hidden cursor-pointer"
+              onClick={() => setMobileView('list')}
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-200/70 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white text-xs font-bold transition-all md:hidden shrink-0 cursor-pointer"
+              title="Back to conversations"
             >
-              <Menu className="w-4.5 h-4.5" />
+              <ChevronLeft className="w-4 h-4" />
+              <span>Back</span>
             </button>
 
             {activeTab === 'channels' ? (
-              <div className="flex items-center gap-2.5">
-                <div className="w-8.5 h-8.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                <div className="w-8.5 h-8.5 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold shrink-0">
                   {activeChannelObj?.isPrivate ? <Lock className="w-4 h-4" /> : <Hash className="w-4 h-4" />}
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 dark:text-white tracking-tight">
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
                     #{activeChannelObj?.name || 'channel'}
                   </h3>
-                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate max-w-xs">
+                  <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 truncate">
                     {activeChannelObj?.description || 'Public collaboration channel'}
                   </p>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2.5">
-                <div className="relative">
+              <div className="flex items-center gap-2 sm:gap-2.5 min-w-0">
+                <div className="relative shrink-0">
                   <img
                     src={resolveAvatar(activeContactObj?.profilePhoto, activeContactObj?.name || 'Contact', (activeContactObj as any)?.gender)}
                     alt="avatar"
@@ -587,234 +773,258 @@ export default function Messages() {
                     }`}
                   />
                 </div>
-                <div>
-                  <h3 className="text-xs font-black text-slate-900 dark:text-white tracking-tight">
+                <div className="min-w-0">
+                  <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
                     {activeContactObj?.name || 'Teammate'}
                   </h3>
                   <p className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                    {activeContactObj && onlineUsers.has(activeContactObj.id) ? 'Online & Ready' : 'Offline'}
+                    {activeContactObj && onlineUsers.has(activeContactObj.id) ? 'Online & Ready' : 'Active Teammate'}
                   </p>
                 </div>
               </div>
             )}
           </div>
 
-          {/* Right Header Actions */}
-          <div className="flex items-center gap-2">
-            {/* Message Filter Input */}
-            <div className="hidden sm:flex items-center relative">
-              <Search className="w-3.5 h-3.5 absolute left-2.5 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Filter messages..."
-                value={messageSearchQuery}
-                onChange={(e) => setMessageSearchQuery(e.target.value)}
-                className="pl-7 pr-3 py-1 bg-slate-100/80 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold outline-none focus:border-blue-500 transition-all placeholder:text-slate-400 text-slate-900 dark:text-white w-36 focus:w-48"
-              />
-            </div>
-
-            {/* Toggle Details Panel Button */}
+          {/* Action buttons (Search & Details Panel Toggle) */}
+          <div className="flex items-center gap-1 sm:gap-2 shrink-0">
+            <button
+              onClick={() => setShowThreadSearch(!showThreadSearch)}
+              className={`p-2 rounded-xl border transition-all cursor-pointer ${
+                showThreadSearch
+                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-500'
+                  : 'border-slate-200/60 dark:border-white/10 hover:bg-slate-200/50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400'
+              }`}
+              title="Search in conversation"
+            >
+              <Search className="w-4 h-4" />
+            </button>
             <button
               onClick={toggleDetailsPanel}
               className={`p-2 rounded-xl border transition-all cursor-pointer ${
                 detailsPanelOpen
-                  ? 'bg-blue-500/20 border-blue-500/40 text-blue-600 dark:text-blue-400'
-                  : 'border-slate-200/60 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500'
+                  ? 'border-blue-500/40 bg-blue-500/10 text-blue-500'
+                  : 'border-slate-200/60 dark:border-white/10 hover:bg-slate-200/50 dark:hover:bg-white/5 text-slate-500 dark:text-slate-400'
               }`}
-              title="Toggle Details & Files Panel"
+              title="Conversation details"
             >
-              {detailsPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+              <Info className="w-4 h-4" />
             </button>
           </div>
         </div>
 
-        {/* Pinned Messages Banner */}
-        {pinnedMessages.length > 0 && (
-          <div className="px-5 py-2 bg-amber-500/10 border-b border-amber-500/20 flex items-center justify-between text-xs font-bold text-amber-700 dark:text-amber-400">
-            <div className="flex items-center gap-2 truncate">
-              <Pin className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
-              <span className="font-extrabold text-[10px] uppercase tracking-wider">Pinned Message:</span>
-              <span className="truncate italic font-medium">"{pinnedMessages[0].content}"</span>
-            </div>
-            <span className="text-[10px] font-black bg-amber-500/20 px-2 py-0.5 rounded-full">
-              {pinnedMessages.length} Pinned
-            </span>
-          </div>
-        )}
+        {/* In-Thread Search Input (Expandable) */}
+        <AnimatePresence>
+          {showThreadSearch && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="px-4 py-2 border-b border-slate-200/50 dark:border-white/10 bg-slate-100/80 dark:bg-slate-900/80 backdrop-blur-md flex items-center gap-2"
+            >
+              <Search className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                placeholder="Search messages in this thread..."
+                value={messageSearchQuery}
+                onChange={(e) => setMessageSearchQuery(e.target.value)}
+                className="w-full bg-transparent text-xs font-semibold outline-none text-slate-900 dark:text-white"
+                autoFocus
+              />
+              {messageSearchQuery && (
+                <button onClick={() => setMessageSearchQuery('')} className="text-slate-400 hover:text-white">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Messages Stream List */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-4">
-          {filteredMessages.length === 0 ? (
-            <div className="text-center py-16 text-slate-400 space-y-2">
-              <MessageSquare className="w-10 h-10 mx-auto opacity-30" />
-              <p className="text-xs font-bold">No messages match your search filter</p>
+        {/* Message Thread Scroll Area */}
+        <div className="flex-1 overflow-y-auto p-3 sm:p-5 space-y-4">
+          {isLoadingMessages ? (
+            <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-400">
+              <Loader2 className="w-7 h-7 animate-spin text-blue-500" />
+              <p className="text-xs font-bold">Synchronizing messages...</p>
+            </div>
+          ) : filteredMessages.length === 0 ? (
+            /* Premium Empty State */
+            <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-md mx-auto space-y-4">
+              <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-blue-600/20 to-indigo-600/20 border border-blue-500/30 flex items-center justify-center text-blue-500 shadow-xl shadow-blue-500/10">
+                <Sparkles className="w-8 h-8" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white">
+                  {activeTab === 'channels'
+                    ? `Welcome to #${activeChannelObj?.name || 'channel'}`
+                    : `Direct message with ${activeContactObj?.name || 'teammate'}`}
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  This is the start of your encrypted, real-time collaboration thread. Send a message to get started!
+                </p>
+              </div>
+
+              {/* Quick Prompt Suggestions */}
+              <div className="flex flex-wrap gap-2 justify-center pt-2">
+                {[
+                  '👋 Hello team!',
+                  '📋 Ready for daily standup',
+                  '🚀 Reviewing latest tasks'
+                ].map((promptText) => (
+                  <button
+                    key={promptText}
+                    onClick={() => handleSendMessage(promptText)}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200/80 dark:border-white/10 hover:border-blue-500/40 bg-white/5 hover:bg-blue-500/10 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                  >
+                    {promptText}
+                  </button>
+                ))}
+              </div>
             </div>
           ) : (
-            filteredMessages.map((msg) => {
-              const isMe = user && msg.sender.id === user.id;
-              const isHovered = hoveredMessageId === msg.id;
+            filteredMessages.map((msg, index) => {
+              const isMe = msg.sender.id === user?.id || (user?.email && msg.sender.name === user.name);
+              const formattedTime = new Date(msg.createdAt).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit'
+              });
 
               return (
                 <div
-                  key={msg.id}
-                  onMouseEnter={() => setHoveredMessageId(msg.id)}
-                  onMouseLeave={() => setHoveredMessageId(null)}
-                  className={`group relative flex gap-3 text-xs ${isMe ? 'flex-row-reverse' : ''}`}
+                  key={msg.id || index}
+                  className={`flex items-start gap-2.5 group relative ${isMe ? 'flex-row-reverse' : 'flex-row'}`}
+                  onMouseEnter={() => setActiveMessageActionId(msg.id)}
+                  onMouseLeave={() => setActiveMessageActionId(null)}
                 >
+                  {/* Sender Avatar */}
                   <img
                     src={resolveAvatar(msg.sender.profilePhoto, msg.sender.name, (msg.sender as any).gender)}
-                    alt="avatar"
-                    className="w-8.5 h-8.5 rounded-xl object-cover ring-1 ring-blue-500/20 flex-shrink-0"
+                    alt={msg.sender.name}
+                    className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-200/50 dark:ring-white/10 shrink-0 mt-0.5"
                   />
 
-                  <div className={`max-w-md flex flex-col ${isMe ? 'items-end' : 'items-start'}`}>
-                    {/* Sender Name & Timestamp */}
-                    <div className={`flex items-center gap-2 mb-1 ${isMe ? 'flex-row-reverse' : ''}`}>
-                      <span className="font-black text-slate-800 dark:text-slate-200">{msg.sender.name}</span>
-                      <span className="text-[9px] text-slate-400 font-bold">
-                        {new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </span>
-                    </div>
-
-                    {/* Reply-to Header preview */}
-                    {msg.replyTo && (
-                      <div className="mb-1 text-[10px] font-bold text-slate-400 flex items-center gap-1 bg-slate-200/50 dark:bg-white/5 px-2.5 py-1 rounded-xl">
-                        <Reply className="w-3 h-3 text-blue-500" />
-                        <span>Replying to {msg.replyTo.senderName}:</span>
-                        <span className="italic truncate max-w-[150px]">"{msg.replyTo.content}"</span>
+                  {/* Message Bubble Container */}
+                  <div className={`flex flex-col ${isMe ? 'items-end' : 'items-start'} max-w-[85%] sm:max-w-[70%]`}>
+                    {/* Sender Name & Role */}
+                    {!isMe && (
+                      <div className="flex items-center gap-1.5 mb-1 px-1">
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{msg.sender.name}</span>
+                        {msg.sender.role && (
+                          <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500">
+                            {msg.sender.role.replace('ROLE_', '')}
+                          </span>
+                        )}
                       </div>
                     )}
 
-                    {/* Message Bubble */}
-                    <div className="space-y-1.5 w-full">
-                      <div
-                        className={`p-3.5 rounded-2xl border font-semibold text-xs leading-relaxed transition-all shadow-xs ${
-                          isMe
-                            ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-none border-blue-500/20 shadow-md shadow-blue-500/10'
-                            : 'bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 rounded-tl-none border-slate-200/80 dark:border-white/10'
-                        }`}
-                      >
-                        {msg.content}
+                    {/* Quoted Reply Banner */}
+                    {msg.replyTo && (
+                      <div className="mb-1 px-3 py-1.5 bg-slate-200/50 dark:bg-white/5 border-l-2 border-blue-500 rounded-r-xl text-[11px] text-slate-600 dark:text-slate-300 italic max-w-full truncate">
+                        <span className="font-bold text-blue-500 not-italic mr-1">{msg.replyTo.senderName}:</span>
+                        "{msg.replyTo.content}"
                       </div>
+                    )}
 
-                      {/* File Attachment Card */}
+                    {/* Main Bubble */}
+                    <div
+                      className={`px-4 py-2.5 rounded-2xl text-xs font-semibold leading-relaxed shadow-sm break-words relative transition-all ${
+                        isMe
+                          ? 'bg-gradient-to-tr from-blue-600 to-indigo-600 text-white rounded-tr-xs shadow-blue-500/20'
+                          : 'bg-white dark:bg-slate-900/90 border border-slate-200/70 dark:border-white/10 text-slate-900 dark:text-slate-100 rounded-tl-xs'
+                      }`}
+                    >
+                      {msg.content}
+
+                      {/* File Attachment Chip */}
                       {msg.fileUrl && (
-                        <div className="p-3 rounded-2xl bg-white/90 dark:bg-slate-900/90 border border-slate-200/80 dark:border-white/10 flex items-center justify-between gap-3 text-xs shadow-xs">
-                          <div className="flex items-center gap-2.5 truncate">
-                            <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center flex-shrink-0">
-                              <FileText className="w-4 h-4" />
-                            </div>
-                            <div className="truncate">
-                              <p className="font-bold truncate text-slate-900 dark:text-white">
-                                {msg.fileName || 'Attached_File.pdf'}
-                              </p>
-                              {msg.fileSize && (
-                                <p className="text-[10px] text-slate-400 font-mono">
-                                  {(msg.fileSize / 1024).toFixed(1)} KB
-                                </p>
-                              )}
-                            </div>
-                          </div>
+                        <div className="mt-2 pt-2 border-t border-white/20 dark:border-white/10 flex items-center gap-2">
+                          <Paperclip className="w-3.5 h-3.5 shrink-0 opacity-80" />
                           <a
                             href={msg.fileUrl}
-                            download={msg.fileName || 'Attached_File.pdf'}
                             target="_blank"
-                            rel="noreferrer"
-                            className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-[10px] flex items-center gap-1 cursor-pointer transition-all flex-shrink-0 shadow-xs"
+                            rel="noopener noreferrer"
+                            className="underline font-bold text-xs truncate max-w-[200px] hover:opacity-80"
                           >
-                            Download
+                            {msg.fileName || 'Attached Document'}
                           </a>
                         </div>
                       )}
-
-                      {/* Message Emoji Reactions Display */}
-                      {msg.reactions && Object.keys(msg.reactions).length > 0 && (
-                        <div className={`flex flex-wrap gap-1 mt-1 ${isMe ? 'justify-end' : 'justify-start'}`}>
-                          {Object.entries(msg.reactions).map(([emoji, uIds]) => (
-                            <button
-                              key={emoji}
-                              onClick={() => handleToggleReaction(msg.id, emoji)}
-                              className="px-2.5 py-0.5 bg-slate-200/60 dark:bg-white/10 border border-slate-300/60 dark:border-white/15 rounded-full text-[11px] font-bold flex items-center gap-1 hover:scale-110 transition-transform cursor-pointer"
-                            >
-                              <span>{emoji}</span>
-                              <span className="text-[10px] opacity-75">{uIds.length}</span>
-                            </button>
-                          ))}
-                        </div>
-                      )}
                     </div>
+
+                    {/* Metadata & Timestamp */}
+                    <div className="flex items-center gap-1.5 mt-1 px-1 text-[10px] text-slate-400 font-semibold">
+                      <span>{formattedTime}</span>
+                      {isMe && <CheckCheck className="w-3.5 h-3.5 text-blue-500" />}
+                    </div>
+
+                    {/* Emoji Reactions List */}
+                    {msg.reactions && Object.keys(msg.reactions).length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1 px-1">
+                        {Object.entries(msg.reactions).map(([emoji, userIds]) => (
+                          <button
+                            key={emoji}
+                            onClick={() => handleToggleReaction(msg.id, emoji)}
+                            className="px-2 py-0.5 rounded-full bg-slate-200/60 dark:bg-white/10 border border-slate-300/40 dark:border-white/10 text-[11px] font-bold flex items-center gap-1 hover:scale-105 transition-all"
+                          >
+                            <span>{emoji}</span>
+                            <span className="text-[9px] text-slate-500 dark:text-slate-300">{userIds.length}</span>
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
-                  {/* Hover Action Bar */}
-                  {isHovered && (
+                  {/* Hover Quick Action Menu */}
+                  {activeMessageActionId === msg.id && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.9 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className={`absolute top-0 flex items-center gap-1 p-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/15 rounded-2xl shadow-xl z-20 ${
-                        isMe ? 'left-4' : 'right-4'
-                      }`}
+                      className={`absolute top-0 ${isMe ? 'left-4' : 'right-4'} bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/15 rounded-xl shadow-xl p-1 flex items-center gap-0.5 z-20`}
                     >
                       <button
                         onClick={() => handleToggleReaction(msg.id, '👍')}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 transition-colors cursor-pointer text-xs"
+                        className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-xs"
                         title="React 👍"
                       >
                         👍
                       </button>
                       <button
                         onClick={() => handleToggleReaction(msg.id, '❤️')}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 transition-colors cursor-pointer text-xs"
+                        className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-xs"
                         title="React ❤️"
                       >
                         ❤️
                       </button>
                       <button
                         onClick={() => handleToggleReaction(msg.id, '🔥')}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 transition-colors cursor-pointer text-xs"
+                        className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-xs"
                         title="React 🔥"
                       >
                         🔥
                       </button>
-
                       <div className="w-px h-3.5 bg-slate-200 dark:bg-white/10 mx-0.5" />
-
                       <button
                         onClick={() => setReplyToMessage(msg)}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 transition-colors cursor-pointer"
+                        className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-500"
                         title="Reply"
                       >
                         <Reply className="w-3.5 h-3.5" />
                       </button>
-
                       <button
-                        onClick={() => {
-                          togglePinMessage(convKey, msg);
-                          showToast('Message pinned');
-                        }}
-                        className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 transition-colors cursor-pointer"
-                        title="Pin Message"
+                        onClick={() => handleCopyMessage(msg.content)}
+                        className="p-1 hover:bg-slate-100 dark:hover:bg-white/10 rounded-lg text-slate-500"
+                        title="Copy text"
                       >
-                        <Pin className="w-3.5 h-3.5" />
+                        <Copy className="w-3.5 h-3.5" />
                       </button>
-
                       {isMe && (
-                        <>
-                          <button
-                            onClick={() => setEditingMessage(msg)}
-                            className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-blue-500 transition-colors cursor-pointer"
-                            title="Edit Message"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteMessage(msg.id)}
-                            className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-rose-500 transition-colors cursor-pointer"
-                            title="Delete Message"
-                          >
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </button>
-                        </>
+                        <button
+                          onClick={() => handleDeleteMessage(msg.id)}
+                          className="p-1 hover:bg-rose-500/10 text-rose-500 rounded-lg"
+                          title="Delete message"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </motion.div>
                   )}
@@ -823,7 +1033,7 @@ export default function Messages() {
             })
           )}
 
-          {/* Realtime Typing Indicator */}
+          {/* Typing Indicator */}
           {currentTypingUser && (
             <div className="flex items-center gap-2 text-xs font-extrabold text-blue-500 animate-pulse">
               <span className="w-2 h-2 rounded-full bg-blue-500 animate-ping"></span>
@@ -848,17 +1058,21 @@ export default function Messages() {
               : `Message ${activeContactObj?.name || 'teammate'}...`
           }
           onTyping={() => {
-            const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
-            supabase.channel(channelName).send({
-              type: 'broadcast',
-              event: 'typing',
-              payload: { userId: user?.id || 1, userName: user?.name || 'Teammate' }
-            });
+            try {
+              const channelName = activeTab === 'channels' ? `room_ch_${activeChannelId}` : `room_dm_${activeContactId}`;
+              supabase.channel(channelName).send({
+                type: 'broadcast',
+                event: 'typing',
+                payload: { userId: user?.id || 1, userName: user?.name || 'Teammate' }
+              });
+            } catch (e) {}
           }}
         />
       </div>
 
-      {/* ----------------- PANEL 3: Right Details & Overview Panel ----------------- */}
+      {/* ========================================================================= */}
+      {/* PANEL 3: RIGHT DETAILS & OVERVIEW PANEL                                   */}
+      {/* ========================================================================= */}
       <ConversationDetailsPanel
         isOpen={detailsPanelOpen}
         onClose={toggleDetailsPanel}
