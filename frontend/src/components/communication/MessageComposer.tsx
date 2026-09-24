@@ -58,6 +58,15 @@ export default function MessageComposer({
     }
   }, [editingMessage]);
 
+  // Auto-resize textarea to fit content without clipping placeholder
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      const scrollH = textareaRef.current.scrollHeight;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 44), 130)}px`;
+    }
+  }, [text]);
+
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
     setText(val);
@@ -322,7 +331,7 @@ export default function MessageComposer({
             onChange={handleTextChange}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
-            className="w-full px-3 sm:px-4 py-2 sm:py-2.5 bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/10 transition-all font-semibold text-xs sm:text-sm resize-none max-h-32 placeholder:text-slate-400"
+            className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 transition-all font-medium text-xs sm:text-sm leading-relaxed resize-none max-h-32 placeholder:text-slate-400 placeholder:leading-relaxed"
           />
         </div>
 
