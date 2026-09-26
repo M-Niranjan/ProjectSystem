@@ -56,7 +56,7 @@ const COLUMNS: Column[] = [
 ];
 
 export default function Boards() {
-  const { selectedProjectId, setView, setTaskModalOpen } = useUIStore();
+  const { selectedProjectId, setView, setTaskModalOpen, showToast } = useUIStore();
   const { user } = useAuthStore();
   const isTeamLeader = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
   
@@ -207,7 +207,7 @@ export default function Boards() {
     // Run pre-validation checks (for backlog/todo requirements)
     const checks = validateTransition(task, nextStatus);
     if (!checks.valid) {
-      alert(checks.error);
+      showToast(checks.error || 'Transition not allowed.', 'error');
       return;
     }
 
@@ -254,7 +254,7 @@ export default function Boards() {
 
     const checks = validateTransition(task, newStatus);
     if (!checks.valid) {
-      alert(checks.error);
+      showToast(checks.error || 'Transition not allowed.', 'error');
       return;
     }
 
@@ -351,7 +351,7 @@ export default function Boards() {
       
       // Double check self-approval block
       if (task.assignee && reviewer.id === task.assignee.id) {
-        alert('Self-approval blocked. Assignee cannot approve their own task.');
+        showToast('Self-approval blocked. Assignee cannot approve their own task.', 'warning');
         return;
       }
       commitTransition(task, targetStatus, 'Review signed off and completed.', reviewer);

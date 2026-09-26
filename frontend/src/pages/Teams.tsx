@@ -5,6 +5,7 @@ import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, 
 import api from '../services/api';
 import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 import { useScrollLock } from '../hooks/useScrollLock';
@@ -26,6 +27,7 @@ interface TeamMember {
 
 export default function Teams() {
   const { user } = useAuthStore();
+  const { showToast } = useUIStore();
   const userRole = normalizeRole(user?.role);
   const isAdmin = userRole === 'ROLE_ADMIN';
   const isTeamLead = userRole === 'ROLE_MANAGER';
@@ -177,7 +179,7 @@ export default function Teams() {
         }
       }, 100);
     } catch (err) {
-      alert("Unable to access camera. Please check device permissions.");
+      showToast("Unable to access camera. Please check device permissions.", "warning");
     }
   };
 

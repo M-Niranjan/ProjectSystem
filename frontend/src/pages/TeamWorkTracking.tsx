@@ -77,7 +77,7 @@ const CHART_COLORS = {
 
 export default function TeamWorkTracking() {
   const { user } = useAuthStore();
-  const { setView } = useUIStore();
+  const { setView, showToast: triggerGlobalToast } = useUIStore();
   const {
     activeTab,
     setActiveTab,
@@ -124,16 +124,8 @@ export default function TeamWorkTracking() {
   // Lock background scroll when blocker or profile modals are open
   useScrollLock(isReportBlockerModalOpen || resolvingBlockerId !== null || !!selectedEmployeeProfile || !!activeEmpModal);
 
-  // Toast Feedback State
-  const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
-    show: false,
-    message: '',
-    type: 'success',
-  });
-
   const showToast = (message: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ show: true, message, type });
-    setTimeout(() => setToast((t) => ({ ...t, show: false })), 4000);
+    triggerGlobalToast(message, type);
   };
 
   const handleOpenEmployeeProfile = (employee: EmployeeProfileData) => {
@@ -1039,17 +1031,6 @@ export default function TeamWorkTracking() {
               </button>
             </div>
           </div>
-        </div>,
-        document.body
-      )}
-
-      {/* TOAST ALERT */}
-      {toast.show && createPortal(
-        <div className="fixed top-4 right-4 z-[99999] flex items-center gap-3 px-4.5 py-3 rounded-2xl border backdrop-blur-xl shadow-lg transition-all duration-300 bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white">
-          <span className={`text-sm font-black ${toast.type === 'success' ? 'text-emerald-500' : 'text-rose-500'}`}>
-            {toast.type === 'success' ? '✓' : '✖'}
-          </span>
-          <span className="text-xs font-black tracking-wide">{toast.message}</span>
         </div>,
         document.body
       )}

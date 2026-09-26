@@ -56,7 +56,7 @@ interface TeamMember {
 }
 
 export default function Tasks() {
-  const { selectedProjectId, setTaskModalOpen } = useUIStore();
+  const { selectedProjectId, setTaskModalOpen, showToast } = useUIStore();
   const { user } = useAuthStore();
   const isTeamLeader = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
 
@@ -147,10 +147,7 @@ export default function Tasks() {
   }, [activeProjectId]);
 
   const showToastMsg = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
-    setToast({ show: true, message: msg, type });
-    setTimeout(() => {
-      setToast(t => ({ ...t, show: false }));
-    }, 4500);
+    showToast(msg, type);
   };
 
   const handleStatusChange = async (taskId: number, newStatus: string) => {
@@ -1003,18 +1000,6 @@ export default function Tasks() {
         document.body
       )}
 
-      {/* Toast Alert Banner */}
-      {toast.show && createPortal(
-        <div className="fixed top-4 right-4 z-[99999] flex items-center gap-3 px-4.5 py-3 rounded-2xl border backdrop-blur-xl shadow-lg transition-all duration-300 bg-white/95 dark:bg-slate-900/95 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white">
-          <span className={`text-sm font-black ${
-            toast.type === 'success' ? 'text-emerald-500' : toast.type === 'error' ? 'text-rose-500' : 'text-blue-500'
-          }`}>
-            {toast.type === 'success' ? '✓' : toast.type === 'error' ? '✖' : 'ℹ'}
-          </span>
-          <span className="text-xs font-black tracking-wide">{toast.message}</span>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

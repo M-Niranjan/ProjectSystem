@@ -15,6 +15,7 @@ import PomodoroTimer from './components/PomodoroTimer';
 import TaskDetailModal from './components/TaskDetailModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import CreateTaskModal from './components/CreateTaskModal';
+import LuxuryToast from './components/common/LuxuryToast';
 
 // Pages
 import Login from './pages/Login';
@@ -326,6 +327,7 @@ function AppContent() {
       </div>
 
       {/* Floating Utilities */}
+      <LuxuryToast />
       <CommandPalette />
       <VoiceController />
       <PomodoroTimer />

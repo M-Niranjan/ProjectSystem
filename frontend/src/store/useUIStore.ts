@@ -49,6 +49,15 @@ export const ACCENT_PRESETS: Record<AccentColor, { color: string; hover: string;
   },
 };
 
+export type ToastType = 'success' | 'error' | 'info' | 'warning';
+
+export interface ToastNotification {
+  id: string;
+  message: string;
+  type: ToastType;
+  duration?: number;
+}
+
 interface DashboardPrefs {
   showWidgets: boolean;
   showStats: boolean;
@@ -74,6 +83,9 @@ interface UIState {
   isTaskEditMode: boolean;
   editingTask: any | null;
   chatContactId: number | null;
+  toast: ToastNotification | null;
+  showToast: (message: string, type?: ToastType, duration?: number) => void;
+  hideToast: () => void;
   toggleSidebar: () => void;
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
@@ -283,5 +295,21 @@ export const useUIStore = create<UIState>((set, get) => ({
     isTaskEditMode: isEdit, 
     editingTask: task 
   }),
-  setChatContactId: (id) => set({ chatContactId: id })
+  setChatContactId: (id) => set({ chatContactId: id }),
+  toast: null,
+  showToast: (message: string, type: ToastType = 'success', duration = 3500) => {
+    const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);
+    set({ toast: { id, message, type, duration } });
+  },
+  hideToast: () => set({ toast: null })
 }));
+
+// Listen for global custom events to trigger toasts from non-React contexts
+if (typeof window !== 'undefined') {
+  window.addEventListener('app-toast', (e: any) => {
+    const { message, type, duration } = e.detail || {};
+    if (message) {
+      useUIStore.getState().showToast(message, type || 'success', duration);
+    }
+  });
+}

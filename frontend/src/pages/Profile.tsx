@@ -7,6 +7,7 @@ import {
   GraduationCap, TrendingUp, FolderGit2, Sparkles, Quote, ExternalLink, Download
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
 import { formatRoleName } from '../services/authRoles';
 import { useScrollLock } from '../hooks/useScrollLock';
@@ -19,6 +20,7 @@ const Github = (props: React.SVGProps<SVGSVGElement>) => (
 
 export default function Profile() {
   const { user, updateProfile } = useAuthStore();
+  const { showToast } = useUIStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   // Lock background scroll when Edit Profile modal is open
@@ -145,7 +147,7 @@ export default function Profile() {
 
   const startCamera = async () => {
     if (!navigator.mediaDevices?.getUserMedia) {
-      alert("Camera access requires secure connection (HTTPS). Please use 'Choose Photo' to select an image from your device.");
+      showToast("Camera access requires secure connection (HTTPS). Please use 'Choose Photo'.", 'warning');
       return;
     }
     try {
@@ -159,7 +161,7 @@ export default function Profile() {
         }
       }, 100);
     } catch (err) {
-      alert("Unable to access camera. Please check camera permissions or use 'Choose Photo'.");
+      showToast("Unable to access camera. Please check camera permissions or use 'Choose Photo'.", 'error');
     }
   };
 
@@ -213,9 +215,10 @@ export default function Profile() {
 
     const success = await updateProfile(payload);
     if (success) {
+      showToast("Profile updated successfully!", "success");
       closeEditModal();
     } else {
-      alert("Failed to save changes.");
+      showToast("Failed to save profile changes.", "error");
     }
   };
 

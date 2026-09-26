@@ -64,7 +64,7 @@ interface TimeLogEntry {
 }
 
 export default function Timeline() {
-  const { selectedProjectId } = useUIStore();
+  const { selectedProjectId, showToast: triggerGlobalToast } = useUIStore();
   const { user } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<'gantt' | 'timesheet' | 'milestones'>('gantt');
@@ -99,8 +99,7 @@ export default function Timeline() {
   const ganttScrollRef = useRef<HTMLDivElement>(null);
 
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3500);
+    triggerGlobalToast(msg, 'success');
   };
 
   // Helper for dynamic relative dates
@@ -1467,15 +1466,6 @@ export default function Timeline() {
           </div>
         )}
       </AnimatePresence>
-
-      {/* TOAST FEEDBACK ALERT */}
-      {toastMessage && createPortal(
-        <div className="fixed top-4 right-4 z-[99999] flex items-center gap-2.5 px-4 py-3 rounded-2xl border backdrop-blur-xl shadow-xl bg-white/95 dark:bg-slate-900/95 border-emerald-500/30 text-slate-800 dark:text-white animate-in fade-in slide-in-from-top duration-300">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-black">{toastMessage}</span>
-        </div>,
-        document.body
-      )}
     </div>
   );
 }

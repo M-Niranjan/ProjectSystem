@@ -38,6 +38,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { useUIStore } from '../store/useUIStore';
 
 interface WorkspaceDocument {
   id: number;
@@ -222,7 +223,7 @@ export default function Documents() {
   // Lock background scroll when templates modal is open
   useScrollLock(isTemplateModalOpen);
 
-  const [copiedNotification, setCopiedNotification] = useState(false);
+  const { showToast } = useUIStore();
   const [isAutosaving, setIsAutosaving] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -298,6 +299,7 @@ export default function Documents() {
     selectDoc(newDoc);
     setMobileView('editor');
     setIsTemplateModalOpen(false);
+    showToast('New document created!', 'success');
   };
 
   const handleDeleteDoc = (id: number, e: React.MouseEvent) => {
@@ -318,6 +320,7 @@ export default function Documents() {
         setMobileView('list');
       }
     }
+    showToast('Document deleted.', 'info');
   };
 
   // Quick formatting insert helpers
@@ -349,8 +352,7 @@ export default function Documents() {
 
   const handleCopyMarkdown = () => {
     navigator.clipboard.writeText(content);
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 2500);
+    showToast('Markdown copied to clipboard!', 'success');
   };
 
   // Filtered documents
@@ -393,21 +395,6 @@ export default function Documents() {
   return (
     <div className="h-[calc(100dvh-5rem)] md:h-[calc(100vh-5.5rem)] w-full flex flex-col space-y-3 select-none">
       
-      {/* Toast Notification */}
-      <AnimatePresence>
-        {copiedNotification && (
-          <motion.div
-            initial={{ opacity: 0, y: -20, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-slate-900/95 text-white border border-white/20 rounded-2xl shadow-2xl flex items-center gap-2 text-xs font-bold"
-          >
-            <Check className="w-4 h-4 text-emerald-400" />
-            <span>Markdown copied to clipboard!</span>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Main Workspace Frame */}
       <div className="flex-1 glass-panel border border-slate-200/80 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-2xl flex overflow-hidden relative">
         

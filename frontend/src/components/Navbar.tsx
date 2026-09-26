@@ -30,7 +30,8 @@ export default function Navbar() {
     setProjectModalOpen,
     setTaskModalOpen,
     sidebarExpanded,
-    toggleSidebar
+    toggleSidebar,
+    showToast
   } = useUIStore();
   const { user } = useAuthStore();
 
@@ -389,9 +390,9 @@ export default function Navbar() {
                     onClick={async () => {
                       const granted = await requestMobilePushPermission();
                       if (granted) {
-                        alert("Mobile System & Email Alerts Enabled!");
+                        showToast("Mobile System & Email Alerts Enabled!", "success");
                       } else {
-                        alert("Notification permission requested.");
+                        showToast("Notification permission requested.", "info");
                       }
                     }}
                     className="text-[10px] font-medium px-2 py-0.5 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600/20 rounded cursor-pointer transition-colors"

@@ -16,7 +16,7 @@ export default function Settings() {
   const {
     darkMode, toggleTheme, themeMode, setThemeMode, accentColor, setAccentColor,
     displayDensity, setDisplayDensity, sidebarExpanded, toggleSidebar,
-    dashboardPrefs, setDashboardPrefs, setView
+    dashboardPrefs, setDashboardPrefs, setView, showToast
   } = useUIStore();
 
   const role = user?.role || 'ROLE_EMPLOYEE';
@@ -27,7 +27,6 @@ export default function Settings() {
   // Active sub-tab state based on role defaults (Clean 4-category architecture)
   const [activeTab, setActiveTab] = useState<string>('appearance');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
-  const [successMsg, setSuccessMsg] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [updatedDetailsSummary, setUpdatedDetailsSummary] = useState<{ email: string; name: string; passChanged: boolean } | null>(null);
 
@@ -93,8 +92,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
 
   const triggerSuccess = (msg: string) => {
-    setSuccessMsg(msg);
-    setTimeout(() => setSuccessMsg(''), 4000);
+    showToast(msg, 'success');
   };
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
@@ -239,12 +237,6 @@ export default function Settings() {
         </span>
       </div>
 
-      {successMsg && (
-        <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 rounded-xl p-4 text-xs font-black flex items-center gap-2 shadow-sm animate-bounce">
-          <CheckCircle2 className="w-5 h-5 text-emerald-500" />
-          <span>{successMsg}</span>
-        </div>
-      )}
 
       {/* Success Popup Modal */}
       <AnimatePresence>

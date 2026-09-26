@@ -4,6 +4,7 @@ import { Award, CheckCircle2, AlertCircle, MessageSquare, Clock, ArrowRight, Use
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
 
 interface ReviewTask {
@@ -22,10 +23,10 @@ interface ReviewTask {
 
 export default function TaskReviews() {
   const { user } = useAuthStore();
+  const { showToast } = useUIStore();
   const [tasks, setTasks] = useState<ReviewTask[]>([]);
   const [selectedTask, setSelectedTask] = useState<ReviewTask | null>(null);
   const [feedback, setFeedback] = useState('');
-  const [toastMsg, setToastMsg] = useState('');
   const [loading, setLoading] = useState(false);
 
   // Freeze background completely when Review Task Submission modal is active
@@ -137,10 +138,10 @@ export default function TaskReviews() {
       // Notify dashboard counters
       window.dispatchEvent(new CustomEvent('task-status-updated'));
 
-      setToastMsg(`Approved task "${task.title}" successfully! Moved to Testing stage.`);
+      showToast(`Approved task "${task.title}" successfully! Moved to Testing stage.`, 'success');
       setSelectedTask(null);
     } catch (err) {
-      setToastMsg(`Task "${task.title}" approved!`);
+      showToast(`Task "${task.title}" approved!`, 'success');
       setSelectedTask(null);
     }
   };
@@ -174,11 +175,11 @@ export default function TaskReviews() {
 
       window.dispatchEvent(new CustomEvent('task-status-updated'));
 
-      setToastMsg(`Feedback sent to ${task.assignee?.name || 'Employee'}. Task returned to In Progress.`);
+      showToast(`Feedback sent to ${task.assignee?.name || 'Employee'}. Task returned to In Progress.`, 'info');
       setSelectedTask(null);
       setFeedback('');
     } catch (err) {
-      setToastMsg(`Changes requested for "${task.title}". Task returned to Employee.`);
+      showToast(`Changes requested for "${task.title}". Task returned to Employee.`, 'warning');
       setSelectedTask(null);
       setFeedback('');
     }
@@ -187,7 +188,7 @@ export default function TaskReviews() {
   const handleResetQueue = () => {
     localStorage.removeItem('mock_pending_review_tasks');
     setTasks(defaultPendingTasks);
-    setToastMsg('Sample code review queue reset with 3 submissions ready for review.');
+    showToast('Sample code review queue reset with 3 submissions ready for review.', 'info');
   };
 
   return (
@@ -231,15 +232,6 @@ export default function TaskReviews() {
           )}
         </div>
       </div>
-
-      {toastMsg && (
-        <div className="p-3.5 bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 rounded-xl text-xs font-bold flex items-center justify-between shadow-xs">
-          <span className="flex items-center gap-2">
-            <Check className="w-4 h-4" /> {toastMsg}
-          </span>
-          <button type="button" onClick={() => setToastMsg('')} className="text-xs font-black hover:opacity-70 cursor-pointer">✕</button>
-        </div>
-      )}
 
       {/* Real-world example highlight banner */}
       <div className="glass-panel p-4 sm:p-5 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">

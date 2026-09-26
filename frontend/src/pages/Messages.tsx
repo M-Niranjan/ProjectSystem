@@ -56,7 +56,7 @@ import MessageComposer from '../components/communication/MessageComposer';
 
 export default function Messages() {
   const { user } = useAuthStore();
-  const { selectedProjectId, chatContactId, setChatContactId } = useUIStore();
+  const { selectedProjectId, chatContactId, setChatContactId, showToast: triggerGlobalToast } = useUIStore();
 
   const {
     activeTab,
@@ -106,8 +106,7 @@ export default function Messages() {
   const pollIntervalRef = useRef<any>(null);
 
   const showToast = (msg: string) => {
-    setToastMessage(msg);
-    setTimeout(() => setToastMessage(null), 3000);
+    triggerGlobalToast(msg, 'info');
   };
 
   // Helper to normalize backend messages from /api/chats or /api/messages into standard ChatMessage

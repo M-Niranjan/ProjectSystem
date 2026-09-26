@@ -6,7 +6,7 @@ import confetti from 'canvas-confetti';
 import { useScrollLock } from '../hooks/useScrollLock';
 
 export default function PomodoroTimer() {
-  const { pomodoroTimerOpen, setPomodoroTimer } = useUIStore();
+  const { pomodoroTimerOpen, setPomodoroTimer, showToast } = useUIStore();
 
   // Lock background scroll when Pomodoro Timer modal is open
   useScrollLock(pomodoroTimerOpen);
@@ -53,9 +53,12 @@ export default function PomodoroTimer() {
           : 'Break Session Completed! ☕',
         { body: mode === 'FOCUS' ? 'Great job! Take a short 5-minute break.' : 'Back to focus! Ready for the next task?' }
       );
-    } else {
-      alert(mode === 'FOCUS' ? 'Focus Session Completed! Great job!' : 'Break Session Completed! Ready to focus?');
     }
+    showToast(
+      mode === 'FOCUS' ? 'Focus Session Completed! Great job! 🎉' : 'Break Session Completed! Ready to focus? ☕',
+      'success',
+      4500
+    );
 
     // Toggle mode automatically
     if (mode === 'FOCUS') {
