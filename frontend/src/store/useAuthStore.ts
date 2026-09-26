@@ -5,6 +5,7 @@ import { normalizeRole } from '../services/authRoles';
 
 interface User {
   id: number;
+  uid?: string;
   email: string;
   name: string;
   role: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';

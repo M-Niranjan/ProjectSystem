@@ -1,11 +1,12 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2, Sparkles, Activity, Lock, Settings, Timer, ShieldCheck, KeyRound, Building2, ScrollText, Network } from 'lucide-react';
+import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2, Sparkles, Activity, Lock, Settings, Timer, ShieldCheck, KeyRound, Building2, ScrollText, Network, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { normalizeRole } from '../services/authRoles';
+import InviteTeammateModal from '../components/InviteTeammateModal';
 
 const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
 
@@ -47,6 +48,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   const [allTasks, setAllTasks] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
+  const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
 
   // Assign task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -646,30 +648,44 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Team Directory Workload Allocation */}
             <div className="glass-panel p-6 lg:col-span-2 space-y-4">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <Users className="w-4 h-4 text-blue-500" /> Team Workload & Allocation
-              </h3>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-500" /> Team Workload & Allocation
+                  </h3>
+                  <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
+                    Assigned teammates in your team and their active allocations.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsInviteModalOpen(true)}
+                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 cursor-pointer transition-all hover:-translate-y-0.5 self-start sm:self-auto shrink-0"
+                >
+                  <UserPlus className="w-3.5 h-3.5" /> Invite Teammate
+                </button>
+              </div>
 
               <div className="divide-y divide-slate-100 dark:divide-white/5">
                 {employeeDirectory
-                  .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan')
+                  .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan' && emp.uid !== user?.uid)
                   .map(emp => (
-                  <div key={emp.id} className="py-3 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      <img src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)} alt="avatar" className="w-8 h-8 rounded-full object-cover" />
-                      <div>
-                        <p className="font-black text-slate-800 dark:text-white">{emp.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold">{emp.designation || 'Software Engineer'}</p>
+                  <div key={emp.id || emp.uid} className="py-3 flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <img src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-black text-slate-800 dark:text-white truncate">{emp.name}</p>
+                        <p className="text-[10px] text-slate-400 font-bold truncate">{emp.designation || 'Software Engineer'}</p>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 shrink-0">
                       <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
                         ⚡ 50% Allocated
                       </span>
                       <button
                         onClick={() => {
-                          setNewTaskAssigneeId(emp.id.toString());
+                          setNewTaskAssigneeId((emp.id || emp.uid).toString());
                         }}
                         className="px-2.5 py-1 bg-white/5 border border-slate-200/50 dark:border-white/10 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer transition-all"
                       >
@@ -678,6 +694,23 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                     </div>
                   </div>
                 ))}
+
+                {employeeDirectory.filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan' && emp.uid !== user?.uid).length === 0 && (
+                  <div className="py-8 text-center space-y-2.5">
+                    <div className="w-10 h-10 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
+                      <Users className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No teammates assigned to your team yet.</p>
+                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">Click "Invite Teammate" to select and add eligible employees created by Admin to your team.</p>
+                    <button
+                      type="button"
+                      onClick={() => setIsInviteModalOpen(true)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow cursor-pointer transition-all"
+                    >
+                      <UserPlus className="w-3.5 h-3.5" /> Invite Teammates Now
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -898,6 +931,14 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           </div>
         </div>
       )}
+      {/* Team Leader Invite Teammate Modal */}
+      <InviteTeammateModal
+        isOpen={isInviteModalOpen}
+        onClose={() => setIsInviteModalOpen(false)}
+        onInviteSuccess={async () => {
+          await loadDashboardData();
+        }}
+      />
     </div>
   );
 }

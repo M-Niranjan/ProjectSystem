@@ -1,9 +1,12 @@
 import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle, Network } from 'lucide-react';
+import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle, Network, UserPlus } from 'lucide-react';
 import api from '../services/api';
 import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
+import { useAuthStore } from '../store/useAuthStore';
+import { normalizeRole } from '../services/authRoles';
+import InviteTeammateModal from '../components/InviteTeammateModal';
 
 interface TeamMember {
   id: number | string;
@@ -21,9 +24,15 @@ interface TeamMember {
 }
 
 export default function Teams() {
+  const { user } = useAuthStore();
+  const userRole = normalizeRole(user?.role);
+  const isAdmin = userRole === 'ROLE_ADMIN';
+  const isTeamLead = userRole === 'ROLE_MANAGER';
+
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [memberWorkloads, setMemberWorkloads] = useState<{ [key: string]: number }>({});
   const [isInviteOpen, setIsInviteOpen] = useState(false);
+  const [isInviteTeammateModalOpen, setIsInviteTeammateModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
 
@@ -54,16 +63,18 @@ export default function Teams() {
 
   const fetchMembers = async () => {
     let teamList: any[] = [];
+    let fetchSucceeded = false;
     try {
       const res = await api.get('/api/teams');
-      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data)) {
         teamList = res.data;
+        fetchSucceeded = true;
       }
     } catch (err) {
       console.warn('Backend get teams failed in Teams.tsx, trying Cloud Firestore direct:', err);
     }
 
-    if (teamList.length === 0) {
+    if (!fetchSucceeded && teamList.length === 0) {
       teamList = await fetchAllFirestoreUserDocs();
     }
 
@@ -273,10 +284,16 @@ export default function Teams() {
         </div>
 
         <button
-          onClick={handleOpenCreate}
+          onClick={() => {
+            if (isTeamLead || !isAdmin) {
+              setIsInviteTeammateModalOpen(true);
+            } else {
+              handleOpenCreate();
+            }
+          }}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/10 cursor-pointer transition-all transform hover:-translate-y-0.5"
         >
-          <Plus className="w-4 h-4" /> Invite Teammate
+          <UserPlus className="w-4 h-4" /> Invite Teammate
         </button>
       </div>
 
@@ -294,14 +311,16 @@ export default function Teams() {
               >
                 <Eye className="w-3.5 h-3.5" />
               </button>
-              <button
-                type="button"
-                onClick={(e) => handleOpenEdit(member, e)}
-                className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                title="Edit Teammate"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-              </button>
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={(e) => handleOpenEdit(member, e)}
+                  className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                  title="Edit Teammate"
+                >
+                  <Pencil className="w-3.5 h-3.5" />
+                </button>
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -753,6 +772,15 @@ export default function Teams() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* Invite Teammate Modal for Team Leader & Team Hub */}
+      <InviteTeammateModal
+        isOpen={isInviteTeammateModalOpen}
+        onClose={() => setIsInviteTeammateModalOpen(false)}
+        onInviteSuccess={async () => {
+          await fetchMembers();
+        }}
+      />
     </div>
   );
 }

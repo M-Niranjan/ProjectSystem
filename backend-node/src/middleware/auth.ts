@@ -44,12 +44,24 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
       }
 
       const role = normalizeRole(databaseUser?.role || decodedJwt.role || 'ROLE_EMPLOYEE') as Role;
+      let resolvedUid = String(decodedJwt.id || '');
+      if ((!resolvedUid || resolvedUid === '900000' || !isNaN(Number(resolvedUid))) && (decodedJwt.email || databaseUser?.email)) {
+        try {
+          const emailToLook = decodedJwt.email || databaseUser?.email;
+          const fsUser = await FirebaseAdminService.getUserByEmailFromFirestore(emailToLook);
+          if (fsUser?.uid) {
+            resolvedUid = fsUser.uid;
+          }
+        } catch (_fsLookupErr) {}
+      }
+
+      req.firebaseUid = resolvedUid || undefined;
       req.user = {
         id: databaseUser ? databaseUser.id : (typeof decodedJwt.id === 'number' ? decodedJwt.id : 900000),
         email: decodedJwt.email || databaseUser?.email || '',
         role,
         name: databaseUser?.name || decodedJwt.name || (decodedJwt.email ? decodedJwt.email.split('@')[0] : 'User'),
-        uid: String(decodedJwt.id || ''),
+        uid: resolvedUid || String(decodedJwt.id || ''),
       };
       return next();
     }

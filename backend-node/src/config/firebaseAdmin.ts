@@ -181,6 +181,25 @@ export class FirebaseAdminService {
         .where('teamLeaderId', '==', teamLeaderUid)
         .get();
       const docs = snapshot.docs.map(doc => ({ id: doc.id, uid: doc.id, ...doc.data() }));
+
+      // Also check team_invitations collection for active/accepted memberships
+      try {
+        const invSnap = await firebaseFirestore.collection('team_invitations')
+          .where('teamLeaderId', '==', teamLeaderUid)
+          .where('invitationStatus', '==', 'ACCEPTED')
+          .get();
+        for (const invDoc of invSnap.docs) {
+          const invData = invDoc.data();
+          const empId = invData.employeeId;
+          if (empId && !docs.some(d => d.uid === empId || d.id === empId)) {
+            const empUserDoc = await this.getFirestoreUserDoc(empId);
+            if (empUserDoc) {
+              docs.push(empUserDoc as any);
+            }
+          }
+        }
+      } catch (_invErr) {}
+
       const ownDoc = await this.getFirestoreUserDoc(teamLeaderUid);
       if (ownDoc && !docs.some(d => d.uid === teamLeaderUid)) {
         docs.unshift(ownDoc as any);
