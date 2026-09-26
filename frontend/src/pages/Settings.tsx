@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, Sun, Moon, Shield, Lock, Check, Sparkles, Users,
   FolderGit2, CheckSquare, Bell, FileText, Activity, Database, Link as LinkIcon,
-  Layout, Eye, EyeOff, Clock, Calendar, Mail, AlertTriangle, Monitor, Sliders, Palette, CheckCircle2
+  Layout, Eye, EyeOff, Clock, Calendar, Mail, AlertTriangle, Monitor, Sliders, Palette, CheckCircle2, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore, AccentColor, DisplayDensity, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
@@ -24,6 +24,7 @@ export default function Settings() {
 
   // Active sub-tab state based on role defaults
   const [activeTab, setActiveTab] = useState<string>('account');
+  const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [updatedDetailsSummary, setUpdatedDetailsSummary] = useState<{ email: string; name: string; passChanged: boolean } | null>(null);
@@ -200,11 +201,13 @@ export default function Settings() {
   };
 
   const tabs = getTabs();
+  const activeTabObj = tabs.find(t => t.id === activeTab) || tabs[0];
+  const ActiveTabIcon = activeTabObj?.icon || User;
 
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       {/* Title */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${mobileDetailOpen ? 'hidden md:flex' : 'flex'}`}>
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
             <SettingsIcon className="w-6 h-6 text-blue-500" /> {user?.role.replace('ROLE_', '')} Settings
@@ -283,29 +286,57 @@ export default function Settings() {
       {/* Main Settings Panel */}
       <div className="glass-panel overflow-hidden border border-slate-200/50 dark:border-white/5 flex flex-col md:flex-row min-h-[500px]">
         {/* Left Sidebar Navigation Tabs */}
-        <div className="w-full md:w-60 border-r border-slate-200/30 dark:border-white/5 flex-shrink-0 bg-slate-500/5 p-3 space-y-1 overflow-y-auto max-h-[600px]">
+        <div className={`w-full md:w-64 border-r border-slate-200/30 dark:border-white/5 flex-shrink-0 bg-slate-500/5 p-3 space-y-1.5 overflow-y-auto max-h-[600px] ${mobileDetailOpen ? 'hidden md:block' : 'block'}`}>
+          <div className="md:hidden pb-2 mb-1 border-b border-slate-200/50 dark:border-white/5">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Settings Menu</p>
+          </div>
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`w-full text-left px-3 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2.5 cursor-pointer transition-all duration-200 ${
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileDetailOpen(true);
+                }}
+                className={`w-full text-left px-3.5 py-3 md:py-2.5 rounded-xl font-bold text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-all duration-200 group ${
                   isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 scale-[1.02]'
-                    : 'text-slate-500 dark:text-slate-400 hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 scale-[1.01]'
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                <span className="truncate">{tab.label}</span>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200/70 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:text-blue-500'
+                  }`}>
+                    <Icon className="w-4 h-4" />
+                  </div>
+                  <span className="truncate font-bold text-xs">{tab.label}</span>
+                </div>
+                <ChevronRight className={`w-4 h-4 md:hidden shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
               </button>
             );
           })}
         </div>
 
         {/* Right Content Area */}
-        <div className="flex-1 p-6 md:p-8 space-y-6 overflow-y-auto">
+        <div className={`flex-1 p-4 sm:p-6 md:p-8 space-y-6 overflow-y-auto ${mobileDetailOpen ? 'block' : 'hidden md:block'}`}>
+          {/* Mobile Back Button & Subheader */}
+          <div className="md:hidden flex items-center justify-between pb-3.5 border-b border-slate-200/50 dark:border-white/10 mb-2">
+            <button
+              type="button"
+              onClick={() => setMobileDetailOpen(false)}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-white font-bold text-xs transition-colors cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Back to Settings</span>
+            </button>
+            <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-200">
+              <ActiveTabIcon className="w-4 h-4 text-blue-500" />
+              <span>{activeTabObj?.label}</span>
+            </div>
+          </div>
           {/* ==================================== */}
           {/* TAB 1: ACCOUNT */}
           {/* ==================================== */}
