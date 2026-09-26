@@ -32,6 +32,7 @@ import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { resolveAvatar } from '../services/avatar';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Task {
   id: number;
@@ -79,6 +80,9 @@ export default function Timeline() {
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [isLogTimeModalOpen, setIsLogTimeModalOpen] = useState(false);
   const [logTimeTaskId, setLogTimeTaskId] = useState<number | null>(null);
+
+  // Lock background scroll when Timeline modals are open
+  useScrollLock(!!selectedTask || isLogTimeModalOpen);
   const [logTimeHours, setLogTimeHours] = useState('1.5');
   const [logTimeCategory, setLogTimeCategory] = useState('Development');
   const [logTimeNotes, setLogTimeNotes] = useState('');
@@ -1270,7 +1274,7 @@ export default function Timeline() {
       <AnimatePresence>
         {selectedTask && (
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain select-none"
             onClick={() => setSelectedTask(null)}
           >
             <motion.div
@@ -1278,7 +1282,7 @@ export default function Timeline() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4"
+              className="w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain"
             >
               <div className="flex items-start justify-between gap-3 border-b border-slate-200/50 dark:border-white/10 pb-3">
                 <div className="space-y-1 min-w-0">
@@ -1362,7 +1366,7 @@ export default function Timeline() {
       <AnimatePresence>
         {isLogTimeModalOpen && (
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4"
+            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain select-none"
             onClick={() => setIsLogTimeModalOpen(false)}
           >
             <motion.div
@@ -1370,7 +1374,7 @@ export default function Timeline() {
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
               onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4"
+              className="w-full max-w-md max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain"
             >
               <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
                 <div className="flex items-center gap-2">

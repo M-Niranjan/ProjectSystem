@@ -3,9 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Clock, Play, Pause, RotateCcw, X, Volume2, Sparkles, Coffee } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import confetti from 'canvas-confetti';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export default function PomodoroTimer() {
   const { pomodoroTimerOpen, setPomodoroTimer } = useUIStore();
+
+  // Lock background scroll when Pomodoro Timer modal is open
+  useScrollLock(pomodoroTimerOpen);
   const [mode, setMode] = useState<'FOCUS' | 'BREAK'>('FOCUS');
   const [isActive, setIsActive] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(25 * 60); // 25 mins
@@ -93,14 +97,14 @@ export default function PomodoroTimer() {
   return (
     <AnimatePresence>
       {pomodoroTimerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 select-none touch-none overscroll-contain">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setPomodoroTimer(false)}
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm touch-none overscroll-none"
           ></motion.div>
 
           {/* Timer Card */}
@@ -109,7 +113,7 @@ export default function PomodoroTimer() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 15 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-sm p-6 text-center shadow-2xl relative border border-slate-200/50 dark:border-white/10 flex flex-col items-center"
+            className="glass-panel w-full max-w-sm max-h-[88vh] overflow-y-auto p-6 text-center shadow-2xl relative border border-slate-200/50 dark:border-white/10 flex flex-col items-center modal-dialog-contain overscroll-contain"
           >
             {/* Close */}
             <button

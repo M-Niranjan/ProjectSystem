@@ -6,6 +6,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
 import { requestMobilePushPermission } from '../services/mobilePushService';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Notification {
   id: number;
@@ -50,6 +51,9 @@ export default function Navbar() {
     task: any | null;
   }>({ isOpen: false, notification: null, task: null });
   const [declineReasonText, setDeclineReasonText] = useState('');
+
+  // Lock background scroll when decline task modal is open
+  useScrollLock(declineModal.isOpen);
 
   const languages = ['EN', 'ES', 'FR', 'DE', 'JA'];
 
@@ -477,8 +481,8 @@ export default function Navbar() {
       </div>
 
       {declineModal.isOpen && declineModal.task && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md p-5 space-y-4 border rounded-xl border-zinc-200 dark:border-zinc-800 shadow-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-black/60 backdrop-blur-xs p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-md max-h-[88vh] overflow-y-auto p-5 space-y-4 border rounded-xl border-zinc-200 dark:border-zinc-800 shadow-xl bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 modal-dialog-contain overscroll-contain">
             <div className="space-y-1">
               <h2 className="text-sm font-bold flex items-center gap-2">
                 Decline Task Assignment

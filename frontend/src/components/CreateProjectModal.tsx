@@ -5,6 +5,7 @@ import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
 import { dispatchNotificationAlert } from '../services/notificationService';
 import TeamMemberPickerModal from './TeamMemberPickerModal';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface CurrencyOption {
   code: string;
@@ -25,6 +26,9 @@ const CURRENCIES: CurrencyOption[] = [
 
 export default function CreateProjectModal() {
   const { projectModalOpen, setProjectModalOpen } = useUIStore();
+
+  // Lock background scroll when Create Project modal is open
+  useScrollLock(projectModalOpen);
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -126,13 +130,13 @@ export default function CreateProjectModal() {
     <>
       <AnimatePresence>
         {projectModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setProjectModalOpen(false)}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
             ></motion.div>
 
             <motion.div
@@ -140,7 +144,7 @@ export default function CreateProjectModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 max-h-[90vh] overflow-y-auto rounded-3xl"
+              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 max-h-[90vh] overflow-y-auto rounded-3xl modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={() => setProjectModalOpen(false)}

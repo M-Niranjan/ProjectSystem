@@ -37,6 +37,7 @@ import {
   Bookmark
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface WorkspaceDocument {
   id: number;
@@ -217,6 +218,10 @@ export default function Documents() {
   
   // Modals & UI States
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
+
+  // Lock background scroll when templates modal is open
+  useScrollLock(isTemplateModalOpen);
+
   const [copiedNotification, setCopiedNotification] = useState(false);
   const [isAutosaving, setIsAutosaving] = useState(false);
 
@@ -896,19 +901,19 @@ export default function Documents() {
       {/* ========================================================================= */}
       <AnimatePresence>
         {isTemplateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsTemplateModalOpen(false)}
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm touch-none overscroll-none"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 15 }}
-              className="glass-panel w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative border border-slate-200/80 dark:border-white/10 z-50 rounded-3xl max-h-[85dvh] overflow-y-auto"
+              className="glass-panel w-full max-w-2xl p-5 sm:p-6 shadow-2xl relative border border-slate-200/80 dark:border-white/10 z-50 rounded-3xl max-h-[85dvh] overflow-y-auto modal-dialog-contain overscroll-contain"
             >
               <div className="flex items-center justify-between pb-3 border-b border-slate-200/50 dark:border-white/10">
                 <div className="flex items-center gap-2.5">

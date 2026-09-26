@@ -7,6 +7,7 @@ import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/f
 import { useAuthStore } from '../store/useAuthStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface TeamMember {
   id: number | string;
@@ -52,6 +53,9 @@ export default function Teams() {
   // Teammate View details modal state
   const [viewingMember, setViewingMember] = useState<TeamMember | null>(null);
   const [isViewOpen, setIsViewOpen] = useState(false);
+
+  // Lock background scroll when any team modal is open
+  useScrollLock(isInviteOpen || isViewOpen || isInviteTeammateModalOpen);
 
   // Profile image camera state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -389,13 +393,13 @@ export default function Teams() {
       {/* Invite / Edit Teammate Modal */}
       <AnimatePresence>
         {isInviteOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeInviteModal}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
             ></motion.div>
 
             <motion.div
@@ -403,7 +407,7 @@ export default function Teams() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-sm p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-y-auto max-h-[90vh]"
+              className="glass-panel w-full max-w-sm p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-y-auto max-h-[90vh] modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={closeInviteModal}
@@ -684,13 +688,13 @@ export default function Teams() {
       {/* View Teammate Details Modal */}
       <AnimatePresence>
         {isViewOpen && viewingMember && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsViewOpen(false)}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
             ></motion.div>
 
             <motion.div
@@ -698,7 +702,7 @@ export default function Teams() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-sm p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 text-center space-y-6"
+              className="glass-panel w-full max-w-sm max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 text-center space-y-6 modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={() => setIsViewOpen(false)}

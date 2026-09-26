@@ -9,6 +9,7 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import api from '../services/api';
 import { formatRoleName } from '../services/authRoles';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 const Github = (props: React.SVGProps<SVGSVGElement>) => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}>
@@ -19,6 +20,9 @@ const Github = (props: React.SVGProps<SVGSVGElement>) => (
 export default function Profile() {
   const { user, updateProfile } = useAuthStore();
   const [isEditOpen, setIsEditOpen] = useState(false);
+
+  // Lock background scroll when Edit Profile modal is open
+  useScrollLock(isEditOpen);
 
   // Form states
   const [editName, setEditName] = useState('');
@@ -578,13 +582,13 @@ export default function Profile() {
       {/* Edit Profile Details Modal */}
       <AnimatePresence>
         {isEditOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={closeEditModal}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
             ></motion.div>
 
             <motion.div
@@ -592,7 +596,7 @@ export default function Profile() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-y-auto max-h-[90vh] space-y-4"
+              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-y-auto max-h-[90vh] space-y-4 modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={closeEditModal}

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { resolveAvatar } from '../services/avatar';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export interface EligibleEmployee {
   id: string;
@@ -44,6 +45,9 @@ interface InviteTeammateModalProps {
 }
 
 export default function InviteTeammateModal({ isOpen, onClose, onInviteSuccess }: InviteTeammateModalProps) {
+  // Lock background scroll when Invite Teammates modal is open
+  useScrollLock(isOpen);
+
   const [employees, setEmployees] = useState<EligibleEmployee[]>([]);
   const [loading, setLoading] = useState(true);
   const [inviting, setInviting] = useState(false);
@@ -183,13 +187,13 @@ export default function InviteTeammateModal({ isOpen, onClose, onInviteSuccess }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md select-none overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/75 backdrop-blur-md select-none touch-none overscroll-contain">
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.96, y: 10 }}
         transition={{ duration: 0.2 }}
-        className="glass-panel w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto"
+        className="glass-panel w-full max-w-2xl bg-white/95 dark:bg-slate-900/95 border border-slate-200/60 dark:border-white/10 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh] my-auto modal-dialog-contain overscroll-contain"
       >
         {/* Header */}
         <div className="p-4 sm:p-6 border-b border-slate-200/50 dark:border-white/5 flex items-center justify-between gap-4 shrink-0">

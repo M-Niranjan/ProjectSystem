@@ -47,6 +47,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 import {
   useTrackingStore,
   TrackingTab,
@@ -119,6 +120,9 @@ export default function TeamWorkTracking() {
   // Resolve Blocker Modal State
   const [resolvingBlockerId, setResolvingBlockerId] = useState<number | null>(null);
   const [resolutionNotes, setResolutionNotes] = useState('');
+
+  // Lock background scroll when blocker or profile modals are open
+  useScrollLock(isReportBlockerModalOpen || resolvingBlockerId !== null || !!selectedEmployeeProfile || !!activeEmpModal);
 
   // Toast Feedback State
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -934,8 +938,8 @@ export default function TeamWorkTracking() {
 
       {/* REPORT BLOCKER FORM MODAL */}
       {isReportBlockerModalOpen && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-md max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <AlertTriangle className="w-4 h-4 text-amber-500" /> Report Work Blocker / Request Assistance
@@ -1005,8 +1009,8 @@ export default function TeamWorkTracking() {
 
       {/* RESOLVE BLOCKER MODAL */}
       {resolvingBlockerId !== null && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-md p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-md max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain">
             <h3 className="text-sm font-black text-emerald-500 flex items-center gap-2">
               <CheckCircle2 className="w-4 h-4" /> Resolve Blocker
             </h3>
@@ -1077,15 +1081,18 @@ function EmployeeWorkProfileModal({
   onClose: () => void;
   onOpenFullPage?: () => void;
 }) {
+  // Lock background scroll when Employee Work Profile modal is open
+  useScrollLock(!!profile);
+
   if (!profile) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-md p-4 touch-none overscroll-contain select-none" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl space-y-5 sm:space-y-6 text-slate-850 dark:text-white select-none"
+        className="w-full max-w-3xl max-h-[90vh] overflow-y-auto p-4 sm:p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl space-y-5 sm:space-y-6 text-slate-850 dark:text-white select-none modal-dialog-contain overscroll-contain"
       >
         {/* Modal Header */}
         <div className="flex flex-col sm:flex-row sm:items-start justify-between border-b border-slate-200/50 dark:border-white/10 pb-4 gap-3">

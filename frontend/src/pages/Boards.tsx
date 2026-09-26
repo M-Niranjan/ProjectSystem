@@ -13,6 +13,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Task {
   id: number;
@@ -73,6 +74,10 @@ export default function Boards() {
 
   // Gate Modal prompts state
   const [gatePrompt, setGatePrompt] = useState<GatePrompt | null>(null);
+
+  // Lock background scroll when quality gate modal is open
+  useScrollLock(!!gatePrompt);
+
   const [completionNote, setCompletionNote] = useState('');
   const [qaChecked, setQaChecked] = useState({ test: false, ui: false, review: false });
   const [selectedReviewerId, setSelectedReviewerId] = useState<number | null>(null);
@@ -526,13 +531,13 @@ export default function Boards() {
 
       {/* Gated Input Dialog Prompts Modal */}
       {gatePrompt && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm" onClick={() => setGatePrompt(null)}></div>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
+          <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none" onClick={() => setGatePrompt(null)}></div>
           
           <motion.div
             initial={{ opacity: 0, scale: 0.9, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="glass-panel w-full max-w-sm p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50"
+            className="glass-panel w-full max-w-sm max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 modal-dialog-contain overscroll-contain"
           >
             <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 mb-3">
               <CheckSquare className="w-5 h-5 text-blue-500" />

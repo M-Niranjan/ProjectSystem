@@ -431,12 +431,12 @@ export function UserManagementView() {
       <AnimatePresence>
         {isModalOpen && (
           <div 
-            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain"
+            className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 touch-none overscroll-contain select-none"
           >
             {/* Backdrop */}
             <div 
               onClick={() => setIsModalOpen(false)} 
-              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm touch-none"
+              className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm touch-none overscroll-none"
             />
 
             {/* Modal Card */}
@@ -445,7 +445,7 @@ export function UserManagementView() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="glass-panel p-5 sm:p-6 w-full max-w-md relative z-10 shadow-2xl space-y-4 max-h-[85dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain my-auto border border-slate-200/50 dark:border-white/10 rounded-2xl sm:rounded-3xl"
+              className="glass-panel p-5 sm:p-6 w-full max-w-md relative z-10 shadow-2xl space-y-4 max-h-[85dvh] sm:max-h-[90vh] overflow-y-auto overscroll-contain modal-dialog-contain my-auto border border-slate-200/50 dark:border-white/10 rounded-2xl sm:rounded-3xl"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex items-center justify-between pb-1">

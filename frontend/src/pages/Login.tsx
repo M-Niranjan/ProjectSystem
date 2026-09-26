@@ -14,6 +14,7 @@ import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
 import { signInWithEmailPassword, fetchFirestoreUserDoc } from '../services/firebase';
 import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 // Validation Schemas
 const loginSchema = z.object({
@@ -28,6 +29,10 @@ export default function Login() {
 
   // Forgot password OTP step modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
+
+  // Lock background scroll when reset password modal is open
+  useScrollLock(showForgotModal);
+
   const [otpStep, setOtpStep] = useState<1 | 2 | 3>(1);
   const [forgotEmail, setForgotEmail] = useState('');
   const [otpCode, setOtpCode] = useState('');
@@ -420,13 +425,13 @@ export default function Login() {
       {/* Forgot Password OTP Modal */}
       <AnimatePresence>
         {showForgotModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-sm glass-panel rounded-3xl p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 relative text-slate-900 dark:text-white"
+              className="w-full max-w-sm max-h-[88vh] overflow-y-auto glass-panel rounded-3xl p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 relative text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
             >
               <button
                 type="button"

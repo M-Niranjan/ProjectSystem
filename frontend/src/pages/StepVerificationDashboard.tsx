@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatRoleName } from '../services/authRoles';
+import { useScrollLock } from '../hooks/useScrollLock';
 import {
   useStepVerificationStore,
   TaskStep,
@@ -54,6 +55,9 @@ export default function StepVerificationDashboard() {
   // Selected Step for Inspection Modal
   const [inspectingStep, setInspectingStep] = useState<TaskStep | null>(null);
   const [reviewerNotes, setReviewerNotes] = useState('');
+
+  // Freeze background completely when step inspection modal is open
+  useScrollLock(!!inspectingStep);
 
   // Toast State
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -422,8 +426,8 @@ export default function StepVerificationDashboard() {
 
       {/* INSPECTION & VERIFICATION MODAL */}
       {inspectingStep && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-xl p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <UserCheck className="w-4 h-4 text-emerald-500" /> Step Work Evidence Inspection

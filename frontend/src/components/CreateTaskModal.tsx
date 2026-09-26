@@ -4,9 +4,13 @@ import { CheckSquare, X, Plus, Sparkles, User, Folder, Clock } from 'lucide-reac
 import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
 import { dispatchNotificationAlert } from '../services/notificationService';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export default function CreateTaskModal() {
   const { taskModalOpen, setTaskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask } = useUIStore();
+
+  // Lock background scroll when Create Task modal is open
+  useScrollLock(taskModalOpen);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -174,13 +178,13 @@ export default function CreateTaskModal() {
   return (
     <AnimatePresence>
       {taskModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setTaskModalOpen(false)}
-            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
           ></motion.div>
 
           <motion.div
@@ -188,7 +192,7 @@ export default function CreateTaskModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 15 }}
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-md p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50"
+            className="glass-panel w-full max-w-md max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 modal-dialog-contain overscroll-contain"
           >
             <button
               onClick={() => setTaskModalOpen(false)}

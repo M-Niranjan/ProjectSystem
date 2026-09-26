@@ -4,6 +4,7 @@ import { Award, CheckCircle2, AlertCircle, MessageSquare, Clock, ArrowRight, Use
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface ReviewTask {
   id: number;
@@ -26,6 +27,9 @@ export default function TaskReviews() {
   const [feedback, setFeedback] = useState('');
   const [toastMsg, setToastMsg] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Freeze background completely when Review Task Submission modal is active
+  useScrollLock(!!selectedTask);
 
   const defaultPendingTasks: ReviewTask[] = [
     {
@@ -344,20 +348,20 @@ export default function TaskReviews() {
       {/* Inspect & Review Modal */}
       <AnimatePresence>
         {selectedTask && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedTask(null)}
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm touch-none overscroll-none"
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.94, y: 16 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.94, y: 16 }}
               transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel p-5 sm:p-6 w-full max-w-lg relative z-10 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-white/10"
+              className="glass-panel p-5 sm:p-6 w-full max-w-lg relative z-10 shadow-2xl space-y-4 max-h-[88vh] overflow-y-auto rounded-2xl sm:rounded-3xl border border-slate-200/50 dark:border-white/10 modal-dialog-contain overscroll-contain"
             >
               <div className="flex items-center justify-between border-b border-slate-200/30 dark:border-white/5 pb-3">
                 <div className="flex items-center gap-2.5">

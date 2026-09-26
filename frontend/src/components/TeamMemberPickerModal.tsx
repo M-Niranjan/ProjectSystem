@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Users, X, Search, Check, CheckSquare, Square, Shield, Briefcase, Code, UserCheck, Sparkles } from 'lucide-react';
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 export interface DirectoryMember {
   id: number | string;
@@ -28,6 +29,9 @@ export default function TeamMemberPickerModal({
   alreadySelectedEmails,
   onConfirm
 }: TeamMemberPickerModalProps) {
+  // Lock background scroll when Team Member Picker modal is open
+  useScrollLock(isOpen);
+
   const [members, setMembers] = useState<DirectoryMember[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,14 +180,14 @@ export default function TeamMemberPickerModal({
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-4 touch-none overscroll-contain select-none">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-md"
+            className="absolute inset-0 bg-slate-950/70 backdrop-blur-md touch-none overscroll-none"
           />
 
           {/* Dialog Container */}
@@ -192,7 +196,7 @@ export default function TeamMemberPickerModal({
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.94, y: 16 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-xl p-5 sm:p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-10 flex flex-col max-h-[88vh] overflow-hidden rounded-2xl sm:rounded-3xl"
+            className="glass-panel w-full max-w-xl p-5 sm:p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-10 flex flex-col max-h-[88vh] overflow-hidden rounded-2xl sm:rounded-3xl modal-dialog-contain overscroll-contain"
           >
             {/* Header */}
             <div className="flex items-start justify-between pb-3 border-b border-slate-200/50 dark:border-white/10">

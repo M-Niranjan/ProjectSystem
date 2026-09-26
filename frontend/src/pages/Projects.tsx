@@ -4,6 +4,7 @@ import { FolderGit2, Star, Trash2, LayoutGrid, List, Search, Plus, Calendar, Dol
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
 import TeamMemberPickerModal from '../components/TeamMemberPickerModal';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface CurrencyOption {
   code: string;
@@ -42,6 +43,10 @@ export default function Projects() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  // Lock background scroll when create/edit project modal is open
+  useScrollLock(isModalOpen);
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const { setView } = useUIStore();
@@ -472,13 +477,13 @@ export default function Projects() {
       {/* Create Project Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
             ></motion.div>
 
             <motion.div
@@ -486,7 +491,7 @@ export default function Projects() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-hidden"
+              className="glass-panel w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={() => setIsModalOpen(false)}

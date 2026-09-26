@@ -24,6 +24,7 @@ import {
   Info
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 import {
   useStepVerificationStore,
   TaskStep,
@@ -58,6 +59,9 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
   // Verify Modal State (Team Leader)
   const [verifyingStep, setVerifyingStep] = useState<TaskStep | null>(null);
   const [reviewerNotes, setReviewerNotes] = useState('');
+
+  // Lock background scroll when step submission or verification modal is open
+  useScrollLock(!!submittingStep || !!verifyingStep);
 
   // Toast State
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' | 'info' }>({
@@ -367,8 +371,8 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
 
       {/* SUBMIT WORK FORM MODAL (Employee) */}
       {submittingStep && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
               <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <Send className="w-4 h-4 text-blue-500" /> Submit Step Work for Review
@@ -428,8 +432,8 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
 
       {/* TEAM LEADER VERIFICATION MODAL */}
       {verifyingStep && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4">
-          <div className="w-full max-w-lg p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-4 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
               <h3 className="text-sm font-black text-amber-500 flex items-center gap-2">
                 <UserCheck className="w-4 h-4" /> Team Leader Step Verification

@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface ActivityItem {
   id: number | string;
@@ -73,6 +74,10 @@ export default function WorkspaceActivity() {
   const [search, setSearch] = useState('');
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  // Lock background scroll when activity modal is open
+  useScrollLock(isAddModalOpen);
+
   const [newAction, setNewAction] = useState<'CREATE' | 'UPDATE' | 'COMMENT'>('UPDATE');
   const [newDetails, setNewDetails] = useState('');
   const [newProject, setNewProject] = useState('Prologue SaaS');
@@ -394,20 +399,20 @@ export default function WorkspaceActivity() {
       {/* Log Activity Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setIsAddModalOpen(false)}
-              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs"
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-xs touch-none overscroll-none"
             />
 
             <motion.div
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
-              className="relative w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden p-6 z-10"
+              className="relative w-full max-w-md max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-2xl shadow-2xl p-6 z-10 modal-dialog-contain overscroll-contain"
             >
               <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-white/10">
                 <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">

@@ -6,6 +6,7 @@ import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import TaskStepPipeline from './TaskStepPipeline';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Task {
   id: number;
@@ -42,6 +43,9 @@ interface Attachment {
 export default function TaskDetailModal() {
   const [isOpen, setIsOpen] = useState(false);
   const [task, setTask] = useState<Task | null>(null);
+
+  // Lock background scroll when Task Detail modal is open
+  useScrollLock(isOpen && !!task);
   const { user } = useAuthStore();
   const { setChatContactId, setView } = useUIStore();
 
@@ -250,14 +254,14 @@ export default function TaskDetailModal() {
   return (
     <AnimatePresence>
       {isOpen && task && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 select-none">
+        <div className="fixed inset-0 z-40 flex items-center justify-center p-4 select-none touch-none overscroll-contain">
           {/* Backdrop Blur */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm touch-none overscroll-none"
           ></motion.div>
 
           {/* Modal Container */}
@@ -266,7 +270,7 @@ export default function TaskDetailModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-4xl h-[85vh] shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-hidden flex flex-col md:flex-row"
+            className="glass-panel w-full max-w-4xl h-[85vh] shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-hidden flex flex-col md:flex-row modal-dialog-contain overscroll-contain"
           >
             {/* Close */}
             <button

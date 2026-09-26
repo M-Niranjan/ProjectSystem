@@ -18,6 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface CommandItem {
   id: string;
@@ -32,6 +33,9 @@ export default function CommandPalette() {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Lock background scroll when Command Palette is open
+  useScrollLock(isOpen);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const { setView, toggleTheme, setVoiceOverlay, setPomodoroTimer } = useUIStore();
@@ -115,14 +119,14 @@ export default function CommandPalette() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 select-none">
+        <div className="fixed inset-0 z-50 flex items-start justify-center pt-24 px-4 select-none touch-none overscroll-contain">
           {/* Backdrop Blur overlay */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={() => setIsOpen(false)}
-            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
           ></motion.div>
 
           {/* Palette box */}
@@ -131,7 +135,7 @@ export default function CommandPalette() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.97 }}
             transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-lg shadow-2xl overflow-hidden relative border border-slate-200/50 dark:border-white/10"
+            className="glass-panel w-full max-w-lg shadow-2xl max-h-[75vh] overflow-y-auto relative border border-slate-200/50 dark:border-white/10 modal-dialog-contain overscroll-contain"
           >
             {/* Search Input */}
             <div className="p-4 border-b border-slate-200/50 dark:border-white/5 flex items-center gap-3">

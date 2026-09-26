@@ -26,6 +26,7 @@ import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatRoleName } from '../services/authRoles';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface Task {
   id: number;
@@ -77,6 +78,9 @@ export default function Tasks() {
 
   // Assignee Reassignment Popover state
   const [assigningTaskId, setAssigningTaskId] = useState<number | null>(null);
+
+  // Lock background scroll when assigning task modal is open
+  useScrollLock(assigningTaskId !== null);
 
   const [actionModal, setActionModal] = useState<{
     isOpen: boolean;
@@ -944,8 +948,8 @@ export default function Tasks() {
 
       {/* Quick Team Member Re-assignment Modal Popover */}
       {assigningTaskId !== null && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4">
-          <div className="w-full max-w-sm p-5 border rounded-3xl border-slate-200 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white space-y-4">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain select-none">
+          <div className="w-full max-w-sm max-h-[88vh] overflow-y-auto p-5 border rounded-3xl border-slate-200 dark:border-slate-800 shadow-2xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white space-y-4 modal-dialog-contain overscroll-contain">
             <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
               <div className="flex items-center gap-2">
                 <UserPlus className="w-5 h-5 text-blue-500" />

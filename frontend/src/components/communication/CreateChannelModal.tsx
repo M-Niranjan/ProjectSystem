@@ -6,6 +6,7 @@ import { X, Hash, Lock, Users, Shield, Plus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContactItem } from '../../store/useCommunicationStore';
 import { formatRoleName } from '../../services/authRoles';
+import { useScrollLock } from '../../hooks/useScrollLock';
 
 const channelSchema = z.object({
   name: z.string()
@@ -37,6 +38,8 @@ export default function CreateChannelModal({
   onSubmitChannel,
   contacts,
 }: CreateChannelModalProps) {
+  // Lock background scroll when Create Channel modal is open
+  useScrollLock(isOpen);
   const {
     register,
     handleSubmit,
@@ -76,14 +79,14 @@ export default function CreateChannelModal({
 
   return (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
         {/* Backdrop */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-slate-950/60 backdrop-blur-md"
+          className="fixed inset-0 bg-slate-950/60 backdrop-blur-md touch-none overscroll-none"
         />
 
         {/* Modal Card */}
@@ -92,7 +95,7 @@ export default function CreateChannelModal({
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 15 }}
           transition={{ duration: 0.2, ease: 'easeOut' }}
-          className="relative w-full max-w-lg bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 shadow-2xl z-10 text-slate-900 dark:text-white"
+          className="relative w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-white/10 rounded-3xl p-6 shadow-2xl z-10 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
         >
           {/* Header */}
           <div className="flex items-center justify-between pb-4 border-b border-slate-200/50 dark:border-white/10">
