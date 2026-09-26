@@ -6,6 +6,7 @@ import interactionPlugin from '@fullcalendar/interaction';
 import { Calendar as CalendarIcon, Info } from 'lucide-react';
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 interface Event {
   id: string;
@@ -122,15 +123,16 @@ export default function Calendar() {
             </p>
           </div>
 
-          <select
+          <LuxurySelect
+            className="w-48 sm:w-56"
             value={activeProjectId || ''}
-            onChange={(e) => setActiveProjectId(Number(e.target.value))}
-            className="px-3 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-bold text-xs cursor-pointer appearance-none"
-          >
-            {projectsList.map(p => (
-              <option className="dark:bg-slate-800" key={p.id} value={p.id}>{p.name}</option>
-            ))}
-          </select>
+            onChange={(val) => setActiveProjectId(Number(val))}
+            placeholder="Select Project..."
+            options={projectsList.map(p => ({
+              value: String(p.id),
+              label: p.name
+            }))}
+          />
         </div>
       </div>
 

@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
 
@@ -732,28 +733,42 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
                 />
 
-                <select
+                <LuxurySelect
                   value={newTaskProjectId}
-                  onChange={(e) => setNewTaskProjectId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
-                >
-                  {projectsList.map(p => (
-                    <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
-                  ))}
-                </select>
+                  onChange={(val) => setNewTaskProjectId(val)}
+                  placeholder="Select Project Workspace..."
+                  options={projectsList.map(p => ({
+                    value: String(p.id),
+                    label: p.name,
+                    icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-500" />
+                  }))}
+                />
 
-                <select
+                <LuxurySelect
                   value={newTaskAssigneeId}
-                  onChange={(e) => setNewTaskAssigneeId(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
-                >
-                  <option value="" className="dark:bg-slate-900">Select Assignee...</option>
-                  {employeeDirectory
+                  onChange={(val) => setNewTaskAssigneeId(val)}
+                  placeholder="Select Assignee..."
+                  options={employeeDirectory
                     .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan')
-                    .map(emp => (
-                    <option key={emp.id} value={emp.id} className="dark:bg-slate-900">{emp.name} ({emp.designation})</option>
-                  ))}
-                </select>
+                    .map(emp => {
+                      const cleanDesignation = (emp.designation || 'Team Member')
+                        .replace(/Devoloper/g, 'Developer');
+                      return {
+                        value: String(emp.id),
+                        label: emp.name,
+                        subLabel: cleanDesignation,
+                        icon: (
+                          <img
+                            src={resolveAvatar(emp.profilePhoto, emp.name, emp.gender)}
+                            alt=""
+                            className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-white/20"
+                          />
+                        ),
+                        badge: emp.department || undefined,
+                        badgeColor: 'bg-indigo-500/15 text-indigo-400'
+                      };
+                    })}
+                />
 
                 <button
                   type="submit"

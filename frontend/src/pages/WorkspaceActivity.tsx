@@ -8,6 +8,7 @@ import {
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 interface ActivityItem {
   id: number | string;
@@ -310,16 +311,17 @@ export default function WorkspaceActivity() {
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
           <Filter className="w-4 h-4 text-slate-400 shrink-0" />
-          <select
+          <LuxurySelect
+            className="w-full sm:w-48"
             value={selectedAction}
-            onChange={(e) => setSelectedAction(e.target.value)}
-            className="w-full sm:w-auto px-3 py-2 bg-slate-50/50 dark:bg-slate-900 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs font-bold outline-none cursor-pointer"
-          >
-            <option value="ALL">All Action Types</option>
-            <option value="CREATE">Create Events</option>
-            <option value="UPDATE">Update Events</option>
-            <option value="COMMENT">Comments & Discussions</option>
-          </select>
+            onChange={(val) => setSelectedAction(val)}
+            options={[
+              { value: 'ALL', label: 'All Action Types' },
+              { value: 'CREATE', label: 'Create Events', badge: 'ADD', badgeColor: 'bg-emerald-500/20 text-emerald-400' },
+              { value: 'UPDATE', label: 'Update Events', badge: 'MOD', badgeColor: 'bg-blue-500/20 text-blue-400' },
+              { value: 'COMMENT', label: 'Comments', badge: 'CHAT', badgeColor: 'bg-amber-500/20 text-amber-400' }
+            ]}
+          />
         </div>
       </div>
 

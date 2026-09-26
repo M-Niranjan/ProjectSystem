@@ -14,6 +14,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 interface Task {
   id: number;
@@ -601,17 +602,23 @@ export default function Boards() {
                 <div className="space-y-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Assign Reviewer</label>
-                    <select
-                      required
+                    <LuxurySelect
                       value={selectedReviewerId || ''}
-                      onChange={(e) => setSelectedReviewerId(Number(e.target.value))}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    >
-                      <option className="dark:bg-slate-800" value="">Select Reviewer...</option>
-                      {usersList.map(u => (
-                        <option className="dark:bg-slate-800" key={u.id} value={u.id}>{u.name}</option>
-                      ))}
-                    </select>
+                      onChange={(val) => setSelectedReviewerId(val ? Number(val) : null)}
+                      placeholder="Select Reviewer..."
+                      options={usersList.map(u => ({
+                        value: String(u.id),
+                        label: u.name,
+                        subLabel: u.designation ? u.designation.replace(/Devoloper/g, 'Developer') : undefined,
+                        icon: (
+                          <img
+                            src={resolveAvatar(u.profilePhoto, u.name, u.gender)}
+                            alt=""
+                            className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-white/20"
+                          />
+                        )
+                      }))}
+                    />
                   </div>
 
                   {/* Warn if self-approval */}

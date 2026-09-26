@@ -6,6 +6,7 @@ import api from '../services/api';
 import { dispatchNotificationAlert } from '../services/notificationService';
 import TeamMemberPickerModal from './TeamMemberPickerModal';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from './common/LuxurySelect';
 
 interface CurrencyOption {
   code: string;
@@ -183,30 +184,30 @@ export default function CreateProjectModal() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status</label>
-                    <select
+                    <LuxurySelect
                       value={status}
-                      onChange={(e) => setStatus(e.target.value)}
-                      className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    >
-                      <option className="dark:bg-slate-800" value="PLANNING">Planning</option>
-                      <option className="dark:bg-slate-800" value="ACTIVE">Active</option>
-                      <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
-                      <option className="dark:bg-slate-800" value="ARCHIVED">Archived</option>
-                    </select>
+                      onChange={(val) => setStatus(val)}
+                      options={[
+                        { value: 'PLANNING', label: 'Planning' },
+                        { value: 'ACTIVE', label: 'Active' },
+                        { value: 'COMPLETED', label: 'Completed' },
+                        { value: 'ARCHIVED', label: 'Archived' }
+                      ]}
+                    />
                   </div>
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Priority</label>
-                    <select
+                    <LuxurySelect
                       value={priority}
-                      onChange={(e) => setPriority(e.target.value)}
-                      className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    >
-                      <option className="dark:bg-slate-800" value="LOW">Low</option>
-                      <option className="dark:bg-slate-800" value="MEDIUM">Medium</option>
-                      <option className="dark:bg-slate-800" value="HIGH">High</option>
-                      <option className="dark:bg-slate-800" value="CRITICAL">Critical</option>
-                    </select>
+                      onChange={(val) => setPriority(val)}
+                      options={[
+                        { value: 'LOW', label: 'Low', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
+                        { value: 'MEDIUM', label: 'Medium', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                        { value: 'HIGH', label: 'High', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                        { value: 'CRITICAL', label: 'Critical', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                      ]}
+                    />
                   </div>
                 </div>
 
@@ -245,7 +246,7 @@ export default function CreateProjectModal() {
                               initial={{ opacity: 0, y: -4, scale: 0.95 }}
                               animate={{ opacity: 1, y: 0, scale: 1 }}
                               exit={{ opacity: 0, y: -4, scale: 0.95 }}
-                              className="absolute left-0 top-full mt-1.5 w-52 p-1.5 glass-panel rounded-xl border border-slate-200/60 dark:border-white/10 shadow-2xl z-30 max-h-48 overflow-y-auto"
+                              className="absolute left-0 top-full mt-1.5 w-52 max-w-[calc(100vw-3rem)] p-1.5 glass-panel rounded-xl border border-slate-200/60 dark:border-white/10 shadow-2xl z-50 max-h-48 overflow-y-auto"
                             >
                               {CURRENCIES.map((curr) => (
                                 <button

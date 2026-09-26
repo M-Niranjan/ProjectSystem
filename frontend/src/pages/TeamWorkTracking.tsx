@@ -48,6 +48,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 import {
   useTrackingStore,
   TrackingTab,
@@ -375,20 +376,18 @@ export default function TeamWorkTracking() {
 
         {/* Filter Controls */}
         <div className="flex flex-wrap items-center gap-2">
-          {/* Workload Level Filter */}
-          <div className="relative">
-            <select
-              value={workloadFilter}
-              onChange={(e) => setWorkloadFilter(e.target.value)}
-              className="px-3 py-1.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer text-slate-700 dark:text-slate-300"
-            >
-              <option value="ALL" className="dark:bg-slate-900">All Workload Levels</option>
-              <option value="LOW" className="dark:bg-slate-900">Low Workload</option>
-              <option value="BALANCED" className="dark:bg-slate-900">Balanced</option>
-              <option value="HIGH" className="dark:bg-slate-900">High Capacity</option>
-              <option value="OVERLOADED" className="dark:bg-slate-900">⚠️ Overloaded</option>
-            </select>
-          </div>
+          <LuxurySelect
+            className="w-48"
+            value={workloadFilter}
+            onChange={(val) => setWorkloadFilter(val)}
+            options={[
+              { value: 'ALL', label: 'All Workload Levels' },
+              { value: 'LOW', label: 'Low Workload', badge: 'LOW', badgeColor: 'bg-emerald-500/20 text-emerald-400' },
+              { value: 'BALANCED', label: 'Balanced', badge: 'OPT', badgeColor: 'bg-blue-500/20 text-blue-400' },
+              { value: 'HIGH', label: 'High Capacity', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+              { value: 'OVERLOADED', label: 'Overloaded', badge: 'ALERT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+            ]}
+          />
 
           {/* Time Range Filter */}
           <div className="flex items-center gap-1 bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl">
@@ -955,16 +954,16 @@ export default function TeamWorkTracking() {
 
               <div className="space-y-1">
                 <label className="text-[10px] font-black uppercase text-slate-400">Priority Level</label>
-                <select
+                <LuxurySelect
                   value={newBlockerPriority}
-                  onChange={(e) => setNewBlockerPriority(e.target.value as any)}
-                  className="w-full px-3.5 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
-                >
-                  <option value="LOW" className="dark:bg-slate-900">Low Priority</option>
-                  <option value="MEDIUM" className="dark:bg-slate-900">Medium Priority</option>
-                  <option value="HIGH" className="dark:bg-slate-900">High Priority</option>
-                  <option value="CRITICAL" className="dark:bg-slate-900">🚨 Critical Blocker</option>
-                </select>
+                  onChange={(val) => setNewBlockerPriority(val as any)}
+                  options={[
+                    { value: 'LOW', label: 'Low Priority', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
+                    { value: 'MEDIUM', label: 'Medium Priority', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                    { value: 'HIGH', label: 'High Priority', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                    { value: 'CRITICAL', label: 'Critical Blocker', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                  ]}
+                />
               </div>
 
               <div className="space-y-1">

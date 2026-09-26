@@ -33,6 +33,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { resolveAvatar } from '../services/avatar';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 interface Task {
   id: number;
@@ -614,20 +615,18 @@ export default function Timeline() {
 
           {/* Project Selector & Actions */}
           <div className="flex items-center gap-2 shrink-0">
-            <div className="relative">
-              <select
-                value={activeProjectId || ''}
-                onChange={(e) => setActiveProjectId(Number(e.target.value))}
-                className="pl-3 pr-8 py-2 bg-white/70 dark:bg-slate-900/70 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-bold text-xs outline-none focus:ring-2 focus:ring-blue-500 cursor-pointer shadow-xs appearance-none"
-              >
-                {projectsList.map(p => (
-                  <option className="dark:bg-slate-800 text-slate-800 dark:text-white" key={p.id} value={p.id}>
-                    {p.name}
-                  </option>
-                ))}
-              </select>
-              <FolderGit2 className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-            </div>
+            <LuxurySelect
+              className="w-48 sm:w-56"
+              value={activeProjectId || ''}
+              onChange={(val) => setActiveProjectId(Number(val))}
+              placeholder="Select Project..."
+              icon={<FolderGit2 className="w-3.5 h-3.5 text-blue-500" />}
+              options={projectsList.map(p => ({
+                value: String(p.id),
+                label: p.name,
+                icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-500" />
+              }))}
+            />
 
             <button
               onClick={() => {
@@ -1391,17 +1390,16 @@ export default function Timeline() {
               <form onSubmit={handleManualTimeSubmit} className="space-y-3.5 text-xs">
                 <div className="space-y-1">
                   <label className="font-bold text-slate-400">Target Task</label>
-                  <select
+                  <LuxurySelect
                     value={logTimeTaskId || ''}
-                    onChange={(e) => setLogTimeTaskId(Number(e.target.value))}
-                    className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-bold outline-none cursor-pointer"
-                  >
-                    {tasks.map(t => (
-                      <option className="dark:bg-slate-900" key={t.id} value={t.id}>
-                        {t.title}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(val) => setLogTimeTaskId(Number(val))}
+                    placeholder="Select Target Task..."
+                    options={tasks.map(t => ({
+                      value: String(t.id),
+                      label: t.title,
+                      subLabel: t.status ? t.status.replace('_', ' ') : undefined
+                    }))}
+                  />
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
@@ -1419,18 +1417,18 @@ export default function Timeline() {
                   </div>
                   <div className="space-y-1">
                     <label className="font-bold text-slate-400">Activity Category</label>
-                    <select
+                    <LuxurySelect
                       value={logTimeCategory}
-                      onChange={(e) => setLogTimeCategory(e.target.value)}
-                      className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-bold outline-none cursor-pointer"
-                    >
-                      <option className="dark:bg-slate-900" value="Development">Development</option>
-                      <option className="dark:bg-slate-900" value="UI/UX Design">UI/UX Design</option>
-                      <option className="dark:bg-slate-900" value="Testing & QA">Testing & QA</option>
-                      <option className="dark:bg-slate-900" value="Architecture">Architecture</option>
-                      <option className="dark:bg-slate-900" value="Code Review">Code Review</option>
-                      <option className="dark:bg-slate-900" value="Bug Fix">Bug Fix</option>
-                    </select>
+                      onChange={(val) => setLogTimeCategory(val)}
+                      options={[
+                        { value: 'Development', label: 'Development' },
+                        { value: 'UI/UX Design', label: 'UI/UX Design' },
+                        { value: 'Testing & QA', label: 'Testing & QA' },
+                        { value: 'Architecture', label: 'Architecture' },
+                        { value: 'Code Review', label: 'Code Review' },
+                        { value: 'Bug Fix', label: 'Bug Fix' },
+                      ]}
+                    />
                   </div>
                 </div>
 

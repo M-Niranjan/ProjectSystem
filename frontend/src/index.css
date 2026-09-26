@@ -494,4 +494,23 @@ aside.glass-panel {
   display: none !important;
 }
 
+/* Universal Select & Dropdown Containment Safeguards */
+select {
+  max-width: 100% !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  white-space: nowrap !important;
+}
 
+select option {
+  max-width: 100% !important;
+  text-overflow: ellipsis !important;
+  overflow: hidden !important;
+  background-color: #0c0e17;
+  color: #f8fafc;
+}
+
+:root:not(.dark) select option {
+  background-color: #ffffff;
+  color: #0f172a;
+}

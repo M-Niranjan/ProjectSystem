@@ -5,6 +5,7 @@ import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
 import { dispatchNotificationAlert } from '../services/notificationService';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from './common/LuxurySelect';
 
 export default function CreateTaskModal() {
   const { taskModalOpen, setTaskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask } = useUIStore();
@@ -241,49 +242,52 @@ export default function CreateTaskModal() {
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
                     <Folder className="w-3.5 h-3.5 text-blue-500" /> Project Workspace
                   </label>
-                  <select
+                  <LuxurySelect
                     value={activeProjectId || ''}
-                    onChange={(e) => setActiveProjectId(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    required
-                  >
-                    <option className="dark:bg-slate-800 text-slate-400" value="">Select Workspace...</option>
-                    {projectsList.map(p => (
-                      <option className="dark:bg-slate-800" key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setActiveProjectId(val ? Number(val) : null)}
+                    placeholder="Select Workspace..."
+                    options={projectsList.map(p => ({
+                      value: String(p.id),
+                      label: p.name,
+                      icon: <Folder className="w-3.5 h-3.5 text-blue-500" />
+                    }))}
+                  />
                 </div>
 
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
                     <User className="w-3.5 h-3.5 text-blue-500" /> Assignee
                   </label>
-                  <select
+                  <LuxurySelect
                     value={assigneeId || ''}
-                    onChange={(e) => setAssigneeId(Number(e.target.value))}
-                    className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                  >
-                    <option className="dark:bg-slate-800" value="">Unassigned</option>
-                    {usersList.map(u => (
-                      <option className="dark:bg-slate-800" key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setAssigneeId(val ? Number(val) : null)}
+                    placeholder="Unassigned"
+                    options={[
+                      { value: '', label: 'Unassigned' },
+                      ...usersList.map(u => ({
+                        value: String(u.id),
+                        label: u.name,
+                        subLabel: u.designation ? u.designation.replace(/Devoloper/g, 'Developer') : undefined,
+                        icon: <User className="w-3.5 h-3.5 text-indigo-400" />
+                      }))
+                    ]}
+                  />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Priority</label>
-                  <select
+                  <LuxurySelect
                     value={priority}
-                    onChange={(e) => setPriority(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                  >
-                    <option className="dark:bg-slate-800" value="LOW">Low</option>
-                    <option className="dark:bg-slate-800" value="MEDIUM">Medium</option>
-                    <option className="dark:bg-slate-800" value="HIGH">High</option>
-                    <option className="dark:bg-slate-800" value="CRITICAL">Critical</option>
-                  </select>
+                    onChange={(val) => setPriority(val)}
+                    options={[
+                      { value: 'LOW', label: 'Low', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
+                      { value: 'MEDIUM', label: 'Medium', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                      { value: 'HIGH', label: 'High', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                      { value: 'CRITICAL', label: 'Critical', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -303,18 +307,18 @@ export default function CreateTaskModal() {
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status (Stage)</label>
-                  <select
+                  <LuxurySelect
                     value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                  >
-                    <option className="dark:bg-slate-800" value="BACKLOG">Backlog</option>
-                    <option className="dark:bg-slate-800" value="TO_DO">To Do</option>
-                    <option className="dark:bg-slate-800" value="IN_PROGRESS">In Progress</option>
-                    <option className="dark:bg-slate-800" value="TESTING">Testing</option>
-                    <option className="dark:bg-slate-800" value="REVIEW">Review</option>
-                    <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
-                  </select>
+                    onChange={(val) => setStatus(val)}
+                    options={[
+                      { value: 'BACKLOG', label: 'Backlog' },
+                      { value: 'TO_DO', label: 'To Do' },
+                      { value: 'IN_PROGRESS', label: 'In Progress' },
+                      { value: 'TESTING', label: 'Testing' },
+                      { value: 'REVIEW', label: 'Review' },
+                      { value: 'COMPLETED', label: 'Completed' }
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">
@@ -334,16 +338,21 @@ export default function CreateTaskModal() {
                   <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
                     🔗 Precedent Dependency
                   </label>
-                  <select
+                  <LuxurySelect
                     value={dependencyId || ''}
-                    onChange={(e) => setDependencyId(e.target.value ? Number(e.target.value) : null)}
-                    className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                  >
-                    <option className="dark:bg-slate-800" value="">No Precedent Task</option>
-                    {existingTasks.filter(t => !editingTask || t.id !== editingTask.id).map(t => (
-                      <option className="dark:bg-slate-800" key={t.id} value={t.id}>{t.title}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setDependencyId(val ? Number(val) : null)}
+                    placeholder="No Precedent Task"
+                    options={[
+                      { value: '', label: 'No Precedent Task' },
+                      ...existingTasks
+                        .filter(t => !editingTask || t.id !== editingTask.id)
+                        .map(t => ({
+                          value: String(t.id),
+                          label: t.title,
+                          subLabel: t.status ? t.status.replace('_', ' ') : undefined
+                        }))
+                    ]}
+                  />
                 </div>
 
                 <div className="space-y-1">

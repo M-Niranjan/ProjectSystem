@@ -7,6 +7,7 @@ import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../ser
 import { normalizeRole } from '../services/authRoles';
 import { upsertFirestoreUserDoc, deleteFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 // ==========================================
 // 1. USER MANAGEMENT VIEW
@@ -240,17 +241,18 @@ export function UserManagementView() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <LuxurySelect
+            className="w-full sm:w-44"
             value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="flex-1 sm:flex-initial px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs font-bold outline-none cursor-pointer"
-          >
-            <option value="ALL" className="dark:bg-slate-900">All Roles</option>
-            <option value="ROLE_ADMIN" className="dark:bg-slate-900">Admin</option>
-            <option value="ROLE_MANAGER" className="dark:bg-slate-900">Team Lead</option>
-            <option value="ROLE_EMPLOYEE" className="dark:bg-slate-900">Employee</option>
-          </select>
+            onChange={(val) => setRoleFilter(val)}
+            options={[
+              { value: 'ALL', label: 'All Roles' },
+              { value: 'ROLE_ADMIN', label: 'Admin', badge: 'ADMIN', badgeColor: 'bg-rose-500/20 text-rose-400' },
+              { value: 'ROLE_MANAGER', label: 'Team Lead', badge: 'LEAD', badgeColor: 'bg-amber-500/20 text-amber-400' },
+              { value: 'ROLE_EMPLOYEE', label: 'Employee', badge: 'MEMBER', badgeColor: 'bg-blue-500/20 text-blue-400' }
+            ]}
+          />
         </div>
       </div>
 
@@ -573,16 +575,15 @@ export function UserManagementView() {
                 <div className="grid grid-cols-2 gap-3 scroll-mt-6">
                   <div>
                     <label className="text-[10px] font-black uppercase text-slate-400">System Role</label>
-                    <select
+                    <LuxurySelect
                       value={role}
-                      onChange={(e) => setRole(e.target.value)}
-                      onFocus={handleInputFocus}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-bold outline-none cursor-pointer"
-                    >
-                      <option value="ROLE_ADMIN" className="dark:bg-slate-900">Admin</option>
-                      <option value="ROLE_MANAGER" className="dark:bg-slate-900">Team Lead</option>
-                      <option value="ROLE_EMPLOYEE" className="dark:bg-slate-900">Employee</option>
-                    </select>
+                      onChange={(val) => setRole(val)}
+                      options={[
+                        { value: 'ROLE_ADMIN', label: 'Admin', badge: 'ADMIN', badgeColor: 'bg-rose-500/20 text-rose-400' },
+                        { value: 'ROLE_MANAGER', label: 'Team Lead', badge: 'LEAD', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                        { value: 'ROLE_EMPLOYEE', label: 'Employee', badge: 'MEMBER', badgeColor: 'bg-blue-500/20 text-blue-400' }
+                      ]}
+                    />
                   </div>
 
                   <div>
@@ -911,18 +912,19 @@ export function AuditLogsView() {
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Filter className="w-4 h-4 text-slate-400" />
-          <select
+          <Filter className="w-4 h-4 text-slate-400 shrink-0" />
+          <LuxurySelect
+            className="w-full sm:w-48"
             value={actionFilter}
-            onChange={(e) => setActionFilter(e.target.value)}
-            className="px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white text-xs font-bold outline-none cursor-pointer"
-          >
-            <option value="ALL" className="dark:bg-slate-900">All Action Types</option>
-            <option value="LOGIN" className="dark:bg-slate-900">Login Events</option>
-            <option value="ROLE_UPDATE" className="dark:bg-slate-900">Role Updates</option>
-            <option value="PROJECT_CREATE" className="dark:bg-slate-900">Project Creation</option>
-            <option value="TASK_SUBMIT" className="dark:bg-slate-900">Task Submissions</option>
-          </select>
+            onChange={(val) => setActionFilter(val)}
+            options={[
+              { value: 'ALL', label: 'All Action Types' },
+              { value: 'LOGIN', label: 'Login Events', badge: 'AUTH', badgeColor: 'bg-indigo-500/20 text-indigo-400' },
+              { value: 'ROLE_UPDATE', label: 'Role Updates', badge: 'SEC', badgeColor: 'bg-amber-500/20 text-amber-400' },
+              { value: 'PROJECT_CREATE', label: 'Project Creation', badge: 'PROJ', badgeColor: 'bg-emerald-500/20 text-emerald-400' },
+              { value: 'TASK_SUBMIT', label: 'Task Submissions', badge: 'TASK', badgeColor: 'bg-blue-500/20 text-blue-400' }
+            ]}
+          />
         </div>
       </div>
 

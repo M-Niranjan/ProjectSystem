@@ -9,6 +9,7 @@ import { useUIStore } from '../store/useUIStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 import { useScrollLock } from '../hooks/useScrollLock';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 interface TeamMember {
   id: number | string;
@@ -616,32 +617,32 @@ export default function Teams() {
 
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Department</label>
-                    <select
+                    <LuxurySelect
                       value={inviteDept}
-                      onChange={(e) => setInviteDept(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    >
-                      <option className="dark:bg-slate-800" value="Technology">Technology</option>
-                      <option className="dark:bg-slate-800" value="Product Design">Product Design</option>
-                      <option className="dark:bg-slate-800" value="Marketing">Marketing</option>
-                      <option className="dark:bg-slate-800" value="Sales">Sales</option>
-                      <option className="dark:bg-slate-800" value="Operations">Operations</option>
-                    </select>
+                      onChange={(val) => setInviteDept(val)}
+                      options={[
+                        { value: 'Technology', label: 'Technology' },
+                        { value: 'Product Design', label: 'Product Design' },
+                        { value: 'Marketing', label: 'Marketing' },
+                        { value: 'Sales', label: 'Sales' },
+                        { value: 'Operations', label: 'Operations' }
+                      ]}
+                    />
                   </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Security Role</label>
-                    <select
+                    <LuxurySelect
                       value={inviteRole}
-                      onChange={(e) => setInviteRole(e.target.value)}
-                      className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
-                    >
-                      <option className="dark:bg-slate-800" value="ROLE_EMPLOYEE">Employee</option>
-                      <option className="dark:bg-slate-800" value="ROLE_MANAGER">Team Lead</option>
-                      <option className="dark:bg-slate-800" value="ROLE_ADMIN">Admin</option>
-                    </select>
+                      onChange={(val) => setInviteRole(val)}
+                      options={[
+                        { value: 'ROLE_EMPLOYEE', label: 'Employee', badge: 'MEMBER', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                        { value: 'ROLE_MANAGER', label: 'Team Lead', badge: 'LEAD', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                        { value: 'ROLE_ADMIN', label: 'Admin', badge: 'ADMIN', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                      ]}
+                    />
                   </div>
 
                   <div className="space-y-1">
