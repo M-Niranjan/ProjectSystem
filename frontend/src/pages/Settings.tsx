@@ -9,6 +9,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore, AccentColor, DisplayDensity, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { formatRoleName } from '../services/authRoles';
+import { resolveAvatar } from '../services/avatar';
 
 export default function Settings() {
   const { user, updateProfile } = useAuthStore();
@@ -23,8 +24,8 @@ export default function Settings() {
   const isTeamLead = role === 'ROLE_MANAGER' || (role as string) === 'ROLE_TEAM_LEAD';
   const isEmployee = role === 'ROLE_EMPLOYEE';
 
-  // Active sub-tab state based on role defaults
-  const [activeTab, setActiveTab] = useState<string>('account');
+  // Active sub-tab state based on role defaults (Clean 4-category architecture)
+  const [activeTab, setActiveTab] = useState<string>('appearance');
   const [mobileDetailOpen, setMobileDetailOpen] = useState(false);
   const [successMsg, setSuccessMsg] = useState('');
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -98,33 +99,18 @@ export default function Settings() {
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setPassError('');
-    if (newPass.trim()) {
-      if (newPass.trim().length < 6) {
-        setPassError('Password must be at least 6 characters long!');
-        return;
-      }
-    }
     setSaving(true);
     const payload: any = { name, email, designation, department, experience, skills, phone };
-    if (newPass.trim()) {
-      payload.password = newPass.trim();
-    }
     const success = await updateProfile(payload);
     setSaving(false);
     if (success) {
       setUpdatedDetailsSummary({
         email,
         name,
-        passChanged: !!newPass.trim()
+        passChanged: false
       });
       setShowSuccessModal(true);
-      triggerSuccess(`Account & security parameters saved! Email set to ${email}`);
-      if (newPass.trim()) {
-        setCurrentPass('');
-        setNewPass('');
-        setConfirmPass('');
-      }
+      triggerSuccess(`Profile parameters updated successfully!`);
     }
   };
 
@@ -148,6 +134,12 @@ export default function Settings() {
     const success = await updateProfile({ password: newPass.trim() });
     setSaving(false);
     if (success) {
+      setUpdatedDetailsSummary({
+        email: user?.email || '',
+        name: user?.name || '',
+        passChanged: true
+      });
+      setShowSuccessModal(true);
       triggerSuccess('Account password updated successfully!');
       setCurrentPass('');
       setNewPass('');
@@ -159,46 +151,23 @@ export default function Settings() {
     setIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // Dynamically compute available settings tabs per role
+  // Dynamically compute available settings tabs per role (Clean 4-Category Architecture)
   const getTabs = () => {
+    const baseTabs = [
+      { id: 'appearance', label: 'Appearance & Theme', icon: Palette },
+      { id: 'security', label: 'Security & Password', icon: Lock },
+      { id: 'integrations', label: 'Connected Tools', icon: LinkIcon },
+      { id: 'account', label: 'Profile & Account', icon: User },
+    ];
+
     if (isAdmin) {
       return [
-        { id: 'account', label: 'Account', icon: User },
-        { id: 'organization', label: 'Organization', icon: Sparkles },
-        { id: 'users', label: 'Users', icon: Users },
-        { id: 'roles', label: 'Roles & Permissions', icon: Shield },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'security', label: 'Security', icon: Lock },
-        { id: 'audit', label: 'Audit & Activity', icon: Activity },
-        { id: 'data', label: 'Data & Backup', icon: Database },
-        { id: 'integrations', label: 'Integrations', icon: LinkIcon },
-        { id: 'appearance', label: 'Appearance', icon: Palette },
-      ];
-    } else if (isTeamLead) {
-      return [
-        { id: 'account', label: 'Account', icon: User },
-        { id: 'team', label: 'Team', icon: Users },
-        { id: 'projects', label: 'Projects', icon: FolderGit2 },
-        { id: 'tasks', label: 'Tasks & Workflow', icon: CheckSquare },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'work', label: 'Work & Productivity', icon: Clock },
-        { id: 'calendar', label: 'Calendar', icon: Calendar },
-        { id: 'documents', label: 'Documents', icon: FileText },
-        { id: 'integrations', label: 'Integrations', icon: LinkIcon },
-        { id: 'security', label: 'Security', icon: Lock },
-        { id: 'appearance', label: 'Appearance', icon: Palette },
-      ];
-    } else {
-      return [
-        { id: 'account', label: 'Account', icon: User },
-        { id: 'notifications', label: 'Notifications', icon: Bell },
-        { id: 'time', label: 'Time Tracking', icon: Clock },
-        { id: 'calendar', label: 'Calendar', icon: Calendar },
-        { id: 'appearance', label: 'Appearance', icon: Palette },
-        { id: 'email', label: 'Email Preferences', icon: Mail },
-        { id: 'security', label: 'Security', icon: Lock },
+        ...baseTabs,
+        { id: 'organization', label: 'Organization & System', icon: Sparkles },
       ];
     }
+
+    return baseTabs;
   };
 
   const tabs = getTabs();
@@ -338,284 +307,148 @@ export default function Settings() {
               <span>{activeTabObj?.label}</span>
             </div>
           </div>
-          {/* ==================================== */}
-          {/* TAB 1: ACCOUNT */}
-          {/* ==================================== */}
+          {/* ========================================================================= */}
+          {/* TAB: PROFILE & ACCOUNT OVERVIEW                                           */}
+          {/* ========================================================================= */}
           {activeTab === 'account' && (
-            <form onSubmit={handleProfileSubmit} className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2 flex items-center gap-2">
-                <User className="w-4 h-4 text-blue-500" /> Account Profile Parameters
-              </h3>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Full Name</label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Email Address</label>
-                  <input
-                    type="email"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Phone Number</label>
-                  <input
-                    type="text"
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Designation</label>
-                  <input
-                    type="text"
-                    value={designation}
-                    onChange={(e) => setDesignation(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Department</label>
-                  <input
-                    type="text"
-                    value={department}
-                    onChange={(e) => setDepartment(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Experience (Years)</label>
-                  <input
-                    type="number"
-                    value={experience}
-                    onChange={(e) => setExperience(Number(e.target.value))}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400">Key Skills (Comma Separated)</label>
-                <input
-                  type="text"
-                  placeholder="React, Java, Spring Boot, SQL"
-                  value={skills}
-                  onChange={(e) => setSkills(e.target.value)}
-                  className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
-                />
-              </div>
-
-              {/* Password update section inside Account Parameters */}
-              <div className="space-y-3 pt-2 border-t border-slate-200/30 dark:border-white/5">
-                <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400">Password</label>
-                  <div className="relative">
-                    <input
-                      type={showNewPass ? 'text' : 'password'}
-                      placeholder="••••••••"
-                      value={newPass}
-                      onChange={(e) => { setNewPass(e.target.value); setPassError(''); }}
-                      className="w-full pl-4 pr-11 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+            <div className="space-y-6 max-w-2xl">
+              {/* Profile Overview Hero Card */}
+              <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-blue-500/10 via-indigo-500/5 to-transparent border border-slate-200/60 dark:border-white/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div className="flex items-center gap-4 min-w-0">
+                  <div className="relative shrink-0">
+                    <img
+                      src={resolveAvatar(user?.profilePhoto, user?.name, user?.gender)}
+                      alt="Avatar"
+                      className="w-14 h-14 rounded-full object-cover ring-2 ring-blue-500/40 shadow-md"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPass(!showNewPass)}
-                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
-                      title={showNewPass ? 'Hide password' : 'Show password'}
-                    >
-                      {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
+                    <span className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4 className="text-base sm:text-lg font-black text-slate-900 dark:text-white truncate">
+                        {user?.name}
+                      </h4>
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 shrink-0">
+                        {formatRoleName(user?.role)}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5 truncate">
+                      {user?.designation || 'Software Engineer'} • {user?.department || 'Engineering'}
+                    </p>
+                    <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                      {user?.email}
+                    </p>
                   </div>
                 </div>
 
-                {passError && <p className="text-xs font-bold text-rose-500 mt-1">⚠️ {passError}</p>}
-              </div>
-
-              <button
-                type="submit"
-                disabled={saving}
-                className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md cursor-pointer transition-all flex items-center gap-2 disabled:opacity-60"
-              >
-                {saving ? (
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                ) : (
-                  <CheckCircle2 className="w-4 h-4 text-white" />
-                )}
-                <span>{saving ? 'Saving Parameters...' : 'Save Account Parameters'}</span>
-              </button>
-            </form>
-          )}
-
-          {/* ==================================== */}
-          {/* TAB 2: APPEARANCE & THEME PREFERENCES */}
-          {/* ==================================== */}
-          {activeTab === 'appearance' && (
-            <div className="space-y-6 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-purple-500" /> Theme Mode & Accent Customization
-              </h3>
-
-              {/* Theme Mode Selection */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400">Theme Mode</label>
-                <div className="grid grid-cols-3 gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('light')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      themeMode === 'light'
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-500 ring-2 ring-blue-500/20'
-                        : 'border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <Sun className="w-5 h-5 text-amber-500" /> Light Mode
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('dark')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      themeMode === 'dark'
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-500 ring-2 ring-blue-500/20'
-                        : 'border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <Moon className="w-5 h-5 text-indigo-400" /> Dark Mode
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => setThemeMode('system')}
-                    className={`p-3 rounded-xl border flex flex-col items-center gap-1.5 text-xs font-bold transition-all cursor-pointer ${
-                      themeMode === 'system'
-                        ? 'border-blue-500 bg-blue-500/10 text-blue-500 ring-2 ring-blue-500/20'
-                        : 'border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-700 dark:text-slate-300'
-                    }`}
-                  >
-                    <Monitor className="w-5 h-5 text-purple-400" /> System Default
-                  </button>
-                </div>
-              </div>
-
-              {/* Accent Color Palette */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 block">Accent Color Palette</label>
-                <div className="flex flex-wrap gap-3">
-                  {(['blue', 'purple', 'green', 'orange', 'red', 'teal'] as AccentColor[]).map((col) => {
-                    const preset = ACCENT_PRESETS[col];
-                    const isSelected = accentColor === col;
-                    return (
-                      <button
-                        key={col}
-                        type="button"
-                        onClick={() => setAccentColor(col)}
-                        className={`w-10 h-10 rounded-2xl flex items-center justify-center cursor-pointer transition-all transform hover:scale-110 shadow-md ${
-                          isSelected ? 'ring-4 ring-white/50 scale-110' : ''
-                        }`}
-                        style={{ backgroundColor: preset.color }}
-                        title={col.toUpperCase()}
-                      >
-                        {isSelected && <Check className="w-5 h-5 text-white font-black" />}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Display Density */}
-              <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 block">Display Density</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {(['compact', 'comfortable', 'spacious'] as DisplayDensity[]).map((d) => (
-                    <button
-                      key={d}
-                      type="button"
-                      onClick={() => setDisplayDensity(d)}
-                      className={`py-2 rounded-xl border text-xs font-bold capitalize transition-all cursor-pointer ${
-                        displayDensity === d
-                          ? 'bg-blue-600 text-white border-blue-500 shadow-md'
-                          : 'border-slate-200/50 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:bg-white/10'
-                      }`}
-                    >
-                      {d}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Sidebar State Preference */}
-              <div className="flex items-center justify-between p-3.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl">
-                <div>
-                  <p className="text-xs font-black text-slate-800 dark:text-white">Remember Sidebar State</p>
-                  <p className="text-[10px] text-slate-400 font-medium">Keep sidebar {sidebarExpanded ? 'expanded' : 'collapsed'} across sessions.</p>
-                </div>
                 <button
                   type="button"
-                  onClick={toggleSidebar}
-                  className={`w-12 h-6.5 rounded-full p-1 transition-colors duration-300 cursor-pointer ${sidebarExpanded ? 'bg-blue-600' : 'bg-slate-300 dark:bg-slate-800'}`}
+                  onClick={() => {
+                    setView('profile');
+                    window.history.pushState(null, '', '/profile');
+                  }}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shrink-0 flex items-center gap-1.5 cursor-pointer"
                 >
-                  <div className={`h-4.5 w-4.5 rounded-full bg-white transition-transform duration-300 ${sidebarExpanded ? 'translate-x-5.5' : ''}`}></div>
+                  <User className="w-3.5 h-3.5" /> Open Full Profile
                 </button>
               </div>
 
-              {/* Dashboard Preferences */}
-              <div className="space-y-3 pt-2">
-                <label className="text-[10px] font-black uppercase text-slate-400 block">Dashboard Widget Preferences</label>
-                <div className="space-y-2 text-xs font-semibold text-slate-700 dark:text-slate-300">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={dashboardPrefs.showWidgets}
-                      onChange={(e) => setDashboardPrefs({ showWidgets: e.target.checked })}
-                      className="rounded accent-blue-600"
-                    />
-                    <span>Show Overview Metric Widgets</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={dashboardPrefs.showStats}
-                      onChange={(e) => setDashboardPrefs({ showStats: e.target.checked })}
-                      className="rounded accent-blue-600"
-                    />
-                    <span>Show Real-time Statistics Charts</span>
-                  </label>
-
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={dashboardPrefs.showRecentActivity}
-                      onChange={(e) => setDashboardPrefs({ showRecentActivity: e.target.checked })}
-                      className="rounded accent-blue-600"
-                    />
-                    <span>Show Recent System Activity Stream</span>
-                  </label>
+              {/* Quick Contact & Parameter Edit Form */}
+              <form onSubmit={handleProfileSubmit} className="space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/5 pb-2">
+                  <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
+                    <User className="w-4 h-4 text-blue-500" /> Profile & Contact Parameters
+                  </h3>
+                  <span className="text-[10px] font-semibold text-slate-400">Synced across workspace</span>
                 </div>
-              </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Full Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Email Address</label>
+                    <input
+                      type="email"
+                      required
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Phone Number</label>
+                    <input
+                      type="text"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Designation</label>
+                    <input
+                      type="text"
+                      value={designation}
+                      onChange={(e) => setDesignation(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Department</label>
+                    <input
+                      type="text"
+                      value={department}
+                      onChange={(e) => setDepartment(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Experience (Years)</label>
+                    <input
+                      type="number"
+                      value={experience}
+                      onChange={(e) => setExperience(Number(e.target.value))}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 font-semibold text-xs"
+                    />
+                  </div>
+                </div>
+
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md cursor-pointer transition-all flex items-center gap-2 disabled:opacity-60"
+                  >
+                    {saving ? (
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    ) : (
+                      <Check className="w-4 h-4 text-white" />
+                    )}
+                    <span>{saving ? 'Saving...' : 'Save Profile Changes'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
+
+
 
           {/* ==================================== */}
           {/* TAB 3: SECURITY & 2FA */}
@@ -932,57 +765,88 @@ export default function Settings() {
             </div>
           )}
 
-          {/* ==================================== */}
-          {/* TAB 5: ADMIN SPECIFIC MODULES */}
-          {/* ==================================== */}
+          {/* ========================================================================= */}
+          {/* TAB 5: ADMIN SPECIFIC ORGANIZATION & HUB SHORTCUTS                        */}
+          {/* ========================================================================= */}
           {activeTab === 'organization' && isAdmin && (
-            <div className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2">Organization Configuration</h3>
-              <div className="space-y-3">
-                <input type="text" value={orgName} onChange={(e) => setOrgName(e.target.value)} className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 rounded-xl text-xs" />
-                <input type="text" value={orgIndustry} onChange={(e) => setOrgIndustry(e.target.value)} className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 rounded-xl text-xs" />
-                <input type="email" value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 rounded-xl text-xs" />
-                <button onClick={() => triggerSuccess('Organization config saved.')} className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl">Save Org Settings</button>
+            <div className="space-y-6 max-w-2xl">
+              <div className="space-y-4">
+                <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2 flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-amber-500" /> Organization Configuration
+                </h3>
+                <div className="space-y-3">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Organization Name</label>
+                    <input
+                      type="text"
+                      value={orgName}
+                      onChange={(e) => setOrgName(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Industry / Domain</label>
+                    <input
+                      type="text"
+                      value={orgIndustry}
+                      onChange={(e) => setOrgIndustry(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-400">Primary Contact Email</label>
+                    <input
+                      type="email"
+                      value={orgEmail}
+                      onChange={(e) => setOrgEmail(e.target.value)}
+                      className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs font-semibold text-slate-800 dark:text-white"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => triggerSuccess('Organization config saved.')}
+                    className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow cursor-pointer transition-all"
+                  >
+                    Save Org Settings
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
 
-          {activeTab === 'users' && isAdmin && (
-            <div className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2">User Directory & Permissions Quick Access</h3>
-              <p className="text-xs text-slate-400">Jump directly to the full user management control panel.</p>
-              <button onClick={() => setView('users')} className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer">
-                Open User Directory Module →
-              </button>
-            </div>
-          )}
+              {/* Admin Quick Module Access Tiles */}
+              <div className="pt-4 border-t border-slate-200/30 dark:border-white/5 space-y-3">
+                <h4 className="text-xs font-black uppercase tracking-wider text-slate-400">Admin Control Hub Shortcuts</h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setView('users')}
+                    className="p-3.5 rounded-xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-purple-500/40 text-left group transition-all cursor-pointer"
+                  >
+                    <Users className="w-5 h-5 text-purple-400 mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">User Directory</p>
+                    <p className="text-[10px] text-slate-400">Manage user accounts</p>
+                  </button>
 
-          {activeTab === 'roles' && isAdmin && (
-            <div className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2">Roles & Permissions Control</h3>
-              <p className="text-xs text-slate-400">Configure role access levels across all workspace modules.</p>
-              <button onClick={() => setView('roles')} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer">
-                Open Role & Permission Matrix →
-              </button>
-            </div>
-          )}
+                  <button
+                    type="button"
+                    onClick={() => setView('roles')}
+                    className="p-3.5 rounded-xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-blue-500/40 text-left group transition-all cursor-pointer"
+                  >
+                    <Shield className="w-5 h-5 text-blue-400 mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Roles Matrix</p>
+                    <p className="text-[10px] text-slate-400">Permission policies</p>
+                  </button>
 
-          {activeTab === 'audit' && isAdmin && (
-            <div className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2">System Audit Logs</h3>
-              <p className="text-xs text-slate-400">View real-time security events and admin activity logs.</p>
-              <button onClick={() => setView('audit-logs')} className="px-4 py-2 bg-gradient-to-r from-amber-600 to-orange-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer">
-                Open Audit Logs Hub →
-              </button>
-            </div>
-          )}
-
-          {/* Fallback for other tabs */}
-          {['notifications', 'data', 'team', 'projects', 'tasks', 'work', 'calendar', 'documents', 'time', 'email'].includes(activeTab) && (
-            <div className="space-y-4 max-w-xl">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2 capitalize">{activeTab} Settings</h3>
-              <p className="text-xs text-slate-400">Configure preferences and defaults for {activeTab}.</p>
-              <button onClick={() => triggerSuccess(`${activeTab.toUpperCase()} preferences saved.`)} className="px-4 py-2 bg-blue-600 text-white font-bold text-xs rounded-xl">Save Preferences</button>
+                  <button
+                    type="button"
+                    onClick={() => setView('audit-logs')}
+                    className="p-3.5 rounded-xl bg-white/5 border border-slate-200/50 dark:border-white/5 hover:border-amber-500/40 text-left group transition-all cursor-pointer"
+                  >
+                    <Activity className="w-5 h-5 text-amber-400 mb-2 group-hover:scale-110 transition-transform" />
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Audit Logs</p>
+                    <p className="text-[10px] text-slate-400">Security event feed</p>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
