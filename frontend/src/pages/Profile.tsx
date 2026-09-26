@@ -40,6 +40,55 @@ export default function Profile() {
   const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
+  // Live Workspace Task Metrics
+  const [taskMetrics, setTaskMetrics] = useState({
+    assigned: 0,
+    completed: 0,
+    pending: 0,
+    rate: 100,
+    loading: true
+  });
+
+  useEffect(() => {
+    let isMounted = true;
+    if (!user) return;
+
+    const fetchUserMetrics = async () => {
+      try {
+        const res = await api.get('/api/tasks');
+        const tasks = res.data || [];
+        const myTasks = tasks.filter((t: any) => 
+          t.assignee && (
+            t.assignee.id === user.id || 
+            (t.assignee.name && user.name && t.assignee.name.trim().toLowerCase() === user.name.trim().toLowerCase()) ||
+            (t.assignee.email && user.email && t.assignee.email.trim().toLowerCase() === user.email.trim().toLowerCase())
+          )
+        );
+        const completed = myTasks.filter((t: any) => t.status === 'COMPLETED' || t.status === 'DONE').length;
+        const total = myTasks.length;
+        const pending = total - completed;
+        const rate = total > 0 ? Math.round((completed / total) * 100) : 100;
+
+        if (isMounted) {
+          setTaskMetrics({
+            assigned: total,
+            completed,
+            pending,
+            rate,
+            loading: false
+          });
+        }
+      } catch (err) {
+        if (isMounted) {
+          setTaskMetrics(prev => ({ ...prev, loading: false }));
+        }
+      }
+    };
+
+    fetchUserMetrics();
+    return () => { isMounted = false; };
+  }, [user?.id, user?.name, user?.email]);
+
   if (!user) return <div className="text-center p-8">Loading profile...</div>;
 
   const skillsList = user.skills && user.skills.trim().length > 0
@@ -204,20 +253,12 @@ export default function Profile() {
                 <Shield className="w-3 h-3" />
                 {user.role?.replace('ROLE_', '') || 'MEMBER'}
               </span>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Verified
-              </span>
             </div>
 
             <p className="text-xs sm:text-sm lg:text-[15px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 flex-wrap">
               <span className="text-slate-900 dark:text-slate-100 font-extrabold">{cleanDesignation}</span>
               <span className="text-slate-300 dark:text-slate-700">•</span>
               <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{user.department || 'Engineering'}</span>
-            </p>
-
-            <p className="text-[11px] lg:text-xs text-slate-500 dark:text-slate-400 font-medium line-clamp-2 max-w-xl">
-              Enterprise workspace member managing agile workflows, task pipelines, and project deliverables.
             </p>
           </div>
         </div>
@@ -242,7 +283,7 @@ export default function Profile() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. 4-TILE METRICS BAR (Experience, Projects, Velocity, Reviews)            */}
+      {/* 2. REAL WORKSPACE METRICS BAR (Experience, Assigned, Completed, Rate)      */}
       {/* ========================================================================= */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {/* 1. Experience */}
@@ -252,7 +293,7 @@ export default function Profile() {
           </div>
           <div className="min-w-0">
             <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {user.experience || 5}y
+              {user.experience || 1}y
             </div>
             <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
               Experience
@@ -260,58 +301,58 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* 2. Projects */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+        {/* 2. Assigned Tasks */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-indigo-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
             <FolderGit2 className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              24
+              {taskMetrics.loading ? '—' : taskMetrics.assigned}
             </div>
             <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Projects
+              Assigned Tasks
             </div>
           </div>
         </div>
 
-        {/* 3. Velocity */}
+        {/* 3. Completed Tasks */}
+        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
+          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+            <CheckCircle className="w-5 h-5" />
+          </div>
+          <div className="min-w-0">
+            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              {taskMetrics.loading ? '—' : taskMetrics.completed}
+            </div>
+            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
+              Completed
+            </div>
+          </div>
+        </div>
+
+        {/* 4. Completion Rate */}
         <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-cyan-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
           <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
             <TrendingUp className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              98%
+              {taskMetrics.loading ? '—' : `${taskMetrics.rate}%`}
             </div>
             <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Velocity
-            </div>
-          </div>
-        </div>
-
-        {/* 4. Reviews */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-amber-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-amber-500/10 text-amber-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <Star className="w-5 h-5 fill-amber-500/20" />
-          </div>
-          <div className="min-w-0">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              15
-            </div>
-            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Reviews
+              Delivery Rate
             </div>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. OPTION A: FLUID CONTENT CARDS (Two-column responsive layout)            */}
+      {/* 3. WORKSPACE CONTENT (Channels & Skills Left, Bio & Activity Right)         */}
       {/* ========================================================================= */}
       <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
 
-        {/* ──── LEFT COLUMN (Quick Channels, Career Dossier, Technical Stack) ──── */}
+        {/* ──── LEFT COLUMN (Contact Channels & Technical Skills) ──── */}
         <div className="w-full lg:w-[340px] xl:w-[360px] lg:shrink-0 space-y-6">
 
           {/* Card: Direct Contact Channels */}
@@ -342,123 +383,103 @@ export default function Profile() {
               </a>
 
               {/* Phone */}
-              <div className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Phone className="w-4 h-4" />
+              {user.phone ? (
+                <a
+                  href={`tel:${user.phone}`}
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Phone</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user.phone}</p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Phone</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      {user.phone || '+1 (555) 019-2834'}
-                    </p>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                    Direct
+                  </span>
+                </a>
+              ) : (
+                <button
+                  type="button"
+                  onClick={handleOpenEdit}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 dark:bg-white/[0.01] border border-dashed border-slate-200 dark:border-white/10 hover:border-emerald-500/30 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all text-left cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center shrink-0">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-medium">+ Add phone number</span>
                   </div>
-                </div>
-                <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  Direct
-                </span>
-              </div>
+                  <Pencil className="w-3 h-3 text-slate-400 group-hover:text-emerald-500" />
+                </button>
+              )}
 
               {/* GitHub */}
-              <a
-                href={user.githubUrl ? (user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`) : 'https://github.com'}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Github className="w-4 h-4" />
+              {user.githubUrl ? (
+                <a
+                  href={user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Github className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GitHub</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {user.githubUrl.replace(/^https?:\/\//, '')}
+                      </p>
+                    </div>
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GitHub</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      {user.githubUrl ? user.githubUrl.replace(/^https?:\/\//, '') : 'github.com/developer'}
-                    </p>
-                  </div>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 shrink-0 transition-colors" />
-              </a>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 shrink-0 transition-colors" />
+                </a>
+              ) : null}
 
               {/* Portfolio */}
-              <a
-                href={user.portfolioUrl ? (user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`) : 'https://portfolio.dev'}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Globe className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Portfolio</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                      {user.portfolioUrl ? user.portfolioUrl.replace(/^https?:\/\//, '') : 'portfolio.dev'}
-                    </p>
-                  </div>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-500 shrink-0 transition-colors" />
-              </a>
-            </div>
-          </div>
-
-          {/* Card: Career Dossier (PDF) */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <FileText className="w-4 h-4 text-rose-500" /> Career Dossier (PDF)
-              </h3>
-              <span className="text-[10px] text-rose-500 dark:text-rose-400 font-bold uppercase tracking-wider bg-rose-500/10 px-2 py-0.5 rounded-md">
-                Verified
-              </span>
-            </div>
-
-            {user.resumeBase64 ? (
-              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-3">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center shrink-0">
-                    <FileText className="w-5 h-5" />
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-xs font-black text-slate-900 dark:text-white truncate">
-                      {user.resumeFileName || 'Resume_Document.pdf'}
-                    </p>
-                    <p className="text-[10px] text-slate-400 font-medium">Adobe Acrobat Document • PDF</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 pt-1">
-                  <button
-                    onClick={downloadResume}
-                    className="flex-1 py-2 px-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer shadow-sm transition-all"
-                  >
-                    <Download className="w-3.5 h-3.5" /> Download PDF
-                  </button>
-                  <button
-                    onClick={handleOpenEdit}
-                    className="py-2 px-3 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 rounded-xl text-xs font-bold flex items-center justify-center gap-1 cursor-pointer transition-colors"
-                  >
-                    <Pencil className="w-3.5 h-3.5" /> Replace
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-xl bg-slate-50/70 dark:bg-white/[0.02] border border-dashed border-slate-200 dark:border-white/10 text-center space-y-2.5">
-                <div className="w-10 h-10 rounded-xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
-                  <UploadCloud className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-700 dark:text-slate-200">No Resume Attached</p>
-                  <p className="text-[11px] text-slate-400 mt-0.5">Upload a PDF dossier for agile sprint leaders.</p>
-                </div>
-                <button
-                  onClick={handleOpenEdit}
-                  className="px-3.5 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/20 rounded-lg text-xs font-bold cursor-pointer transition-all inline-flex items-center gap-1.5"
+              {user.portfolioUrl ? (
+                <a
+                  href={user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
                 >
-                  <UploadCloud className="w-3.5 h-3.5" /> Attach Document
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Portfolio</p>
+                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
+                        {user.portfolioUrl.replace(/^https?:\/\//, '')}
+                      </p>
+                    </div>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-500 shrink-0 transition-colors" />
+                </a>
+              ) : null}
+
+              {/* If neither GitHub nor Portfolio is added, show quick add prompt */}
+              {!user.githubUrl && !user.portfolioUrl && (
+                <button
+                  type="button"
+                  onClick={handleOpenEdit}
+                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 dark:bg-white/[0.01] border border-dashed border-slate-200 dark:border-white/10 hover:border-blue-500/30 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all text-left cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center shrink-0">
+                      <Globe className="w-4 h-4" />
+                    </div>
+                    <span className="text-xs font-medium">+ Add GitHub or Portfolio</span>
+                  </div>
+                  <Pencil className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
                 </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Card: Technical Expertise & Stack */}
@@ -485,103 +506,88 @@ export default function Profile() {
           </div>
         </div>
 
-        {/* ──── RIGHT COLUMN (Bio Overview, Education, Milestone Badges) ──── */}
+        {/* ──── RIGHT COLUMN (Bio Overview & Workspace Task Activity) ──── */}
         <div className="flex-1 min-w-0 space-y-6">
 
-          {/* Card: About & Career Overview */}
+          {/* Card: About & Professional Overview */}
           <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
               <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Quote className="w-4 h-4 text-blue-500" /> About & Career Overview
+                <Quote className="w-4 h-4 text-blue-500" /> Professional Overview
               </h3>
-              <span className="text-[10px] text-blue-500 dark:text-blue-400 font-bold uppercase tracking-wider bg-blue-500/10 px-2 py-0.5 rounded-md">
-                Executive Bio
-              </span>
+              <button
+                type="button"
+                onClick={handleOpenEdit}
+                className="text-[10px] font-bold text-blue-500 hover:text-blue-600 cursor-pointer flex items-center gap-1"
+              >
+                <Pencil className="w-3 h-3" /> Edit Bio
+              </button>
             </div>
 
             <div className="relative pl-4 border-l-2 border-blue-500/70 py-1">
               <p className="text-sm sm:text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                {user.bio || "Passionate full-stack developer committed to architecting resilient, user-centric web applications and agile workflows. Specializing in high-performance cloud ecosystems and collaborative engineering."}
+                {user.bio || "No summary provided yet. Click 'Edit Bio' to share your key engineering responsibilities and project focus."}
               </p>
             </div>
           </div>
 
-          {/* Card: Education & Credentials */}
+          {/* Card: Workspace Task & Delivery Performance (100% Real Live Data) */}
           <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
               <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <GraduationCap className="w-4 h-4 text-emerald-500" /> Education & Credentials
+                <Briefcase className="w-4 h-4 text-indigo-500" /> Workspace Task Activity
               </h3>
-              <span className="text-[10px] text-emerald-500 dark:text-emerald-400 font-bold uppercase tracking-wider bg-emerald-500/10 px-2 py-0.5 rounded-md">
-                Verified
+              <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-md">
+                Live Status
               </span>
             </div>
 
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
-                <GraduationCap className="w-6 h-6" />
-              </div>
-              <div className="min-w-0 flex-1 space-y-1">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                    {user.education ? user.education.split('\n')[0] : "Bachelor of Science in Computer Science & Engineering (B.Tech / B.S.)"}
-                  </h4>
-                  <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-white/5 px-2 py-0.5 rounded-md">
-                    First Class Distinction
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+              {/* Completed Tasks */}
+              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed Tasks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
+                    {taskMetrics.loading ? '—' : taskMetrics.completed}
                   </span>
+                  <span className="text-xs text-slate-400 font-medium">delivered</span>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
-                  {user.education && user.education.includes('\n') 
-                    ? user.education.split('\n').slice(1).join('\n')
-                    : "Specialization in Distributed Systems, Full-Stack Architecture, and Agile Software Methodologies."}
-                </p>
+              </div>
+
+              {/* Ongoing Tasks */}
+              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ongoing / Active</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
+                    {taskMetrics.loading ? '—' : taskMetrics.pending}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">in progress</span>
+                </div>
+              </div>
+
+              {/* Total Assigned */}
+              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tasks</p>
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
+                    {taskMetrics.loading ? '—' : taskMetrics.assigned}
+                  </span>
+                  <span className="text-xs text-slate-400 font-medium">assigned</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* Card: Milestone Badges */}
-          <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Award className="w-4 h-4 text-violet-500" /> Milestone Badges & Achievements
-              </h3>
-              <span className="text-[10px] text-violet-500 dark:text-violet-400 font-bold uppercase tracking-wider bg-violet-500/10 px-2 py-0.5 rounded-md">
-                3 Earned
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-              {/* Badge 1 */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-indigo-500/40 hover:bg-indigo-500/5 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-indigo-500/15 text-indigo-500 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <h4 className="text-xs font-black text-slate-900 dark:text-white">Tech Lead Certified</h4>
-                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-snug">
-                  Excellence in sprint architecture and technical direction.
-                </p>
+            {/* Task Delivery Progress Bar */}
+            <div className="space-y-1.5 pt-2">
+              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
+                <span>Task Delivery Velocity</span>
+                <span className="text-emerald-500 font-extrabold">{taskMetrics.rate}%</span>
               </div>
-
-              {/* Badge 2 */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-yellow-500/40 hover:bg-yellow-500/5 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-yellow-500/15 text-yellow-500 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                  <Star className="w-5 h-5 fill-current" />
-                </div>
-                <h4 className="text-xs font-black text-slate-900 dark:text-white">Prologue Pioneer</h4>
-                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-snug">
-                  Assigned to first 3 SaaS enterprise projects.
-                </p>
-              </div>
-
-              {/* Badge 3 */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-500 flex items-center justify-center mb-2.5 group-hover:scale-110 transition-transform">
-                  <CheckCircle className="w-5 h-5" />
-                </div>
-                <h4 className="text-xs font-black text-slate-900 dark:text-white">Milestones Master</h4>
-                <p className="text-[11px] text-slate-400 font-medium mt-1 leading-snug">
-                  Successfully finished 25+ sprint subtasks.
-                </p>
+              <div className="w-full h-2 rounded-full bg-slate-200/70 dark:bg-white/10 overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.max(5, Math.min(100, taskMetrics.rate))}%` }}
+                />
               </div>
             </div>
           </div>
