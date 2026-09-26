@@ -23,6 +23,7 @@ import {
   X
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { formatRoleName } from '../services/authRoles';
 import {
   useStepVerificationStore,
   TaskStep,
@@ -403,7 +404,7 @@ export default function StepVerificationDashboard() {
                 />
                 <div className="flex items-center justify-between">
                   <h4 className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>{log.actorName} ({log.actorRole.replace('ROLE_', '')})</span>
+                    <span>{log.actorName} ({formatRoleName(log.actorRole, 'title')})</span>
                     <span className="text-[9px] font-extrabold px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded uppercase">
                       {log.action.replace('_', ' ')}
                     </span>

@@ -5,7 +5,7 @@ import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, 
 import api from '../services/api';
 import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 import { useAuthStore } from '../store/useAuthStore';
-import { normalizeRole } from '../services/authRoles';
+import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 
 interface TeamMember {
@@ -378,7 +378,7 @@ export default function Teams() {
                 </span>
                 
                 <span className="flex items-center gap-1 flex-shrink-0">
-                  <Shield className="w-3.5 h-3.5 text-blue-500" /> {member.role.replace('ROLE_', '')}
+                  <Shield className="w-3.5 h-3.5 text-blue-500" /> {formatRoleName(member.role, 'title')}
                 </span>
               </div>
             </div>
@@ -633,7 +633,7 @@ export default function Teams() {
                       className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs cursor-pointer appearance-none"
                     >
                       <option className="dark:bg-slate-800" value="ROLE_EMPLOYEE">Employee</option>
-                      <option className="dark:bg-slate-800" value="ROLE_MANAGER">Manager</option>
+                      <option className="dark:bg-slate-800" value="ROLE_MANAGER">Team Lead</option>
                       <option className="dark:bg-slate-800" value="ROLE_ADMIN">Admin</option>
                     </select>
                   </div>
@@ -738,7 +738,7 @@ export default function Teams() {
                 </div>
                 <div className="flex justify-between border-b border-slate-200/30 dark:border-white/5 pb-2">
                   <span className="text-slate-400">Role level</span>
-                  <span className="text-blue-500">{viewingMember.role.replace('ROLE_', '')}</span>
+                  <span className="text-blue-500">{formatRoleName(viewingMember.role, 'title')}</span>
                 </div>
                 {viewingMember.experience !== undefined && (
                   <div className="flex justify-between border-b border-slate-200/30 dark:border-white/5 pb-2">

@@ -23,6 +23,7 @@ import {
   ChatMessage,
   useCommunicationStore
 } from '../../store/useCommunicationStore';
+import { formatRoleName } from '../../services/authRoles';
 
 interface DetailsPanelProps {
   isOpen: boolean;
@@ -118,7 +119,7 @@ export default function ConversationDetailsPanel({
               </div>
               <h3 className="text-base font-black tracking-tight">{contact?.name || 'Teammate'}</h3>
               <p className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mt-0.5">
-                {contact?.role?.replace('ROLE_', '') || 'Employee'}
+                {formatRoleName(contact?.role, 'title') || 'Employee'}
               </p>
               <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
                 {contact?.email || ''}
@@ -252,7 +253,7 @@ export default function ConversationDetailsPanel({
                         </div>
                         <div className="truncate">
                           <p className="text-xs font-black truncate">{m.name}</p>
-                          <p className="text-[9px] text-slate-400 font-semibold">{m.designation || m.role.replace('ROLE_', '')}</p>
+                          <p className="text-[9px] text-slate-400 font-semibold">{m.designation || formatRoleName(m.role, 'title')}</p>
                         </div>
                       </div>
                       <span className="text-[9px] font-extrabold px-1.5 py-0.5 bg-blue-500/10 text-blue-500 rounded-md uppercase">

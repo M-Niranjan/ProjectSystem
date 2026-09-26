@@ -141,7 +141,7 @@ Clearly specify what user pain point this feature solves, why it matters now, an
 ## 1. Meeting Details
 - **Date**: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 - **Time**: 10:00 AM - 11:30 AM IST
-- **Chairperson**: Vinay (Project Manager)
+- **Chairperson**: Vinay (Team Lead)
 - **Attendees**: Engineering Leads, Product Designers, QA Specialists
 
 ## 2. Agenda Items Discussed

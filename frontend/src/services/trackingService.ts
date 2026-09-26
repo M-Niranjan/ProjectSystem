@@ -1,5 +1,6 @@
 import api from './api';
 import { WorkloadLevel, BlockerItem, ActivityEvent, EmployeeProfileData } from '../store/useTrackingStore';
+import { formatRoleName } from './authRoles';
 
 // Initial mock blockers database to persist reported blockers
 let MOCK_BLOCKERS: BlockerItem[] = [];
@@ -83,7 +84,7 @@ export async function getTrackingOverviewData() {
         id: emp.id,
         name: emp.name,
         role: emp.role,
-        designation: emp.designation || emp.role?.replace('ROLE_', '') || 'Software Engineer',
+        designation: emp.designation || formatRoleName(emp.role, 'title') || 'Software Engineer',
         department: emp.department || 'Engineering',
         profilePhoto: emp.profilePhoto,
         assignedTasksCount: total,

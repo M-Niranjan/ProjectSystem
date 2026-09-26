@@ -5,7 +5,7 @@ import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, C
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
-import { normalizeRole } from '../services/authRoles';
+import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 
 const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
@@ -238,7 +238,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             )}
           </h1>
           <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-            Welcome back, <span className="text-slate-900 dark:text-white font-bold">{user?.name}</span>! Roles: <span className="font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">{user?.role.replace('ROLE_', '')}</span>
+            Welcome back, <span className="text-slate-900 dark:text-white font-bold">{user?.name}</span>! Roles: <span className="font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">{formatRoleName(user?.role)}</span>
           </p>
         </div>
 

@@ -25,6 +25,7 @@ import {
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { formatRoleName } from '../services/authRoles';
 
 interface Task {
   id: number;
@@ -633,7 +634,7 @@ export default function Tasks() {
                       <h3 className="text-sm font-black text-slate-900 dark:text-white flex items-center gap-2">
                         {member.name}
                         <span className="text-[10px] font-extrabold px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-md uppercase">
-                          {member.designation || member.role.replace('ROLE_', '')}
+                          {member.designation || formatRoleName(member.role, 'title')}
                         </span>
                       </h3>
                       <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
@@ -984,7 +985,7 @@ export default function Tasks() {
                     />
                     <div className="text-left">
                       <p className="font-black group-hover:text-blue-500 transition-colors">{member.name}</p>
-                      <p className="text-[9.5px] text-slate-400 font-semibold">{member.designation || member.role.replace('ROLE_', '')}</p>
+                      <p className="text-[9.5px] text-slate-400 font-semibold">{member.designation || formatRoleName(member.role, 'title')}</p>
                     </div>
                   </div>
                   <span className="text-[10px] font-black px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-lg">

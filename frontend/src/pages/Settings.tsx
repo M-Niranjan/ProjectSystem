@@ -8,6 +8,7 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore, AccentColor, DisplayDensity, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { formatRoleName } from '../services/authRoles';
 
 export default function Settings() {
   const { user, updateProfile } = useAuthStore();
@@ -210,7 +211,7 @@ export default function Settings() {
       <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${mobileDetailOpen ? 'hidden md:flex' : 'flex'}`}>
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
-            <SettingsIcon className="w-6 h-6 text-blue-500" /> {user?.role.replace('ROLE_', '')} Settings
+            <SettingsIcon className="w-6 h-6 text-blue-500" /> {formatRoleName(user?.role, 'title')} Settings
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Role-specific system settings, security rules, appearance themes, and integration parameters.
@@ -218,7 +219,7 @@ export default function Settings() {
         </div>
 
         <span className="text-xs font-extrabold px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full border border-blue-500/20 self-start sm:self-auto">
-          Role: {user?.role}
+          Role: {formatRoleName(user?.role)}
         </span>
       </div>
 

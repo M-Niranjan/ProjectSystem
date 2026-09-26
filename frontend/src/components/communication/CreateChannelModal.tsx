@@ -5,6 +5,7 @@ import * as z from 'zod';
 import { X, Hash, Lock, Users, Shield, Plus, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ContactItem } from '../../store/useCommunicationStore';
+import { formatRoleName } from '../../services/authRoles';
 
 const channelSchema = z.object({
   name: z.string()
@@ -204,7 +205,7 @@ export default function CreateChannelModal({
                             {member.name.charAt(0)}
                           </span>
                           <span>{member.name}</span>
-                          <span className="text-[10px] opacity-60 font-semibold">({member.role.replace('ROLE_', '')})</span>
+                          <span className="text-[10px] opacity-60 font-semibold">({formatRoleName(member.role, 'title')})</span>
                         </div>
                         {isSelected && <Check className="w-4 h-4 text-blue-500" />}
                       </div>

@@ -43,6 +43,7 @@ import { supabase } from '../services/supabase';
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
+import { formatRoleName } from '../services/authRoles';
 import {
   useCommunicationStore,
   ChatMessage,
@@ -687,7 +688,7 @@ export default function Messages() {
                           <div className="text-left truncate">
                             <span className="truncate block font-extrabold">{contact.name}</span>
                             <span className={`text-[10px] block truncate font-normal ${isActive ? 'text-blue-100' : 'text-slate-400'}`}>
-                              {contact.role?.replace('ROLE_', '') || 'Member'}
+                              {formatRoleName(contact.role, 'title') || 'Member'}
                             </span>
                           </div>
                         </div>
@@ -715,7 +716,7 @@ export default function Messages() {
               />
               <div className="truncate">
                 <p className="text-xs font-black text-slate-800 dark:text-white truncate">{user.name}</p>
-                <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{user.role?.replace('ROLE_', '')}</p>
+                <p className="text-[9px] font-extrabold text-blue-600 dark:text-blue-400 uppercase tracking-wider">{formatRoleName(user.role)}</p>
               </div>
             </div>
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 shrink-0" title="Online & Connected" />
@@ -911,7 +912,7 @@ export default function Messages() {
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{msg.sender.name}</span>
                         {msg.sender.role && (
                           <span className="text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md bg-blue-500/10 text-blue-500">
-                            {msg.sender.role.replace('ROLE_', '')}
+                            {formatRoleName(msg.sender.role, 'title')}
                           </span>
                         )}
                       </div>

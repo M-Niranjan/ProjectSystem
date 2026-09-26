@@ -1,4 +1,5 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
+import { formatRoleName } from '../services/authRoles';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -312,7 +313,7 @@ export default function Sidebar() {
                 />
                 <div className="truncate flex-1">
                   <p className={`text-[13.5px] font-bold truncate ${location.pathname === '/profile' ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-zinc-100'}`}>{user.name}</p>
-                  <p className="text-[10.5px] uppercase tracking-wider font-mono truncate font-semibold text-slate-500 dark:text-zinc-400">{user.role.replace('ROLE_', '')}</p>
+                  <p className="text-[10.5px] uppercase tracking-wider font-mono truncate font-semibold text-slate-500 dark:text-zinc-400">{formatRoleName(user.role)}</p>
                 </div>
               </button>
             ) : (
@@ -331,7 +332,7 @@ export default function Sidebar() {
                   className="w-9 h-9 rounded-lg object-cover ring-1 ring-white/10 hover:ring-2 hover:ring-cyan-500 transition-all"
                 />
                 <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
-                  {user.name} ({user.role.replace('ROLE_', '')})
+                  {user.name} ({formatRoleName(user.role, 'title')})
                 </div>
               </button>
             )
