@@ -32,6 +32,7 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useScrollLock } from '../hooks/useScrollLock';
 
 interface SidebarItem {
   name: string;
@@ -79,7 +80,7 @@ export default function Sidebar() {
   const location = useLocation();
   const { user, logout } = useAuthStore();
   const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
-  const [isMobile, setIsMobile] = useState(false);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -90,6 +91,9 @@ export default function Sidebar() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Lock background dashboard scroll when mobile sidebar drawer is open to keep background 100% constant
+  useScrollLock(isMobile && sidebarExpanded);
 
   const adminMenuItems: SidebarItem[] = [
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
@@ -155,17 +159,26 @@ export default function Sidebar() {
       {isMobile && sidebarExpanded && (
         <div 
           onClick={toggleSidebar} 
-          className="fixed inset-0 bg-black/50 backdrop-blur-xs z-30 transition-opacity duration-200"
+          onTouchMove={(e) => {
+            if (e.cancelable) e.preventDefault();
+          }}
+          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-40 transition-opacity duration-200 touch-none overscroll-none select-none"
         />
       )}
 
       <motion.aside
         animate={
           isMobile
-            ? { x: sidebarExpanded ? 0 : -270, width: 270 }
+            ? { x: sidebarExpanded ? 0 : -280, width: 280 }
             : { x: 0, width: sidebarExpanded ? 270 : 76 }
         }
         onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => {
+          const target = e.target as HTMLElement | null;
+          if (!target?.closest('.sidebar-scrollable-nav')) {
+            if (e.cancelable) e.preventDefault();
+          }
+        }}
         className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden overscroll-contain select-none ${
           isMobile ? 'z-50 h-full' : 'z-30 h-screen'
         }`}
@@ -223,7 +236,7 @@ export default function Sidebar() {
           )}
 
           {/* Menu Navigation Items */}
-          <nav className="px-3 space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto overscroll-contain">
+          <nav className="sidebar-scrollable-nav px-3 space-y-2 max-h-[calc(100vh-230px)] overflow-y-auto overscroll-contain">
             {allowedItems.map((item) => {
               const Icon = item.icon;
               const targetPath = item.view === 'dashboard'
