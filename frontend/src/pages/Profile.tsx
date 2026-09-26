@@ -230,32 +230,31 @@ export default function Profile() {
       {/* ========================================================================= */}
       {/* 1. HORIZONTAL IDENTITY HEADER (Photo Left, Name & Details Right)           */}
       {/* ========================================================================= */}
-      <div className="pb-6 border-b border-slate-200/60 dark:border-white/10 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="pb-6 border-b border-slate-200/40 dark:border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-5">
         {/* Left: Avatar + Identification & Stats */}
-        <div className="flex flex-row items-start gap-4 sm:gap-5 min-w-0 flex-1">
-          <div className="relative group shrink-0">
-            <div className="w-16 h-16 sm:w-20 sm:h-20 lg:w-24 lg:h-24 rounded-2xl overflow-hidden ring-2 sm:ring-4 ring-blue-500/25 dark:ring-blue-500/35 shadow-lg transition-transform duration-300 group-hover:scale-105">
+        <div className="flex items-center gap-4 sm:gap-5 min-w-0 flex-1">
+          <div className="relative shrink-0">
+            <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full overflow-hidden ring-2 ring-cyan-500/35 shadow-lg shadow-cyan-500/10">
               <img
                 src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                 alt="Profile"
                 className="w-full h-full object-cover"
               />
             </div>
-            <span className="absolute bottom-0.5 right-0.5 w-3.5 h-3.5 lg:w-4 lg:h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0a0b0f] ring-2 ring-emerald-500/40 animate-pulse" title="Active in Workspace" />
+            <span className="absolute bottom-0 right-0 w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full bg-emerald-500 border-2 border-white dark:border-[#0a0b0f] ring-2 ring-emerald-500/40 animate-pulse" title="Active in Workspace" />
           </div>
 
-          <div className="space-y-1.5 min-w-0 flex-1">
+          <div className="space-y-1 min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
               <h1 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tight text-slate-900 dark:text-white truncate">
                 {user.name}
               </h1>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0 flex items-center gap-1">
-                <Shield className="w-3 h-3" />
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
                 {user.role?.replace('ROLE_', '') || 'MEMBER'}
               </span>
             </div>
 
-            <p className="text-xs sm:text-sm lg:text-[15px] font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 flex-wrap">
+            <p className="text-xs sm:text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2 flex-wrap">
               <span className="text-slate-900 dark:text-slate-100 font-extrabold">{cleanDesignation}</span>
               <span className="text-slate-300 dark:text-slate-700">•</span>
               <span className="text-cyan-600 dark:text-cyan-400 font-semibold">{user.department || 'Engineering'}</span>
@@ -264,17 +263,17 @@ export default function Profile() {
         </div>
 
         {/* Right: Actions */}
-        <div className="flex items-center gap-2.5 shrink-0 pt-1 md:pt-0 w-full sm:w-auto">
+        <div className="flex items-center gap-2.5 shrink-0 pt-1 sm:pt-0">
           <button
             onClick={handleOpenEdit}
-            className="flex-1 sm:flex-none justify-center px-4 py-2.5 lg:px-5 lg:py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+            className="px-4 py-2 sm:px-5 sm:py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-full font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0"
           >
             <Pencil className="w-3.5 h-3.5" /> Edit Profile
           </button>
           {user.resumeBase64 && (
             <button
               onClick={downloadResume}
-              className="flex-1 sm:flex-none justify-center px-4 py-2.5 lg:px-5 lg:py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/10 text-slate-800 dark:text-white rounded-xl font-bold text-xs flex items-center gap-2 cursor-pointer transition-all hover:-translate-y-0.5 active:translate-y-0"
+              className="px-4 py-2 sm:px-5 sm:py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/10 border border-slate-200/60 dark:border-white/10 text-slate-800 dark:text-white rounded-full font-bold text-xs flex items-center gap-2 cursor-pointer transition-all"
             >
               <Download className="w-3.5 h-3.5 text-rose-500" /> Resume
             </button>
@@ -283,314 +282,295 @@ export default function Profile() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. REAL WORKSPACE METRICS BAR (Experience, Assigned, Completed, Rate)      */}
+      {/* 2. SEAMLESS STAT ROW (NO BOXES — Clean Hairline Dividers)                  */}
       {/* ========================================================================= */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-        {/* 1. Experience */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-blue-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <Clock className="w-5 h-5" />
+      <div className="py-4 border-b border-slate-200/40 dark:border-white/10 grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-0">
+        {/* Stat 1: Experience */}
+        <div className="flex items-center gap-3 md:pr-6 md:border-r border-slate-200/40 dark:border-white/10">
+          <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0">
+            <Clock className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {user.experience || 1}y
+            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              {user.experience || 1} Yrs
             </div>
-            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
               Experience
             </div>
           </div>
         </div>
 
-        {/* 2. Assigned Tasks */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-indigo-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <FolderGit2 className="w-5 h-5" />
+        {/* Stat 2: Active Tasks */}
+        <div className="flex items-center gap-3 md:px-6 md:border-r border-slate-200/40 dark:border-white/10">
+          <div className="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0">
+            <FolderGit2 className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-              {taskMetrics.loading ? '—' : taskMetrics.assigned}
+            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
+              {taskMetrics.loading ? '—' : taskMetrics.pending}
             </div>
-            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Assigned Tasks
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              Active Tasks
             </div>
           </div>
         </div>
 
-        {/* 3. Completed Tasks */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-emerald-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <CheckCircle className="w-5 h-5" />
+        {/* Stat 3: Tasks Done */}
+        <div className="flex items-center gap-3 md:px-6 md:border-r border-slate-200/40 dark:border-white/10">
+          <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0">
+            <CheckCircle className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               {taskMetrics.loading ? '—' : taskMetrics.completed}
             </div>
-            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Completed
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              Tasks Done ({taskMetrics.rate}%)
             </div>
           </div>
         </div>
 
-        {/* 4. Completion Rate */}
-        <div className="glass-panel p-4 rounded-2xl border border-slate-200/60 dark:border-white/10 hover:border-cyan-500/40 transition-all flex items-center gap-3.5 group shadow-sm">
-          <div className="w-11 h-11 rounded-xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-            <TrendingUp className="w-5 h-5" />
+        {/* Stat 4: Velocity */}
+        <div className="flex items-center gap-3 md:pl-6">
+          <div className="w-10 h-10 rounded-full bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0">
+            <TrendingUp className="w-4 h-4" />
           </div>
           <div className="min-w-0">
-            <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
               {taskMetrics.loading ? '—' : `${taskMetrics.rate}%`}
             </div>
-            <div className="text-[10px] sm:text-xs font-bold uppercase tracking-wider text-slate-400">
-              Delivery Rate
+            <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+              Velocity
             </div>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. WORKSPACE CONTENT (Channels & Skills Left, Bio & Activity Right)         */}
+      {/* 3. DIRECT CONTACT & REACH CHANNELS (Boxless Fluid Floating Row)           */}
       {/* ========================================================================= */}
-      <div className="flex flex-col lg:flex-row gap-6 lg:gap-8">
-
-        {/* ──── LEFT COLUMN (Contact Channels & Technical Skills) ──── */}
-        <div className="w-full lg:w-[340px] xl:w-[360px] lg:shrink-0 space-y-6">
-
-          {/* Card: Direct Contact Channels */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Phone className="w-4 h-4 text-emerald-500" /> Contact Channels
-              </h3>
-              <span className="text-[10px] text-slate-400 font-semibold">Direct Reach</span>
-            </div>
-
-            <div className="space-y-2.5">
-              {/* Email */}
-              <a
-                href={`mailto:${user.email}`}
-                className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-blue-500/40 hover:bg-blue-500/5 transition-all group"
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                    <Mail className="w-4 h-4" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Email</p>
-                    <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user.email}</p>
-                  </div>
-                </div>
-                <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 shrink-0 transition-colors" />
-              </a>
-
-              {/* Phone */}
-              {user.phone ? (
-                <a
-                  href={`tel:${user.phone}`}
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Phone</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">{user.phone}</p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                    Direct
-                  </span>
-                </a>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleOpenEdit}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 dark:bg-white/[0.01] border border-dashed border-slate-200 dark:border-white/10 hover:border-emerald-500/30 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all text-left cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center shrink-0">
-                      <Phone className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-medium">+ Add phone number</span>
-                  </div>
-                  <Pencil className="w-3 h-3 text-slate-400 group-hover:text-emerald-500" />
-                </button>
-              )}
-
-              {/* GitHub */}
-              {user.githubUrl ? (
-                <a
-                  href={user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-violet-500/40 hover:bg-violet-500/5 transition-all group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <Github className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GitHub</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                        {user.githubUrl.replace(/^https?:\/\//, '')}
-                      </p>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 shrink-0 transition-colors" />
-                </a>
-              ) : null}
-
-              {/* Portfolio */}
-              {user.portfolioUrl ? (
-                <a
-                  href={user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Portfolio</p>
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                        {user.portfolioUrl.replace(/^https?:\/\//, '')}
-                      </p>
-                    </div>
-                  </div>
-                  <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-500 shrink-0 transition-colors" />
-                </a>
-              ) : null}
-
-              {/* If neither GitHub nor Portfolio is added, show quick add prompt */}
-              {!user.githubUrl && !user.portfolioUrl && (
-                <button
-                  type="button"
-                  onClick={handleOpenEdit}
-                  className="w-full flex items-center justify-between p-2.5 rounded-xl bg-slate-50/50 dark:bg-white/[0.01] border border-dashed border-slate-200 dark:border-white/10 hover:border-blue-500/30 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 transition-all text-left cursor-pointer group"
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-400 flex items-center justify-center shrink-0">
-                      <Globe className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-medium">+ Add GitHub or Portfolio</span>
-                  </div>
-                  <Pencil className="w-3 h-3 text-slate-400 group-hover:text-blue-500" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Card: Technical Expertise & Stack */}
-          <div className="glass-panel p-5 sm:p-6 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Zap className="w-4 h-4 text-amber-500" /> Technical Stack & Skills
-              </h3>
-              <span className="text-[10px] text-amber-500 dark:text-amber-400 font-bold uppercase tracking-wider bg-amber-500/10 px-2 py-0.5 rounded-md">
-                {skillsList.length} Skills
-              </span>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              {skillsList.map((skill, idx) => (
-                <span
-                  key={idx}
-                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-white/5 text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5 hover:text-blue-600 dark:hover:text-blue-400 transition-all cursor-default"
-                >
-                  {skill}
-                </span>
-              ))}
-            </div>
-          </div>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+            <Phone className="w-3.5 h-3.5 text-emerald-500" /> Direct Channels
+          </span>
+          <span className="text-[10px] text-slate-400 font-semibold">Immediate Reach</span>
         </div>
 
-        {/* ──── RIGHT COLUMN (Bio Overview & Workspace Task Activity) ──── */}
-        <div className="flex-1 min-w-0 space-y-6">
-
-          {/* Card: About & Professional Overview */}
-          <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Quote className="w-4 h-4 text-blue-500" /> Professional Overview
-              </h3>
-              <button
-                type="button"
-                onClick={handleOpenEdit}
-                className="text-[10px] font-bold text-blue-500 hover:text-blue-600 cursor-pointer flex items-center gap-1"
-              >
-                <Pencil className="w-3 h-3" /> Edit Bio
-              </button>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          {/* Email */}
+          <a
+            href={`mailto:${user.email}`}
+            className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-slate-200/50 dark:border-white/5 transition-all group min-h-[52px]"
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-10 h-10 rounded-full bg-blue-500/10 text-blue-500 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-blue-500/20 transition-all">
+                <Mail className="w-4 h-4" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Email</p>
+                <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.email}</p>
+              </div>
             </div>
+            <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-500 shrink-0 transition-colors ml-2" />
+          </a>
 
-            <div className="relative pl-4 border-l-2 border-blue-500/70 py-1">
-              <p className="text-sm sm:text-[15px] text-slate-700 dark:text-slate-300 leading-relaxed font-medium">
-                {user.bio || "No summary provided yet. Click 'Edit Bio' to share your key engineering responsibilities and project focus."}
-              </p>
-            </div>
-          </div>
-
-          {/* Card: Workspace Task & Delivery Performance (100% Real Live Data) */}
-          <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-200/60 dark:border-white/10 shadow-sm space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-200/60 dark:border-white/5">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Briefcase className="w-4 h-4 text-indigo-500" /> Workspace Task Activity
-              </h3>
-              <span className="text-[10px] text-indigo-500 dark:text-indigo-400 font-bold uppercase tracking-wider bg-indigo-500/10 px-2 py-0.5 rounded-md">
-                Live Status
+          {/* Phone */}
+          {user.phone ? (
+            <a
+              href={`tel:${user.phone}`}
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-slate-200/50 dark:border-white/5 transition-all group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-emerald-500/20 transition-all">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Phone / Call</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">{user.phone}</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full shrink-0 ml-2">
+                Direct
               </span>
-            </div>
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenEdit}
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/40 hover:bg-slate-100/80 dark:bg-white/[0.015] dark:hover:bg-white/[0.04] border border-dashed border-slate-300 dark:border-white/10 transition-all text-left cursor-pointer group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 text-emerald-500/60 flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-emerald-500 transition-colors">+ Add Phone</span>
+              </div>
+              <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover:text-emerald-500 ml-2" />
+            </button>
+          )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
-              {/* Completed Tasks */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completed Tasks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400">
-                    {taskMetrics.loading ? '—' : taskMetrics.completed}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">delivered</span>
+          {/* GitHub */}
+          {user.githubUrl ? (
+            <a
+              href={user.githubUrl.startsWith('http') ? user.githubUrl : `https://${user.githubUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-slate-200/50 dark:border-white/5 transition-all group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-violet-500/10 text-violet-500 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-violet-500/20 transition-all">
+                  <Github className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">GitHub</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {user.githubUrl.replace(/^https?:\/\//, '')}
+                  </p>
                 </div>
               </div>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 shrink-0 transition-colors ml-2" />
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenEdit}
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/40 hover:bg-slate-100/80 dark:bg-white/[0.015] dark:hover:bg-white/[0.04] border border-dashed border-slate-300 dark:border-white/10 transition-all text-left cursor-pointer group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-violet-500/10 text-violet-500/60 flex items-center justify-center shrink-0">
+                  <Github className="w-4 h-4" />
+                </div>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-violet-500 transition-colors">+ Add GitHub</span>
+              </div>
+              <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover:text-violet-500 ml-2" />
+            </button>
+          )}
 
-              {/* Ongoing Tasks */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Ongoing / Active</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-blue-600 dark:text-blue-400">
-                    {taskMetrics.loading ? '—' : taskMetrics.pending}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">in progress</span>
+          {/* Portfolio */}
+          {user.portfolioUrl ? (
+            <a
+              href={user.portfolioUrl.startsWith('http') ? user.portfolioUrl : `https://${user.portfolioUrl}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/70 hover:bg-slate-100/90 dark:bg-white/[0.03] dark:hover:bg-white/[0.06] border border-slate-200/50 dark:border-white/5 transition-all group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-500 flex items-center justify-center shrink-0 group-hover:scale-105 group-hover:bg-cyan-500/20 transition-all">
+                  <Globe className="w-4 h-4" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider">Portfolio</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                    {user.portfolioUrl.replace(/^https?:\/\//, '')}
+                  </p>
                 </div>
               </div>
-
-              {/* Total Assigned */}
-              <div className="p-4 rounded-xl bg-slate-50/50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 space-y-1">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Tasks</p>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-black text-slate-800 dark:text-slate-100">
-                    {taskMetrics.loading ? '—' : taskMetrics.assigned}
-                  </span>
-                  <span className="text-xs text-slate-400 font-medium">assigned</span>
+              <ExternalLink className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-500 shrink-0 transition-colors ml-2" />
+            </a>
+          ) : (
+            <button
+              type="button"
+              onClick={handleOpenEdit}
+              className="flex items-center justify-between p-3 rounded-2xl bg-slate-50/40 hover:bg-slate-100/80 dark:bg-white/[0.015] dark:hover:bg-white/[0.04] border border-dashed border-slate-300 dark:border-white/10 transition-all text-left cursor-pointer group min-h-[52px]"
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-cyan-500/10 text-cyan-500/60 flex items-center justify-center shrink-0">
+                  <Globe className="w-4 h-4" />
                 </div>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 group-hover:text-cyan-500 transition-colors">+ Add Portfolio</span>
               </div>
-            </div>
+              <Pencil className="w-3.5 h-3.5 text-slate-400 group-hover:text-cyan-500 ml-2" />
+            </button>
+          )}
+        </div>
+      </div>
 
-            {/* Task Delivery Progress Bar */}
-            <div className="space-y-1.5 pt-2">
-              <div className="flex justify-between text-xs font-bold text-slate-600 dark:text-slate-400">
-                <span>Task Delivery Velocity</span>
-                <span className="text-emerald-500 font-extrabold">{taskMetrics.rate}%</span>
-              </div>
-              <div className="w-full h-2 rounded-full bg-slate-200/70 dark:bg-white/10 overflow-hidden">
-                <div 
-                  className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 rounded-full transition-all duration-500"
-                  style={{ width: `${Math.max(5, Math.min(100, taskMetrics.rate))}%` }}
-                />
-              </div>
+      {/* ========================================================================= */}
+      {/* 4. TECHNICAL SKILLS CONSTELLATION (Boxless, Floating Glow Pills)          */}
+      {/* ========================================================================= */}
+      <div className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center gap-2">
+            <Zap className="w-3.5 h-3.5 text-amber-500" /> Core Tech Stack & Competencies
+          </span>
+          <button
+            type="button"
+            onClick={handleOpenEdit}
+            className="text-[11px] font-bold text-blue-500 hover:text-blue-600 dark:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <Pencil className="w-3 h-3" /> Edit Skills
+          </button>
+        </div>
+
+        <div className="flex flex-wrap gap-2.5">
+          {skillsList.map((skill, idx) => (
+            <div
+              key={idx}
+              className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full text-xs font-bold bg-slate-100/90 dark:bg-white/[0.04] text-slate-800 dark:text-slate-200 border border-slate-200/60 dark:border-white/5 hover:border-cyan-500/40 hover:bg-cyan-500/5 transition-all shadow-sm"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.9)]" />
+              <span>{skill}</span>
             </div>
+          ))}
+          <button
+            type="button"
+            onClick={handleOpenEdit}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-semibold text-slate-400 hover:text-blue-500 border border-dashed border-slate-300 dark:border-white/10 hover:border-blue-500/40 transition-all cursor-pointer"
+          >
+            <span>+ Add More</span>
+          </button>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 5. EXECUTIVE BIO & OVERVIEW (Ambient Quote Block — Completely Boxless)     */}
+      {/* ========================================================================= */}
+      <div className="relative rounded-3xl bg-gradient-to-r from-blue-500/[0.04] via-indigo-500/[0.03] to-transparent p-6 sm:p-8 border border-slate-200/50 dark:border-white/5 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Quote className="w-4 h-4 text-blue-500" />
+            <span className="text-[11px] font-black uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Professional Bio & Executive Summary
+            </span>
           </div>
+          <button
+            type="button"
+            onClick={handleOpenEdit}
+            className="text-[11px] font-bold text-blue-500 hover:text-blue-600 dark:text-blue-400 flex items-center gap-1 cursor-pointer transition-colors"
+          >
+            <Pencil className="w-3 h-3" /> Edit Bio
+          </button>
+        </div>
+
+        <div className="relative pl-3 sm:pl-4">
+          <span className="absolute -top-3 -left-1 text-4xl sm:text-5xl font-serif text-blue-500/15 select-none pointer-events-none">
+            “
+          </span>
+          <p className="text-sm sm:text-base text-slate-700 dark:text-slate-300 font-medium leading-relaxed italic">
+            {user.bio || "No summary provided yet. Click 'Edit Bio' to share your key engineering responsibilities, leadership experience, and project focus."}
+          </p>
+        </div>
+      </div>
+
+      {/* ========================================================================= */}
+      {/* 6. LIVE TASK DELIVERY VELOCITY RIBBON (Minimal Stream — No Heavy Boxes)     */}
+      {/* ========================================================================= */}
+      <div className="pt-2 pb-4 space-y-2">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="uppercase tracking-wider text-[10px] font-black">Workspace Task Velocity</span>
+          </div>
+          <span className="text-emerald-500 font-extrabold text-xs">
+            {taskMetrics.loading ? 'Calculating...' : `${taskMetrics.rate}% Completed (${taskMetrics.completed}/${taskMetrics.assigned} Tasks)`}
+          </span>
+        </div>
+        <div className="w-full h-1.5 rounded-full bg-slate-200/70 dark:bg-white/10 overflow-hidden">
+          <div 
+            className="h-full bg-gradient-to-r from-blue-500 via-indigo-500 to-emerald-500 rounded-full transition-all duration-700"
+            style={{ width: `${Math.max(5, Math.min(100, taskMetrics.rate))}%` }}
+          />
         </div>
       </div>
 
