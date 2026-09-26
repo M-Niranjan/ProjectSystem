@@ -542,11 +542,34 @@ export class TeamController {
       const errors: string[] = [];
 
       for (const empId of employeeIds) {
-        // Fetch employee document directly from Firestore
-        const empDoc = await FirebaseAdminService.getFirestoreUserDoc(empId);
+        // Fetch employee document directly from Firestore or fallback to SQLite
+        let empDoc = await FirebaseAdminService.getFirestoreUserDoc(empId);
         if (!empDoc) {
-          errors.push(`Employee record (${empId}) was not found in Firestore.`);
-          continue;
+          let sqlUser: any = null;
+          try {
+            if (!isNaN(Number(empId))) {
+              sqlUser = await User.findByPk(Number(empId));
+            } else {
+              sqlUser = await User.findOne({ where: { email: empId.toLowerCase() } });
+            }
+          } catch (_dbErr) {}
+
+          if (sqlUser) {
+            empDoc = {
+              uid: String(sqlUser.id),
+              id: String(sqlUser.id),
+              name: sqlUser.name,
+              email: sqlUser.email,
+              role: sqlUser.role,
+              roleCode: sqlUser.role,
+              status: sqlUser.status || 'active',
+              department: sqlUser.department || 'Engineering',
+              designation: sqlUser.designation || 'Software Engineer',
+            };
+          } else {
+            errors.push(`Employee record (${empId}) was not found.`);
+            continue;
+          }
         }
 
         // Validate that user is indeed an employee
