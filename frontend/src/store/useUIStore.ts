@@ -1,7 +1,6 @@
 import { create } from 'zustand';
 
 export type AccentColor = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'teal';
-export type DisplayDensity = 'comfortable' | 'compact' | 'spacious';
 export type ThemeMode = 'light' | 'dark' | 'system';
 
 export const ACCENT_PRESETS: Record<AccentColor, { color: string; hover: string; light: string; gradient: string; glow: string }> = {
@@ -70,7 +69,6 @@ interface UIState {
   darkMode: boolean;
   themeMode: ThemeMode;
   accentColor: AccentColor;
-  displayDensity: DisplayDensity;
   dashboardPrefs: DashboardPrefs;
   activeLanguage: string;
   voiceOverlayOpen: boolean;
@@ -90,7 +88,6 @@ interface UIState {
   toggleTheme: () => void;
   setThemeMode: (mode: ThemeMode) => void;
   setAccentColor: (color: AccentColor) => void;
-  setDisplayDensity: (density: DisplayDensity) => void;
   setDashboardPrefs: (prefs: Partial<DashboardPrefs>) => void;
   initTheme: () => void;
   setLanguage: (lang: string) => void;
@@ -116,23 +113,6 @@ const applyAccentStyles = (accent: AccentColor) => {
     root.style.setProperty('--color-blue-500', preset.color);
     root.style.setProperty('--color-blue-600', preset.hover);
     root.style.setProperty('--color-indigo-600', preset.hover);
-  }
-};
-
-const applyDensityStyles = (density: DisplayDensity) => {
-  if (typeof document !== 'undefined') {
-    const root = document.documentElement;
-    root.setAttribute('data-density', density);
-    if (density === 'compact') {
-      root.style.setProperty('--density-scale', '0.9');
-      root.style.setProperty('--density-padding', '0.5rem');
-    } else if (density === 'spacious') {
-      root.style.setProperty('--density-scale', '1.08');
-      root.style.setProperty('--density-padding', '1.25rem');
-    } else {
-      root.style.setProperty('--density-scale', '1.0');
-      root.style.setProperty('--density-padding', '0.85rem');
-    }
   }
 };
 
@@ -178,7 +158,6 @@ export const useUIStore = create<UIState>((set, get) => ({
   darkMode: false,
   themeMode: 'light',
   accentColor: 'blue',
-  displayDensity: 'comfortable',
   dashboardPrefs: {
     showWidgets: true,
     showStats: true,
@@ -243,12 +222,6 @@ export const useUIStore = create<UIState>((set, get) => ({
     applyAccentStyles(color);
   },
 
-  setDisplayDensity: (density: DisplayDensity) => {
-    set({ displayDensity: density });
-    localStorage.setItem('displayDensity', density);
-    applyDensityStyles(density);
-  },
-
   setDashboardPrefs: (prefs: Partial<DashboardPrefs>) => {
     const updated = { ...get().dashboardPrefs, ...prefs };
     set({ dashboardPrefs: updated });
@@ -258,7 +231,6 @@ export const useUIStore = create<UIState>((set, get) => ({
   initTheme: () => {
     const savedMode = (localStorage.getItem('themeMode') || 'light') as ThemeMode;
     const savedAccent = (localStorage.getItem('accentColor') || 'blue') as AccentColor;
-    const savedDensity = (localStorage.getItem('displayDensity') || 'comfortable') as DisplayDensity;
     const savedPrefs = localStorage.getItem('dashboardPrefs');
 
     let isDark = savedMode === 'dark';
@@ -270,12 +242,16 @@ export const useUIStore = create<UIState>((set, get) => ({
       themeMode: savedMode,
       darkMode: isDark,
       accentColor: savedAccent,
-      displayDensity: savedDensity,
       dashboardPrefs: savedPrefs ? JSON.parse(savedPrefs) : get().dashboardPrefs,
     });
 
     applyAccentStyles(savedAccent);
-    applyDensityStyles(savedDensity);
+
+    if (typeof document !== 'undefined') {
+      document.documentElement.removeAttribute('data-density');
+      document.documentElement.style.removeProperty('--density-scale');
+      document.documentElement.style.removeProperty('--density-padding');
+    }
 
     if (isDark) {
       document.documentElement.classList.add('dark');

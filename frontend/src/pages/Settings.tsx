@@ -6,7 +6,7 @@ import {
   Layout, Eye, EyeOff, Clock, Calendar, Mail, AlertTriangle, Monitor, Sliders, Palette, CheckCircle2, ArrowLeft, ChevronRight
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { useUIStore, AccentColor, DisplayDensity, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
+import { useUIStore, AccentColor, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { formatRoleName } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
@@ -15,7 +15,7 @@ export default function Settings() {
   const { user, updateProfile, logout } = useAuthStore();
   const {
     darkMode, toggleTheme, themeMode, setThemeMode, accentColor, setAccentColor,
-    displayDensity, setDisplayDensity, sidebarExpanded, toggleSidebar,
+    sidebarExpanded, toggleSidebar,
     dashboardPrefs, setDashboardPrefs, setView, showToast
   } = useUIStore();
 
@@ -767,82 +767,16 @@ export default function Settings() {
           )}
 
           {/* ==================================== */}
-          {/* TAB 5: APPEARANCE & DISPLAY DENSITY */}
+          {/* TAB: APPEARANCE & THEME */}
           {/* ==================================== */}
           {activeTab === 'appearance' && (
             <div className="space-y-6 max-w-2xl">
               <h3 className="text-sm font-black text-slate-800 dark:text-white border-b border-slate-200/30 dark:border-white/5 pb-2 flex items-center gap-2">
-                <Palette className="w-4 h-4 text-purple-500" /> Appearance & Display Density Controls
+                <Palette className="w-4 h-4 text-purple-500" /> Appearance & Theme Controls
               </h3>
 
-              {/* 1. Display Density Controls */}
+              {/* 1. Theme Mode Selection (Light / Dark / System) */}
               <div className="space-y-3">
-                <div>
-                  <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
-                    Display Density
-                  </h4>
-                  <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                    Control paddings, spacing density, and item sizes across all views.
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    {
-                      id: 'compact',
-                      name: 'Compact',
-                      icon: '⚡',
-                      desc: 'High-density view for maximum data visibility with tight padding.',
-                    },
-                    {
-                      id: 'comfortable',
-                      name: 'Comfortable',
-                      icon: '📐',
-                      desc: 'Balanced spacing, standard padding, and optimal readability.',
-                    },
-                    {
-                      id: 'spacious',
-                      name: 'Spacious',
-                      icon: '🛋️',
-                      desc: 'Generous padding and airy layout designed for touchscreens.',
-                    },
-                  ].map((option) => {
-                    const isSelected = displayDensity === option.id;
-                    return (
-                      <div
-                        key={option.id}
-                        onClick={() => {
-                          setDisplayDensity(option.id as DisplayDensity);
-                          triggerSuccess(`Display density updated to ${option.name}!`);
-                        }}
-                        className={`p-4 rounded-2xl border transition-all cursor-pointer flex flex-col justify-between space-y-2 ${
-                          isSelected
-                            ? 'bg-blue-500/10 border-blue-500/40 text-blue-600 dark:text-blue-400 shadow-md ring-2 ring-blue-500/20 scale-[1.02]'
-                            : 'bg-white/5 border-slate-200/50 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:bg-white/10'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <span className="text-xl">{option.icon}</span>
-                          {isSelected && (
-                            <span className="px-2 py-0.5 bg-blue-500 text-white font-black text-[9px] rounded-full uppercase">
-                              Active
-                            </span>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-xs font-black text-slate-900 dark:text-white">{option.name}</p>
-                          <p className="text-[10px] font-medium text-slate-500 dark:text-slate-400 leading-normal mt-0.5">
-                            {option.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 2. Theme Mode Selection (Light / Dark / System) */}
-              <div className="space-y-3 pt-4 border-t border-slate-200/30 dark:border-white/5">
                 <div>
                   <h4 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider">
                     Theme Mode
