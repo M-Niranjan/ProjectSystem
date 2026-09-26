@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { Check, X, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 
 export default function LuxuryToast() {
@@ -9,7 +9,7 @@ export default function LuxuryToast() {
 
   useEffect(() => {
     if (!toast) return;
-    const duration = toast.duration || 3500;
+    const duration = toast.duration || 2600;
     const timer = setTimeout(() => {
       hideToast();
     }, duration);
@@ -20,36 +20,48 @@ export default function LuxuryToast() {
     switch (toast?.type) {
       case 'error':
         return {
-          icon: AlertCircle,
+          title: 'Error',
+          icon: X,
+          strokeWidth: 3,
           iconColor: 'text-rose-400',
-          iconBg: 'bg-rose-500/20 border-rose-500/40 shadow-[0_0_12px_rgba(244,63,94,0.35)]',
-          borderGlow: 'border-rose-500/40 shadow-[0_12px_36px_rgba(0,0,0,0.7),0_0_24px_rgba(244,63,94,0.25)]',
-          glowDot: 'bg-rose-400',
+          badgeText: 'text-rose-400',
+          iconBg: 'bg-rose-500/15 border-rose-500/40 shadow-[0_0_30px_rgba(244,63,94,0.35)]',
+          borderGlow: 'border-rose-500/35 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_35px_rgba(244,63,94,0.2)]',
+          pulseRing: 'border-rose-500/30',
         };
       case 'warning':
         return {
+          title: 'Warning',
           icon: AlertTriangle,
+          strokeWidth: 2.5,
           iconColor: 'text-amber-400',
-          iconBg: 'bg-amber-500/20 border-amber-500/40 shadow-[0_0_12px_rgba(245,158,11,0.35)]',
-          borderGlow: 'border-amber-500/40 shadow-[0_12px_36px_rgba(0,0,0,0.7),0_0_24px_rgba(245,158,11,0.25)]',
-          glowDot: 'bg-amber-400',
+          badgeText: 'text-amber-400',
+          iconBg: 'bg-amber-500/15 border-amber-500/40 shadow-[0_0_30px_rgba(245,158,11,0.35)]',
+          borderGlow: 'border-amber-500/35 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_35px_rgba(245,158,11,0.2)]',
+          pulseRing: 'border-amber-500/30',
         };
       case 'info':
         return {
+          title: 'Notice',
           icon: Info,
+          strokeWidth: 2.5,
           iconColor: 'text-cyan-400',
-          iconBg: 'bg-cyan-500/20 border-cyan-500/40 shadow-[0_0_12px_rgba(6,182,212,0.35)]',
-          borderGlow: 'border-cyan-500/40 shadow-[0_12px_36px_rgba(0,0,0,0.7),0_0_24px_rgba(6,182,212,0.25)]',
-          glowDot: 'bg-cyan-400',
+          badgeText: 'text-cyan-400',
+          iconBg: 'bg-cyan-500/15 border-cyan-500/40 shadow-[0_0_30px_rgba(6,182,212,0.35)]',
+          borderGlow: 'border-cyan-500/35 shadow-[0_20px_60px_rgba(0,0,0,0.7),0_0_35px_rgba(6,182,212,0.2)]',
+          pulseRing: 'border-cyan-500/30',
         };
       case 'success':
       default:
         return {
-          icon: CheckCircle2,
+          title: 'Success',
+          icon: Check,
+          strokeWidth: 3.5,
           iconColor: 'text-emerald-400',
-          iconBg: 'bg-emerald-500/20 border-emerald-500/40 shadow-[0_0_12px_rgba(16,185,129,0.35)]',
-          borderGlow: 'border-emerald-500/40 shadow-[0_12px_36px_rgba(0,0,0,0.7),0_0_24px_rgba(16,185,129,0.25)]',
-          glowDot: 'bg-emerald-400',
+          badgeText: 'text-emerald-400',
+          iconBg: 'bg-emerald-500/15 border-emerald-500/40 shadow-[0_0_35px_rgba(16,185,129,0.4)]',
+          borderGlow: 'border-emerald-500/35 shadow-[0_20px_60px_rgba(0,0,0,0.75),0_0_40px_rgba(16,185,129,0.25)]',
+          pulseRing: 'border-emerald-500/30',
         };
     }
   };
@@ -60,51 +72,71 @@ export default function LuxuryToast() {
   if (typeof document === 'undefined') return null;
 
   return createPortal(
-    <aside
-      aria-label="Notifications"
-      className="fixed top-3.5 sm:top-5 left-1/2 -translate-x-1/2 z-[999999] pointer-events-none w-[calc(100%-1.5rem)] max-w-md sm:w-auto px-2"
-    >
-      <AnimatePresence mode="wait">
-        {toast && (
+    <AnimatePresence>
+      {toast && (
+        <aside
+          aria-label="Notifications"
+          className="fixed inset-0 z-[999999] flex items-center justify-center p-4 pointer-events-none select-none"
+        >
+          {/* Subtle Ambient Focus Tint (Click anywhere to dismiss immediately) */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            onClick={hideToast}
+            className="absolute inset-0 bg-slate-950/25 backdrop-blur-[2px] pointer-events-auto"
+          />
+
+          {/* Luxury Centered HUD Card */}
           <motion.div
             key={toast.id}
-            initial={{ opacity: 0, y: -28, scale: 0.93 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.95 }}
-            transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-            className={`pointer-events-auto flex items-center justify-between gap-3 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl sm:rounded-full bg-slate-950/90 dark:bg-slate-950/95 backdrop-blur-2xl border ${theme.borderGlow} text-white select-none`}
+            initial={{ opacity: 0, scale: 0.82, y: 16 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.88, y: -12 }}
+            transition={{ type: 'spring', stiffness: 450, damping: 28 }}
+            onClick={hideToast}
+            className={`relative pointer-events-auto w-full max-w-[290px] sm:max-w-[320px] rounded-3xl bg-slate-950/90 dark:bg-slate-950/95 backdrop-blur-2xl border ${theme.borderGlow} p-6 sm:p-7 flex flex-col items-center justify-center text-center cursor-pointer`}
             role="status"
             aria-live="polite"
           >
-            {/* Left: Glowing Squircle Icon Container */}
-            <div className="flex items-center gap-3 min-w-0">
-              <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 border relative ${theme.iconBg}`}>
-                <Icon className={`w-4 h-4 ${theme.iconColor}`} />
-                <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${theme.glowDot} animate-ping opacity-75`} />
-                <span className={`absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full ${theme.glowDot}`} />
-              </div>
+            {/* Ambient Pulse Ripple Ring behind Icon */}
+            <div className="relative flex items-center justify-center mb-4">
+              <span className={`absolute w-20 h-20 rounded-full border ${theme.pulseRing} animate-ping opacity-30`} />
+              <span className={`absolute w-24 h-24 rounded-full border ${theme.pulseRing} opacity-15`} />
 
-              {/* Message Content */}
-              <div className="min-w-0 pr-1">
-                <p className="text-xs sm:text-[13px] font-bold text-slate-100 truncate tracking-tight">
-                  {toast.message}
-                </p>
-              </div>
+              {/* Middle Symbol Container with Right Mark (✓) */}
+              <motion.div
+                initial={{ scale: 0.4, rotate: -20 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: 'spring', stiffness: 500, damping: 22, delay: 0.05 }}
+                className={`w-16 h-16 rounded-2xl flex items-center justify-center border-2 ${theme.iconBg} relative z-10`}
+              >
+                <Icon
+                  className={`w-8 h-8 ${theme.iconColor}`}
+                  strokeWidth={theme.strokeWidth}
+                />
+              </motion.div>
             </div>
 
-            {/* Right: Dismiss Action */}
-            <button
-              type="button"
-              onClick={hideToast}
-              className="p-1 rounded-full text-slate-400 hover:text-white hover:bg-white/10 transition-colors shrink-0 cursor-pointer ml-1"
-              title="Dismiss notification"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
+            {/* Status Type Badge */}
+            <span className={`text-[10px] font-black uppercase tracking-widest ${theme.badgeText} mb-1.5`}>
+              {theme.title}
+            </span>
+
+            {/* Notification Message */}
+            <p className="text-sm font-bold text-white tracking-tight leading-relaxed max-w-[240px]">
+              {toast.message}
+            </p>
+
+            {/* Micro subtle tap hint */}
+            <span className="text-[10px] font-semibold text-slate-500 mt-3 opacity-60">
+              Tap anywhere to dismiss
+            </span>
           </motion.div>
-        )}
-      </AnimatePresence>
-    </aside>,
+        </aside>
+      )}
+    </AnimatePresence>,
     document.body
   );
 }
