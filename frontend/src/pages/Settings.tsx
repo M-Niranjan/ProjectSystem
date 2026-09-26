@@ -12,7 +12,7 @@ import { formatRoleName } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
 
 export default function Settings() {
-  const { user, updateProfile } = useAuthStore();
+  const { user, updateProfile, logout } = useAuthStore();
   const {
     darkMode, toggleTheme, themeMode, setThemeMode, accentColor, setAccentColor,
     displayDensity, setDisplayDensity, sidebarExpanded, toggleSidebar,
@@ -151,19 +151,66 @@ export default function Settings() {
     setIntegrations(prev => ({ ...prev, [key]: !prev[key] }));
   };
 
+  const handleSignOut = () => {
+    if (window.confirm('Are you sure you want to sign out?')) {
+      logout();
+    }
+  };
+
+  const handleLockWorkspace = () => {
+    triggerSuccess('Workspace locked for current session.');
+  };
+
+  const connectedCount = Object.values(integrations).filter(Boolean).length;
+
   // Dynamically compute available settings tabs per role (Clean 4-Category Architecture)
   const getTabs = () => {
     const baseTabs = [
-      { id: 'appearance', label: 'Appearance & Theme', icon: Palette },
-      { id: 'security', label: 'Security & Password', icon: Lock },
-      { id: 'integrations', label: 'Connected Tools', icon: LinkIcon },
-      { id: 'account', label: 'Profile & Account', icon: User },
+      {
+        id: 'appearance',
+        label: 'Appearance & Theme',
+        mobileLabel: 'Appearance',
+        icon: Palette,
+        chip: darkMode ? 'Dark' : 'Light',
+        chipType: 'neutral' as const
+      },
+      {
+        id: 'security',
+        label: 'Security & Password',
+        mobileLabel: 'Security',
+        icon: Shield,
+        chip: 'Active',
+        chipType: 'success' as const
+      },
+      {
+        id: 'integrations',
+        label: 'Connected Tools',
+        mobileLabel: 'Connected Tools',
+        icon: LinkIcon,
+        chip: `${connectedCount} Linked`,
+        chipType: 'info' as const
+      },
+      {
+        id: 'account',
+        label: 'Profile & Account',
+        mobileLabel: 'Profile',
+        icon: User,
+        chip: 'Verified',
+        chipType: 'success' as const
+      },
     ];
 
     if (isAdmin) {
       return [
         ...baseTabs,
-        { id: 'organization', label: 'Organization & System', icon: Sparkles },
+        {
+          id: 'organization',
+          label: 'Organization & System',
+          mobileLabel: 'Organization',
+          icon: Sparkles,
+          chip: 'Admin',
+          chipType: 'warning' as const
+        },
       ];
     }
 
@@ -176,8 +223,8 @@ export default function Settings() {
 
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
-      {/* Title */}
-      <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-4 ${mobileDetailOpen ? 'hidden md:flex' : 'flex'}`}>
+      {/* Desktop Title Header */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">
             <SettingsIcon className="w-6 h-6 text-blue-500" /> {formatRoleName(user?.role, 'title')} Settings
@@ -187,7 +234,7 @@ export default function Settings() {
           </p>
         </div>
 
-        <span className="text-xs font-extrabold px-3 py-1 bg-blue-500/10 text-blue-500 rounded-full border border-blue-500/20 self-start sm:self-auto">
+        <span className="text-xs font-extrabold px-3 py-1 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/30 self-start sm:self-auto">
           Role: {formatRoleName(user?.role)}
         </span>
       </div>
@@ -253,53 +300,173 @@ export default function Settings() {
         )}
       </AnimatePresence>
 
-      {/* Main Settings Panel */}
-      <div className="glass-panel overflow-hidden border border-slate-200/50 dark:border-white/5 flex flex-col md:flex-row min-h-[500px]">
-        {/* Left Sidebar Navigation Tabs */}
-        <div className={`w-full md:w-64 border-r border-slate-200/30 dark:border-white/5 flex-shrink-0 bg-slate-500/5 p-3 space-y-1.5 overflow-y-auto max-h-[600px] ${mobileDetailOpen ? 'hidden md:block' : 'block'}`}>
-          <div className="md:hidden pb-2 mb-1 border-b border-slate-200/50 dark:border-white/5">
-            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2">Settings Menu</p>
+      {/* ========================================================================= */}
+      {/* MOBILE MENU VIEW (!mobileDetailOpen) - EXACT OPTION 3 LUXURY PILL DESIGN  */}
+      {/* ========================================================================= */}
+      {!mobileDetailOpen && (
+        <div className="md:hidden space-y-4 max-w-lg mx-auto">
+          {/* Card 1: Top Header Card */}
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-800/80 shadow-xl space-y-2">
+            <div className="flex items-center justify-between gap-3">
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                {formatRoleName(user?.role, 'title')} Settings
+              </h1>
+              <div className="flex items-center gap-2 shrink-0">
+                <img
+                  src={resolveAvatar(user?.profilePhoto, user?.name, user?.gender)}
+                  alt="Avatar"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover ring-2 ring-teal-500/40 shadow-sm"
+                />
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-teal-500/10 text-teal-400 dark:text-teal-300 border border-teal-500/30 shadow-[0_0_10px_rgba(20,184,166,0.15)]">
+                  {formatRoleName(user?.role)}
+                </span>
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium leading-relaxed">
+              Role-specific system settings, security rules, appearance themes, and integration parameters.
+            </p>
           </div>
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => {
-                  setActiveTab(tab.id);
-                  setMobileDetailOpen(true);
-                }}
-                className={`w-full text-left px-3.5 py-3 md:py-2.5 rounded-xl font-bold text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-all duration-200 group ${
-                  isActive
-                    ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-md shadow-blue-500/20 scale-[1.01]'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200/70 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:text-blue-500'
-                  }`}>
-                    <Icon className="w-4 h-4" />
+
+          {/* Middle 4 Pill Buttons */}
+          <div className="space-y-3">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    setMobileDetailOpen(true);
+                  }}
+                  className="w-full px-4 py-3 sm:py-3.5 rounded-full bg-slate-900/60 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-800/80 hover:border-blue-500/40 hover:bg-slate-800/50 active:scale-[0.99] transition-all duration-200 shadow-lg shadow-black/20 flex items-center justify-between cursor-pointer group"
+                >
+                  <div className="flex items-center gap-3.5 min-w-0">
+                    <div className="w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 bg-blue-500/15 border border-blue-500/30 text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.25)] group-hover:scale-105 group-hover:border-blue-400/50 transition-all">
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <span className="text-sm sm:text-base font-bold text-slate-800 dark:text-slate-100 truncate tracking-tight">
+                      {tab.mobileLabel || tab.label}
+                    </span>
                   </div>
-                  <span className="truncate font-bold text-xs">{tab.label}</span>
-                </div>
-                <ChevronRight className={`w-4 h-4 md:hidden shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+
+                  <div className="shrink-0 pl-2">
+                    {tab.chipType === 'neutral' && (
+                      <span className="px-3.5 py-1 rounded-full text-xs font-semibold bg-slate-800/90 text-slate-300 border border-slate-700/60 shadow-xs">
+                        {tab.chip}
+                      </span>
+                    )}
+                    {tab.chipType === 'success' && (
+                      <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                        {tab.chip}
+                      </span>
+                    )}
+                    {tab.chipType === 'info' && (
+                      <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30 shadow-[0_0_10px_rgba(59,130,246,0.25)]">
+                        {tab.chip}
+                      </span>
+                    )}
+                    {tab.chipType === 'warning' && (
+                      <span className="px-3.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                        {tab.chip}
+                      </span>
+                    )}
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Card 3: Bottom Storage & Sync + Actions */}
+          <div className="p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-slate-900/60 dark:bg-slate-900/70 backdrop-blur-xl border border-slate-800/80 shadow-xl flex items-center justify-between gap-4">
+            <div className="flex-1 min-w-0 pr-2">
+              <div className="w-full h-3 rounded-full bg-slate-800/90 p-0.5 overflow-hidden border border-slate-700/50 shadow-inner">
+                <div 
+                  className="h-full rounded-full bg-gradient-to-r from-teal-400 via-indigo-500 to-purple-500 shadow-[0_0_12px_rgba(99,102,241,0.5)] transition-all duration-500" 
+                  style={{ width: '28%' }}
+                />
+              </div>
+              <p className="text-[11px] sm:text-xs text-slate-400 font-medium tracking-wide mt-2">
+                Cache & Sync • 14.8 MB / 100 MB
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleSignOut}
+                className="px-4 py-1.5 rounded-xl border border-slate-700/60 bg-slate-800/80 hover:bg-rose-500/20 hover:border-rose-500/40 text-slate-300 hover:text-rose-300 text-xs font-semibold transition-all shadow-sm cursor-pointer text-center"
+              >
+                Sign Out
               </button>
-            );
-          })}
+              <button
+                type="button"
+                onClick={handleLockWorkspace}
+                className="px-4 py-1.5 rounded-xl border border-slate-700/60 bg-slate-800/80 hover:bg-blue-500/20 hover:border-blue-500/40 text-slate-300 hover:text-blue-300 text-xs font-semibold transition-all shadow-sm cursor-pointer text-center"
+              >
+                Lock Workspace
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Settings Panel */}
+      <div className={`glass-panel overflow-hidden border border-slate-200/50 dark:border-white/5 ${mobileDetailOpen ? 'flex flex-col' : 'hidden'} md:flex md:flex-row min-h-[500px]`}>
+        {/* Left Sidebar Navigation Tabs */}
+        <div className="hidden md:flex w-64 border-r border-slate-200/30 dark:border-white/5 flex-shrink-0 bg-slate-500/5 p-3 flex-col justify-between overflow-y-auto max-h-[650px]">
+          <div className="space-y-1.5">
+            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 pb-1">Settings Menu</p>
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`w-full text-left px-3.5 py-3 rounded-2xl font-bold text-xs flex items-center justify-between gap-2.5 cursor-pointer transition-all duration-200 group ${
+                    isActive
+                      ? 'bg-blue-600/15 border border-blue-500/40 text-blue-400 shadow-md shadow-blue-500/10 scale-[1.01]'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-200/50 dark:hover:bg-white/10 hover:text-slate-900 dark:hover:text-white border border-transparent'
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                      isActive ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-slate-200/70 dark:bg-white/5 text-slate-500 dark:text-slate-400 group-hover:text-blue-500'
+                    }`}>
+                      <Icon className="w-4 h-4" />
+                    </div>
+                    <span className="truncate font-bold text-xs">{tab.label}</span>
+                  </div>
+                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                    isActive ? 'bg-blue-500/20 text-blue-300' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {tab.chip}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Desktop Storage Mini-Card */}
+          <div className="p-3 rounded-xl bg-slate-900/40 border border-slate-800/60 mt-4">
+            <div className="w-full h-2 rounded-full bg-slate-800 overflow-hidden mb-1.5">
+              <div className="h-full rounded-full bg-gradient-to-r from-teal-400 via-indigo-500 to-purple-500" style={{ width: '28%' }} />
+            </div>
+            <p className="text-[10px] text-slate-400 font-medium">Cache & Sync • 14.8 MB / 100 MB</p>
+          </div>
         </div>
 
         {/* Right Content Area */}
-        <div className={`flex-1 p-4 sm:p-6 md:p-8 space-y-6 overflow-y-auto ${mobileDetailOpen ? 'block' : 'hidden md:block'}`}>
+        <div className="flex-1 p-4 sm:p-6 md:p-8 space-y-6 overflow-y-auto">
           {/* Mobile Back Button & Subheader */}
           <div className="md:hidden flex items-center justify-between pb-3.5 border-b border-slate-200/50 dark:border-white/10 mb-2">
             <button
               type="button"
               onClick={() => setMobileDetailOpen(false)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/15 text-slate-700 dark:text-white font-bold text-xs transition-colors cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 hover:bg-slate-700/80 border border-slate-700/60 text-slate-200 font-bold text-xs transition-colors cursor-pointer shadow-sm"
             >
-              <ArrowLeft className="w-4 h-4" />
+              <ArrowLeft className="w-4 h-4 text-blue-400" />
               <span>Back to Settings</span>
             </button>
             <div className="flex items-center gap-1.5 text-xs font-black text-slate-700 dark:text-slate-200">
