@@ -14,6 +14,7 @@ export interface StepEvidence {
   files?: { name: string; url: string; size?: string }[];
   links?: string[];
   codeReferences?: string[];
+  attachments?: string[];
   submittedAt: string;
   submittedBy: { id: number; name: string };
 }
