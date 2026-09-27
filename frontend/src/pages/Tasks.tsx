@@ -20,7 +20,8 @@ import {
   ChevronDown,
   AlertCircle,
   Filter,
-  Layers
+  Layers,
+  MoreHorizontal
 } from 'lucide-react';
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
@@ -55,6 +56,17 @@ interface TeamMember {
   profilePhoto?: string;
 }
 
+function formatDisplayDate(dateStr?: string) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  } catch {
+    return dateStr;
+  }
+}
+
 export default function Tasks() {
   const { selectedProjectId, setTaskModalOpen, showToast } = useUIStore();
   const { user } = useAuthStore();
@@ -71,9 +83,7 @@ export default function Tasks() {
   const [showMyTasksOnly, setShowMyTasksOnly] = useState(false);
   const [groupByAssignee, setGroupByAssignee] = useState(false);
 
-  const [projectSearchQuery, setProjectSearchQuery] = useState('');
   const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
-  const [isProjectFocused, setIsProjectFocused] = useState(false);
   const [isGridView, setIsGridView] = useState(false);
 
   // Assignee Reassignment Popover state
@@ -88,18 +98,26 @@ export default function Tasks() {
     type: 'accept' | 'decline' | null;
   }>({ isOpen: false, task: null, type: null });
   const [declineReason, setDeclineReasonText] = useState('');
-  const [toast, setToast] = useState<{
-    show: boolean;
-    message: string;
-    type: 'success' | 'error' | 'info';
-  }>({ show: false, message: '', type: 'success' });
+
+  // Scroll to top on mount
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  }, []);
 
   const fetchProjects = async () => {
     try {
       const res = await api.get('/api/projects');
-      setProjectsList(res.data);
-      if (!activeProjectId && res.data.length > 0) {
-        setActiveProjectId(res.data[0].id);
+      setProjectsList(res.data || []);
+      if (!activeProjectId && res.data && res.data.length > 0) {
+        // Prefer project with id 11 or containing "Project Management" or first
+        const pms = res.data.find((p: any) => p.name?.toLowerCase().includes('project management') || p.id === 11);
+        if (selectedProjectId) {
+          setActiveProjectId(selectedProjectId);
+        } else if (pms) {
+          setActiveProjectId(pms.id);
+        } else {
+          setActiveProjectId(res.data[0].id);
+        }
       }
     } catch (err) {
       setProjectsList([]);
@@ -273,73 +291,120 @@ export default function Tasks() {
     
     const matchesStatus = statusFilter === 'ALL'
       || t.status === statusFilter
-      || (statusFilter === 'TO_DO' && t.status === 'ACCEPTED');
+      || (statusFilter === 'TO_DO' && (t.status === 'TO_DO' || t.status === 'ACCEPTED'));
     
     // Assignee filter logic
     let matchesAssigneeFilter = true;
     if (assigneeFilter === 'UNASSIGNED') {
       matchesAssigneeFilter = !t.assignee;
     } else if (assigneeFilter !== 'ALL') {
-      matchesAssigneeFilter = t.assignee?.id === parseInt(assigneeFilter);
+      const selectedMember = teamMembers.find(m => String(m.id) === assigneeFilter);
+      matchesAssigneeFilter = Boolean(
+        t.assignee?.id === parseInt(assigneeFilter) ||
+        String(t.assignee?.id) === assigneeFilter ||
+        (selectedMember && t.assignee?.name?.toLowerCase() === selectedMember.name?.toLowerCase())
+      );
     }
 
     const matchesRoleAssignee = user?.role === 'ROLE_EMPLOYEE'
-      ? (t.assignee && t.assignee.id === user?.id)
-      : (!showMyTasksOnly || (t.assignee && t.assignee.id === user?.id));
+      ? Boolean(t.assignee && (t.assignee.id === user?.id || t.assignee.name?.toLowerCase() === user?.name?.toLowerCase()))
+      : Boolean(!showMyTasksOnly || (t.assignee && (t.assignee.id === user?.id || t.assignee.name?.toLowerCase() === user?.name?.toLowerCase())));
 
-    return matchesSearch && matchesStatus && matchesAssigneeFilter && matchesRoleAssignee;
+    return Boolean(matchesSearch && matchesStatus && matchesAssigneeFilter && matchesRoleAssignee);
   });
 
-  // Calculate team workload counts
-  const unassignedCount = tasks.filter(t => !t.assignee).length;
+  const renderStatusBadge = (status: string) => {
+    const norm = status.toUpperCase().replace(/\s+/g, '_');
+    if (norm === 'IN_PROGRESS') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.2)]">
+          IN PROGRESS
+        </span>
+      );
+    }
+    if (norm === 'COMPLETED') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_8px_rgba(16,185,129,0.2)]">
+          COMPLETED
+        </span>
+      );
+    }
+    if (norm === 'TO_DO' || norm === 'ACCEPTED') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-blue-500/15 text-blue-400 border border-blue-500/30">
+          TO DO
+        </span>
+      );
+    }
+    if (norm === 'TESTING') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+          TESTING
+        </span>
+      );
+    }
+    if (norm === 'REVIEW') {
+      return (
+        <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-purple-500/15 text-purple-300 border border-purple-500/30">
+          REVIEW
+        </span>
+      );
+    }
+    return (
+      <span className="inline-flex items-center px-3 py-1 rounded-full text-[10px] font-extrabold tracking-wider uppercase bg-slate-500/15 text-slate-400 border border-slate-500/20">
+        {status.replace(/_/g, ' ')}
+      </span>
+    );
+  };
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
-      {/* Title & Primary Action Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
-        <div className="min-w-0">
-          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white truncate">
+    <div className="space-y-5 select-none pt-1 sm:pt-2 pb-12 w-full min-w-0">
+      {/* Tier 1: Title & Primary Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-white">
             Workspace Tasks
           </h1>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            Team Leaders task assignment tracker, workload distribution, and status board.
+          <p className="text-sm font-normal text-slate-400 mt-1">
+            Manage and track progress across all team tasks for this workspace.
           </p>
         </div>
 
         {isTeamLeader && (
           <button
             onClick={() => setTaskModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-500/20 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap flex-shrink-0 self-start sm:self-auto"
+            style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 16px 0 rgba(37, 99, 235, 0.45)' }}
+            className="flex items-center gap-2 px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
           >
-            <Plus className="w-4 h-4" /> Add Task
+            <Plus className="w-4 h-4 stroke-[2.5]" /> Add Task
           </button>
         )}
       </div>
 
-      {/* Dedicated Search & Filter Toolbar (Option 2) */}
-      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 border border-slate-200/50 dark:border-white/5">
+      {/* Tier 2: Dedicated Frosted Search & Controls Toolbar (Option 2) */}
+      <div className="bg-[#0e131f]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-3 px-4 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Left: Search Input */}
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        <div className="relative w-full md:w-96">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
           <input
             type="text"
-            placeholder="Search tasks, descriptions, keys..."
+            placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/20 transition-all font-semibold text-xs"
+            className="w-full pl-10 pr-4 py-2 bg-[#080b13] border border-slate-800/90 rounded-xl text-slate-200 placeholder:text-slate-500 outline-none focus:border-blue-500/80 transition-all font-normal text-sm shadow-inner"
           />
         </div>
 
         {/* Right: View Toggles & My Tasks Toggle */}
-        <div className="flex flex-wrap items-center gap-2.5 shrink-0 justify-between md:justify-end">
-          {/* View Toggles (Grid / List / Group by Assignee) */}
-          <div className="flex items-center gap-1 bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 p-1 rounded-xl">
+        <div className="flex items-center gap-5 shrink-0 justify-between md:justify-end flex-wrap">
+          {/* View Toggles (Grid / List / Group Assignee) */}
+          <div className="flex items-center gap-1 bg-[#080b13] border border-slate-800/90 p-1 rounded-xl">
             <button
               onClick={() => { setIsGridView(true); setGroupByAssignee(false); }}
-              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                 isGridView && !groupByAssignee
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
+                  : 'text-slate-400 hover:text-white'
               }`}
               title="Grid View"
             >
@@ -347,10 +412,10 @@ export default function Tasks() {
             </button>
             <button
               onClick={() => { setIsGridView(false); setGroupByAssignee(false); }}
-              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                 !isGridView && !groupByAssignee
-                  ? 'bg-teal-600 text-white shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                  ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
+                  : 'text-slate-400 hover:text-white'
               }`}
               title="List View"
             >
@@ -359,10 +424,10 @@ export default function Tasks() {
             {isTeamLeader && (
               <button
                 onClick={() => setGroupByAssignee(!groupByAssignee)}
-                className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                   groupByAssignee
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
                 title="Group Tasks by Assignee"
               >
@@ -371,94 +436,90 @@ export default function Tasks() {
             )}
           </div>
 
-          {/* My Tasks Only Filter Toggle */}
+          {/* My Tasks Only iOS Switch */}
           {user?.role !== 'ROLE_EMPLOYEE' && (
-            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 rounded-xl px-3 py-2 transition-all shrink-0">
-              <input
-                type="checkbox"
-                checked={showMyTasksOnly}
-                onChange={(e) => setShowMyTasksOnly(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 cursor-pointer focus:ring-teal-500/30"
-              />
-              <span>🧑 My Tasks Only</span>
-            </label>
+            <div
+              onClick={() => setShowMyTasksOnly(!showMyTasksOnly)}
+              className="flex items-center gap-3 cursor-pointer select-none"
+            >
+              <span className="text-sm font-medium text-slate-300">My Tasks Only</span>
+              <div
+                style={{ backgroundColor: showMyTasksOnly ? '#2563eb' : '#334155' }}
+                className="w-11 h-6 rounded-full transition-colors relative p-0.5 inline-flex items-center"
+              >
+                <span
+                  className={`w-5 h-5 rounded-full bg-white shadow-md transform transition-transform duration-200 ease-in-out ${
+                    showMyTasksOnly ? 'translate-x-5' : 'translate-x-0'
+                  }`}
+                />
+              </div>
+            </div>
           )}
         </div>
       </div>
 
-      {/* TEAM LEADER ASSIGNEE TRACKING BAR (Visible ONLY to Team Leaders) */}
+      {/* TEAM LEADER ASSIGNEE TRACKER (Option 2 Design) */}
       {isTeamLeader && (
-        <div className="glass-panel p-4 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-500 flex items-center justify-center font-bold">
-                <UserCheck className="w-4 h-4" />
-              </div>
-              <div>
-                <h3 className="text-xs font-black text-slate-800 dark:text-white tracking-tight uppercase">
-                  TEAM LEAD ASSIGNEE TRACKER
-                </h3>
-                <p className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                  Filter and track tasks by assigned team member workload.
-                </p>
-              </div>
-            </div>
-
-            {unassignedCount > 0 && (
-              <span className="px-2.5 py-1 bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 rounded-xl text-[10px] font-black flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5" /> {unassignedCount} Unassigned Task{unassignedCount > 1 ? 's' : ''}
-              </span>
-            )}
+        <div className="bg-[#0e131f]/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-4 px-5 shadow-lg space-y-3">
+          <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+            TEAM LEAD ASSIGNEE TRACKER
           </div>
 
-          {/* Team Member Filter Pills */}
-          <div className="flex flex-wrap gap-2 pt-1">
+          {/* Team Member Filter Chips */}
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={() => setAssigneeFilter('ALL')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              className={`px-5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 assigneeFilter === 'ALL'
-                  ? 'bg-blue-600 text-white shadow-xs'
-                  : 'bg-white/5 border border-slate-200/50 dark:border-white/5 text-slate-600 dark:text-slate-300 hover:bg-white/10'
+                  ? 'bg-[#1c2438] text-white border border-slate-700/80 shadow-sm'
+                  : 'bg-[#111624] text-slate-400 border border-slate-800/80 hover:text-slate-200'
               }`}
             >
-              <span>All Members ({tasks.length})</span>
+              All Members
             </button>
 
             <button
-              onClick={() => setAssigneeFilter('UNASSIGNED')}
-              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-1.5 ${
+              onClick={() => setAssigneeFilter(assigneeFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
+              className={`px-5 py-2 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 assigneeFilter === 'UNASSIGNED'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20'
+                  ? 'bg-[#1c2438] text-white border border-amber-500/50 shadow-sm'
+                  : 'bg-[#111624] text-slate-300 border border-slate-800/80 hover:border-slate-700'
               }`}
             >
-              <span>⚠️ Unassigned ({unassignedCount})</span>
+              Unassigned
             </button>
 
             {teamMembers.map((member) => {
-              const memberTaskCount = tasks.filter(t => t.assignee?.id === member.id).length;
+              const memberTaskCount = tasks.filter(t => 
+                t.assignee?.id === member.id || 
+                String(t.assignee?.id) === String(member.id) ||
+                (t.assignee?.name && member.name && t.assignee.name.toLowerCase() === member.name.toLowerCase())
+              ).length;
               const isSelected = assigneeFilter === String(member.id);
               return (
                 <button
                   key={member.id}
-                  onClick={() => setAssigneeFilter(String(member.id))}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition-all cursor-pointer flex items-center gap-2 ${
+                  onClick={() => setAssigneeFilter(isSelected ? 'ALL' : String(member.id))}
+                  className={`flex items-center gap-3 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs scale-[1.02]'
-                      : 'bg-white/5 border border-slate-200/50 dark:border-white/5 text-slate-700 dark:text-slate-300 hover:bg-white/10'
+                      ? 'bg-[#1c2438] border-blue-500/60 shadow-[0_0_12px_rgba(59,130,246,0.25)]'
+                      : 'bg-[#111624] border-slate-800/80 hover:border-slate-700 hover:bg-[#141b2c]'
                   }`}
                 >
                   <img
                     src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
-                    alt="avatar"
-                    className="w-4 h-4 rounded-full object-cover ring-1 ring-blue-500/30"
+                    alt={member.name}
+                    className="w-8 h-8 rounded-full object-cover border border-slate-700/80 shrink-0"
                   />
-                  <span>{member.name}</span>
-                  <span className={`px-1.5 py-0.2 text-[9px] rounded-full font-black ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-blue-500/10 text-blue-500'
-                  }`}>
-                    {memberTaskCount}
-                  </span>
+                  <div className="text-left">
+                    <div className="text-xs font-bold text-white flex items-center gap-1.5 leading-tight">
+                      <span>{member.name}</span>
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">
+                      {memberTaskCount} tasks
+                    </div>
+                  </div>
                 </button>
               );
             })}
@@ -466,113 +527,90 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Project Selector & Status Tabs */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="relative w-full max-w-xs space-y-1 flex-shrink-0">
-          <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Select Project Workspace:</label>
-          <div className="relative">
-            <input
-              type="text"
-              className="w-full pl-9 pr-10 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-bold text-xs cursor-pointer"
-              placeholder="Select Project"
-              value={
-                isProjectFocused
-                  ? projectSearchQuery
-                  : (projectsList.find(p => p.id === activeProjectId)
-                      ? `📁 ${projectsList.find(p => p.id === activeProjectId).name}`
-                      : '')
-              }
-              onFocus={() => {
-                setIsProjectDropdownOpen(true);
-                setIsProjectFocused(true);
-                setProjectSearchQuery('');
-              }}
-              onBlur={() => {
-                setTimeout(() => {
-                  setIsProjectDropdownOpen(false);
-                  setIsProjectFocused(false);
-                  setProjectSearchQuery('');
-                }, 200);
-              }}
-              onChange={(e) => {
-                setProjectSearchQuery(e.target.value);
-                setIsProjectDropdownOpen(true);
-              }}
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center pointer-events-none">
-              <span className="text-slate-400 text-[9px]">▼</span>
+      {/* Project Selector & Status Tabs (Option 2 Design) */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+        {/* Left: Project Selector Pill Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+            className="bg-[#0e131f] border border-slate-800/90 hover:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-2.5 text-xs font-bold text-slate-200 shadow-md transition-all cursor-pointer"
+          >
+            <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 flex items-center justify-center text-[10px] text-white shadow-xs font-bold">
+              📊
             </div>
+            <span className="truncate max-w-[200px]">
+              {projectsList.find(p => p.id === activeProjectId)?.name || 'All Projects'}
+            </span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+          </button>
 
-            {isProjectDropdownOpen && (
-              <div className="absolute left-0 right-0 mt-1.5 max-h-60 overflow-y-auto glass-panel border border-slate-200/50 dark:border-white/5 shadow-2xl z-40 rounded-xl py-1">
+          {isProjectDropdownOpen && (
+            <div className="absolute left-0 mt-2 w-64 bg-[#0e131f] border border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 backdrop-blur-xl">
+              <button
+                onClick={() => {
+                  setActiveProjectId(null);
+                  setIsProjectDropdownOpen(false);
+                }}
+                className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
+                  activeProjectId === null
+                    ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
+                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                }`}
+              >
+                <span>📁</span>
+                <span>All Projects</span>
+              </button>
+              {projectsList.map(p => (
                 <button
-                  onMouseDown={(e) => e.preventDefault()}
+                  key={p.id}
                   onClick={() => {
-                    setActiveProjectId(null);
+                    setActiveProjectId(p.id);
                     setIsProjectDropdownOpen(false);
-                    setIsProjectFocused(false);
-                    setProjectSearchQuery('');
                   }}
-                  className={`w-full text-left px-4 py-2.5 text-xs font-black uppercase transition-colors flex items-center gap-2 cursor-pointer ${
-                    activeProjectId === null
-                      ? 'bg-blue-600 text-white'
-                      : 'text-slate-700 dark:text-slate-300 hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
+                  className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
+                    activeProjectId === p.id
+                      ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
+                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
                   }`}
                 >
                   <span>📁</span>
-                  <span className="truncate">All Projects</span>
-                  {activeProjectId === null && <span className="ml-auto">✓</span>}
+                  <span className="truncate">{p.name}</span>
                 </button>
-
-                {projectsList.filter(p => (p.name || '').toLowerCase().includes(projectSearchQuery.toLowerCase())).map(p => {
-                  const isActive = p.id === activeProjectId;
-                  return (
-                    <button
-                      key={p.id}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => {
-                        setActiveProjectId(p.id);
-                        setIsProjectDropdownOpen(false);
-                        setIsProjectFocused(false);
-                        setProjectSearchQuery('');
-                      }}
-                      className={`w-full text-left px-4 py-2.5 text-xs font-black uppercase transition-colors flex items-center gap-2 cursor-pointer ${
-                        isActive
-                          ? 'bg-blue-600 text-white'
-                          : 'text-slate-700 dark:text-slate-300 hover:bg-white/10 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <span>📁</span>
-                      <span className="truncate">{p.name}</span>
-                      {isActive && <span className="ml-auto">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
 
-        {/* Status Filter Tabs */}
-        <div className="flex gap-1.5 border-b border-slate-200/30 dark:border-white/5 pb-2.5 overflow-x-auto w-full max-w-full">
-          {['ALL', 'BACKLOG', 'TO_DO', 'IN_PROGRESS', 'TESTING', 'REVIEW', 'COMPLETED'].map(tab => (
-            <button
-              key={tab}
-              onClick={() => setStatusFilter(tab)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
-                statusFilter === tab
-                  ? 'bg-blue-600 text-white shadow shadow-blue-500/10'
-                  : 'text-slate-500 hover:bg-white/10 dark:text-slate-400 dark:hover:text-white'
-              }`}
-            >
-              {tab.replace('_', ' ')}
-            </button>
-          ))}
+        {/* Right: Status Tabs */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+          {[
+            { id: 'ALL', label: 'ALL' },
+            { id: 'BACKLOG', label: 'BACKLOG' },
+            { id: 'TO_DO', label: 'TO DO' },
+            { id: 'IN_PROGRESS', label: 'IN PROGRESS' },
+            { id: 'TESTING', label: 'TESTING' },
+            { id: 'REVIEW', label: 'REVIEW' },
+            { id: 'COMPLETED', label: 'COMPLETED' }
+          ].map(tab => {
+            const isActive = statusFilter === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setStatusFilter(tab.id)}
+                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                  isActive
+                    ? 'bg-[#1c2438] text-white border border-slate-700/80 shadow-sm font-bold'
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
       </div>
 
-      {/* Main Task Listing (Grouped by Assignee OR Grid OR List Table) */}
+      {/* Main Task Listing (Grouped by Assignee OR Grid OR Option 2 Table) */}
       {groupByAssignee ? (
         /* ================= GROUP BY ASSIGNEE WORKLOAD VIEW ================= */
         <div className="space-y-6">
@@ -585,7 +623,7 @@ export default function Tasks() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-amber-600 dark:text-amber-400">
-                    Unassigned Tasks ({unassignedCount})
+                    Unassigned Tasks ({tasks.filter(t => !t.assignee).length})
                   </h3>
                   <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                     Tasks pending Team Leader assignment to a specific team member.
@@ -604,7 +642,7 @@ export default function Tasks() {
                     <span className="text-[9px] font-black px-2 py-0.5 rounded uppercase bg-amber-500/10 text-amber-500 border border-amber-500/20">
                       {task.priority} Priority
                     </span>
-                    <span className="text-[9px] font-bold text-slate-400">Due: {task.dueDate}</span>
+                    <span className="text-[9px] font-bold text-slate-400">Due: {formatDisplayDate(task.dueDate)}</span>
                   </div>
 
                   <div>
@@ -631,7 +669,11 @@ export default function Tasks() {
 
           {/* Grouped by Team Member */}
           {teamMembers.map(member => {
-            const memberTasks = filteredTasks.filter(t => t.assignee?.id === member.id);
+            const memberTasks = filteredTasks.filter(t => 
+              t.assignee?.id === member.id || 
+              String(t.assignee?.id) === String(member.id) ||
+              (t.assignee?.name && member.name && t.assignee.name.toLowerCase() === member.name.toLowerCase())
+            );
             if (memberTasks.length === 0 && assigneeFilter !== 'ALL') return null;
 
             return (
@@ -672,7 +714,7 @@ export default function Tasks() {
                         }`}>
                           {task.status.replace('_', ' ')}
                         </span>
-                        <span className="text-[9px] font-bold text-slate-400">Due: {task.dueDate}</span>
+                        <span className="text-[9px] font-bold text-slate-400">Due: {formatDisplayDate(task.dueDate)}</span>
                       </div>
 
                       <div>
@@ -706,244 +748,182 @@ export default function Tasks() {
       ) : isGridView ? (
         /* ================= GRID VIEW ================= */
         filteredTasks.length === 0 ? (
-          <div className="glass-panel p-16 text-center text-slate-450 text-xs font-bold flex flex-col items-center justify-center gap-3">
+          <div className="glass-panel p-16 text-center text-slate-400 text-xs font-bold flex flex-col items-center justify-center gap-3">
             <CheckSquare className="w-12 h-12 text-slate-300 dark:text-slate-700 animate-pulse" />
             No tasks found matching current filters.
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredTasks.map(task => {
-              const isAssignee = task.assignee && task.assignee.id === user?.id;
-              return (
-                <div
-                  key={task.id}
-                  onClick={() => openTaskDetail(task)}
-                  className="glass-panel glass-panel-hover p-5 flex flex-col justify-between min-h-[220px] cursor-pointer relative"
-                >
-                  <div className="space-y-3.5">
-                    <div className="flex justify-between items-start gap-2">
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${
-                        task.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' :
-                        task.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-500' :
-                        'bg-slate-500/10 text-slate-400'
-                      }`}>
-                        {task.status.replace('_', ' ')}
-                      </span>
+            {filteredTasks.map(task => (
+              <div
+                key={task.id}
+                onClick={() => openTaskDetail(task)}
+                className="glass-panel glass-panel-hover p-5 flex flex-col justify-between min-h-[220px] cursor-pointer relative"
+              >
+                <div className="space-y-3.5">
+                  <div className="flex justify-between items-start gap-2">
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${
+                      task.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' :
+                      task.status === 'IN_PROGRESS' ? 'bg-blue-500/10 text-blue-500' :
+                      'bg-slate-500/10 text-slate-400'
+                    }`}>
+                      {task.status.replace('_', ' ')}
+                    </span>
 
-                      <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${
-                        task.priority === 'CRITICAL' ? 'bg-red-500/10 text-red-500' :
-                        task.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-500' :
-                        'bg-blue-500/10 text-blue-500'
-                      }`}>
-                        {task.priority} Priority
-                      </span>
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-black text-slate-800 dark:text-white line-clamp-1">{task.title}</h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{task.description}</p>
-                    </div>
+                    <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase ${
+                      task.priority === 'CRITICAL' ? 'bg-red-500/10 text-red-500' :
+                      task.priority === 'HIGH' ? 'bg-amber-500/10 text-amber-500' :
+                      'bg-blue-500/10 text-blue-500'
+                    }`}>
+                      {task.priority} Priority
+                    </span>
                   </div>
 
-                  <div className="mt-4 pt-3.5 border-t border-slate-200/10 dark:border-white/5 space-y-3">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-                      <span className="text-blue-500 flex items-center gap-1 font-black truncate max-w-[150px]">
-                        📁 {task.project ? (task.project.name || task.project.title || 'General') : 'General'}
-                      </span>
-                      <span className="flex items-center gap-1 flex-shrink-0">
-                        <Calendar className="w-3 h-3" /> {task.dueDate}
-                      </span>
-                    </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-800 dark:text-white line-clamp-1">{task.title}</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{task.description}</p>
+                  </div>
+                </div>
 
-                    <div className="flex justify-between items-center">
-                      {/* Interactive Assignee Badge for Team Leaders */}
-                      {isTeamLeader ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setAssigningTaskId(task.id);
-                          }}
-                          className="flex items-center gap-1.5 px-2 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20 font-extrabold text-[10px] cursor-pointer transition-all"
-                        >
-                          {task.assignee ? (
-                            <>
-                              <img
-                                src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
-                                alt="avatar"
-                                className="w-4 h-4 rounded-full object-cover"
-                              />
-                              <span>{task.assignee.name}</span>
-                            </>
-                          ) : (
-                            <span className="text-amber-500">⚠️ Assign Teammate</span>
-                          )}
-                          <ChevronDown className="w-3 h-3" />
-                        </button>
-                      ) : (
-                        task.assignee ? (
-                          <div className="flex items-center gap-1.5">
-                            <img
-                              src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
-                              alt="avatar"
-                              className="w-5 h-5 rounded-full object-cover ring-1 ring-blue-500/10"
-                            />
-                            <span className="text-[10px] font-bold text-slate-600 dark:text-slate-350">{task.assignee.name}</span>
-                          </div>
-                        ) : (
-                          <span className="text-[10px] text-slate-400 italic">Unassigned</span>
-                        )
-                      )}
+                <div className="mt-4 pt-3.5 border-t border-slate-200/10 dark:border-white/5 space-y-3">
+                  <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                    <span className="text-blue-500 flex items-center gap-1 font-black truncate max-w-[150px]">
+                      📁 {task.project ? (task.project.name || task.project.title || 'General') : 'General'}
+                    </span>
+                    <span className="flex items-center gap-1 flex-shrink-0">
+                      <Calendar className="w-3 h-3" /> {formatDisplayDate(task.dueDate)}
+                    </span>
+                  </div>
 
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-500 border border-slate-500/10">
-                          ⏱️ {task.actualTime || 0}h/{task.estimatedTime || 0}h
-                        </span>
-                        <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => openTaskDetail(task)}
-                            className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-slate-800 dark:hover:text-white"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
+                  <div className="flex justify-between items-center">
+                    {task.assignee ? (
+                      <div className="flex items-center gap-1.5">
+                        <img
+                          src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
+                          alt="avatar"
+                          className="w-5 h-5 rounded-full object-cover ring-1 ring-blue-500/10"
+                        />
+                        <span className="text-[10px] font-bold text-slate-300">{task.assignee.name}</span>
                       </div>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 italic">Unassigned</span>
+                    )}
+
+                    <div className="flex items-center gap-2">
+                      <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-slate-500/10 text-slate-500 border border-slate-500/10">
+                        ⏱️ {task.actualTime || 0}h/{task.estimatedTime || 0}h
+                      </span>
                     </div>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         )
       ) : (
-        /* ================= TABLE LIST VIEW ================= */
-        <div className="glass-panel overflow-hidden border border-slate-200/50 dark:border-white/5 shadow-xl w-full min-w-0">
-          <div className="overflow-x-auto w-full min-w-0">
-            <table className="w-full text-left text-xs border-collapse min-w-[850px] table-fixed">
+        /* ================= OPTION 2 TABLE LIST VIEW ================= */
+        <div className="bg-[#0e131f]/70 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden w-full">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
-                <tr className="bg-slate-500/5 border-b border-slate-200/30 dark:border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                  <th className="p-4 w-[80px] text-center">Inspect</th>
-                  <th className="p-4 w-[260px]">Task Name</th>
-                  <th className="p-4 w-[170px]">Project</th>
-                  <th className="p-4 w-[160px]">Status</th>
-                  <th className="p-4 w-[100px]">Priority</th>
-                  <th className="p-4 w-[110px]">Due Date</th>
-                  <th className="p-4 w-[170px]">Assigned Team Member</th>
-                  <th className="p-4 w-[100px]">Time Log</th>
+                <tr className="border-b border-slate-800/80 bg-slate-900/40 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                  <th className="py-3.5 px-4 w-12 text-center">
+                    <input
+                      type="checkbox"
+                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
+                    />
+                  </th>
+                  <th className="py-3.5 px-4 w-24">ID</th>
+                  <th className="py-3.5 px-4">Task Name</th>
+                  <th className="py-3.5 px-4 w-44">Assignee</th>
+                  <th className="py-3.5 px-4 w-28">Priority</th>
+                  <th className="py-3.5 px-4 w-36">Status</th>
+                  <th className="py-3.5 px-4 w-28">Due Date</th>
+                  <th className="py-3.5 px-4 w-24 text-right pr-6">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-200/20 dark:divide-white/5">
+              <tbody className="divide-y divide-slate-800/60">
                 {filteredTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="p-12 text-center text-slate-400 font-bold">
+                    <td colSpan={8} className="py-14 text-center text-slate-400 font-medium">
                       No tasks found matching current filters.
                     </td>
                   </tr>
                 ) : (
                   filteredTasks.map(task => {
-                    const isAssignee = task.assignee && task.assignee.id === user?.id;
+                    const initial = task.assignee ? task.assignee.name.charAt(0).toUpperCase() : '?';
                     return (
-                      <tr key={task.id} className="hover:bg-slate-500/5 transition-colors font-bold text-slate-700 dark:text-slate-300">
-                        <td className="p-4 w-[80px] text-center">
-                          <div className="flex justify-center items-center gap-1.5">
-                            <button
-                              onClick={() => openTaskDetail(task)}
-                              className="p-1.5 rounded-lg border border-slate-200/50 dark:border-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                              title="Open Details Inspector"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                          </div>
+                      <tr
+                        key={task.id}
+                        className="hover:bg-[#141b2c]/60 transition-colors group cursor-pointer"
+                        onClick={() => openTaskDetail(task)}
+                      >
+                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="checkbox"
+                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
+                          />
                         </td>
-                        <td className="p-4 w-[260px] truncate">
-                          <div className="truncate">
-                            <p className="font-black text-slate-800 dark:text-slate-100 truncate">{task.title}</p>
-                            <p className="text-[10px] text-slate-400 truncate mt-0.5">{task.description}</p>
-                          </div>
+                        <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">
+                          PM-{task.id}
                         </td>
-                        <td className="p-4 w-[170px] truncate">
-                          <span className="font-black text-[10px] uppercase text-blue-500 truncate block">
-                            {task.project ? (task.project.name || task.project.title || 'General') : 'General'}
+                        <td className="py-3.5 px-4">
+                          <span className="text-white font-medium text-xs sm:text-sm group-hover:text-blue-300 transition-colors">
+                            {task.title}
                           </span>
                         </td>
-                        <td className="p-4 w-[160px] whitespace-nowrap">
-                          <select
-                            disabled={!isTeamLeader && !isAssignee}
-                            value={task.status}
-                            onChange={(e) => handleStatusChange(task.id, e.target.value)}
-                            className={`bg-transparent border-none font-bold text-xs text-blue-500 outline-none whitespace-nowrap ${(!isTeamLeader && !isAssignee) ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'}`}
-                          >
-                            <option className="dark:bg-slate-800" value="BACKLOG">Backlog</option>
-                            <option className="dark:bg-slate-800" value="TO_DO">To Do</option>
-                            <option className="dark:bg-slate-800" value="IN_PROGRESS">In Progress</option>
-                            <option className="dark:bg-slate-800" value="TESTING">Testing</option>
-                            <option className="dark:bg-slate-800" value="REVIEW">Review</option>
-                            <option className="dark:bg-slate-800" value="COMPLETED">Completed</option>
-                          </select>
-                        </td>
-                        <td className="p-4 w-[100px] whitespace-nowrap">
-                          <select
-                            disabled={!isTeamLeader}
-                            value={task.priority}
-                            onChange={(e) => handlePriorityChange(task.id, e.target.value)}
-                            className={`bg-transparent border-none font-black text-[10px] uppercase outline-none whitespace-nowrap ${!isTeamLeader ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'} ${
-                              task.priority === 'CRITICAL' ? 'text-red-500' :
-                              task.priority === 'HIGH' ? 'text-amber-500' :
-                              'text-slate-400'
-                            }`}
-                          >
-                            <option className="dark:bg-slate-800 text-slate-700" value="LOW">Low</option>
-                            <option className="dark:bg-slate-800 text-slate-700" value="MEDIUM">Medium</option>
-                            <option className="dark:bg-slate-800 text-slate-700" value="HIGH">High</option>
-                            <option className="dark:bg-slate-800 text-slate-700" value="CRITICAL">Critical</option>
-                          </select>
-                        </td>
-                        <td className="p-4 w-[110px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                          <span className="flex items-center gap-1.5 whitespace-nowrap">
-                            <Calendar className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" /> {task.dueDate}
-                          </span>
-                        </td>
-                        
-                        {/* Interactive Assignee Dropdown for Team Leaders */}
-                        <td className="p-4 w-[170px] whitespace-nowrap">
-                          {isTeamLeader ? (
-                            <button
-                              onClick={() => setAssigningTaskId(task.id)}
-                              className="flex items-center gap-1.5 px-2.5 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 rounded-xl border border-blue-500/20 font-extrabold text-xs cursor-pointer transition-all"
-                            >
-                              {task.assignee ? (
-                                <>
-                                  <img
-                                    src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
-                                    alt="avatar"
-                                    className="w-4 h-4 rounded-full object-cover"
-                                  />
-                                  <span className="truncate max-w-[100px]">{task.assignee.name}</span>
-                                </>
-                              ) : (
-                                <span className="text-amber-500">⚠️ Assign</span>
-                              )}
-                              <ChevronDown className="w-3 h-3" />
-                            </button>
-                          ) : (
-                            task.assignee ? (
-                              <div className="flex items-center gap-1.5 truncate">
-                                <img
-                                  src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
-                                  alt="avatar"
-                                  className="w-5 h-5 rounded-full object-cover ring-1 ring-blue-500/10 flex-shrink-0"
-                                />
-                                <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{task.assignee.name}</span>
+                        <td
+                          className="py-3.5 px-4"
+                          onClick={(e) => {
+                            if (isTeamLeader) {
+                              e.stopPropagation();
+                              setAssigningTaskId(task.id);
+                            }
+                          }}
+                        >
+                          {task.assignee ? (
+                            <div className="flex items-center -space-x-1.5" title={task.assignee.name}>
+                              <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-[#0e131f] shadow-sm shrink-0">
+                                {initial}
                               </div>
-                            ) : (
-                              <span className="text-slate-400 italic">Unassigned</span>
-                            )
+                              <img
+                                src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
+                                alt={task.assignee.name}
+                                className="w-6 h-6 rounded-full object-cover ring-2 ring-[#0e131f] shadow-sm shrink-0"
+                              />
+                            </div>
+                          ) : (
+                            <span className="text-xs text-slate-500 italic">Unassigned</span>
                           )}
                         </td>
-
-                        <td className="p-4 w-[100px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                          <span className="flex items-center gap-1 whitespace-nowrap">
-                            ⏱️ {task.actualTime || 0}h/{task.estimatedTime || 0}h
+                        <td className="py-3.5 px-4">
+                          <span className="text-slate-300 font-medium text-xs">
+                            {task.priority === 'HIGH' || task.priority === 'CRITICAL' ? 'High' : task.priority === 'LOW' ? 'Low' : 'Medium'}
                           </span>
+                        </td>
+                        <td className="py-3.5 px-4">
+                          {renderStatusBadge(task.status)}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-400 font-medium text-xs whitespace-nowrap">
+                          {formatDisplayDate(task.dueDate)}
+                        </td>
+                        <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-end gap-2 text-slate-400">
+                            <button
+                              onClick={() => openTaskDetail(task)}
+                              className="p-1 hover:text-white transition-colors cursor-pointer"
+                              title="Edit task"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => openTaskDetail(task)}
+                              className="p-1 hover:text-white transition-colors cursor-pointer"
+                              title="More options"
+                            >
+                              <MoreHorizontal className="w-4 h-4" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -966,7 +946,7 @@ export default function Tasks() {
               </div>
               <button
                 onClick={() => setAssigningTaskId(null)}
-                className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
+                className="p-1 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg cursor-pointer"
               >
                 ✕
               </button>
@@ -993,7 +973,7 @@ export default function Tasks() {
                   <div className="flex items-center gap-2.5">
                     <img
                       src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
-                      alt="avatar"
+                      alt={member.name}
                       className="w-7 h-7 rounded-xl object-cover ring-1 ring-blue-500/20"
                     />
                     <div className="text-left">
@@ -1011,7 +991,6 @@ export default function Tasks() {
         </div>,
         document.body
       )}
-
     </div>
   );
 }
