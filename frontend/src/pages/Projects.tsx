@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FolderGit2, Star, Trash2, LayoutGrid, List, Search, Plus, Calendar, DollarSign, Users, X, Info, Check, Pencil, ChevronDown, UserPlus } from 'lucide-react';
 import api from '../services/api';
@@ -476,24 +477,19 @@ export default function Projects() {
       </div>
 
       {/* Create Project Modal */}
-      <AnimatePresence>
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 touch-none overscroll-contain select-none">
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setIsModalOpen(false)}
-              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm touch-none overscroll-none"
-            ></motion.div>
+      {isModalOpen && createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 touch-none overscroll-contain modal-dialog-root">
+          <div
+            onClick={() => setIsModalOpen(false)}
+            className="absolute inset-0 bg-slate-950/50 backdrop-blur-sm cursor-pointer"
+          />
 
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9, y: 15 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9, y: 15 }}
-              transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 modal-dialog-contain overscroll-contain"
-            >
+          <div
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="glass-panel w-full max-w-lg max-h-[88vh] overflow-y-auto p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 modal-dialog-contain overscroll-contain pointer-events-auto select-text touch-auto"
+          >
               <button
                 onClick={() => setIsModalOpen(false)}
                 className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
@@ -747,10 +743,10 @@ export default function Projects() {
                   </button>
                 </div>
               </form>
-            </motion.div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>,
+        document.body
+      )}
 
       {/* Team Member Picker Modal */}
       <TeamMemberPickerModal

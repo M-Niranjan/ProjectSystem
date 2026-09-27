@@ -1269,201 +1269,201 @@ export default function Timeline() {
       )}
 
       {/* TASK QUICK INSPECT DRAWER / MODAL */}
-      <AnimatePresence>
-        {selectedTask && (
+      {selectedTask && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root"
+          onClick={() => setSelectedTask(null)}
+        >
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain select-none"
-            onClick={() => setSelectedTask(null)}
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain pointer-events-auto select-text touch-auto"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-lg max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain"
-            >
-              <div className="flex items-start justify-between gap-3 border-b border-slate-200/50 dark:border-white/10 pb-3">
-                <div className="space-y-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded">
-                      TASK #{selectedTask.id}
-                    </span>
-                    <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
-                      selectedTask.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
-                    }`}>
-                      {selectedTask.status}
-                    </span>
-                  </div>
-                  <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white break-words">
-                    {selectedTask.title}
-                  </h3>
+            <div className="flex items-start justify-between gap-3 border-b border-slate-200/50 dark:border-white/10 pb-3">
+              <div className="space-y-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-black uppercase px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded">
+                    TASK #{selectedTask.id}
+                  </span>
+                  <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                    selectedTask.status === 'COMPLETED' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-blue-500/10 text-blue-500'
+                  }`}>
+                    {selectedTask.status}
+                  </span>
                 </div>
-
-                <button
-                  onClick={() => setSelectedTask(null)}
-                  className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-white/5 transition-colors cursor-pointer shrink-0"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white break-words">
+                  {selectedTask.title}
+                </h3>
               </div>
 
-              <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
-                {selectedTask.description || 'No description provided.'}
-              </p>
+              <button
+                type="button"
+                onClick={() => setSelectedTask(null)}
+                className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-white/5 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
 
-              <div className="grid grid-cols-2 gap-3 text-xs">
-                <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Start Date</span>
-                  <p className="font-black text-slate-800 dark:text-white">{selectedTask.startDate || 'N/A'}</p>
-                </div>
-                <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Deadline Due</span>
-                  <p className="font-black text-slate-800 dark:text-white">{selectedTask.dueDate || 'N/A'}</p>
-                </div>
-                <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Actual Hours</span>
-                  <p className="font-black text-blue-500">{selectedTask.actualTime || 0} hrs logged</p>
-                </div>
-                <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
-                  <span className="text-[10px] font-bold text-slate-400 uppercase">Assignee</span>
-                  <p className="font-black text-slate-800 dark:text-white">{selectedTask.assignee || 'Unassigned'}</p>
-                </div>
+            <p className="text-xs text-slate-600 dark:text-slate-300 font-semibold">
+              {selectedTask.description || 'No description provided.'}
+            </p>
+
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Start Date</span>
+                <p className="font-black text-slate-800 dark:text-white">{selectedTask.startDate || 'N/A'}</p>
               </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/40 dark:border-white/5">
-                <button
-                  onClick={() => {
-                    handleStartTimer(selectedTask.id);
-                    setSelectedTask(null);
-                    showToast(`Started live timer for "${selectedTask.title}"!`);
-                  }}
-                  className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Play className="w-3.5 h-3.5 fill-current" />
-                  <span>Start Stopwatch</span>
-                </button>
-
-                <button
-                  onClick={() => {
-                    setLogTimeTaskId(selectedTask.id);
-                    setIsLogTimeModalOpen(true);
-                    setSelectedTask(null);
-                  }}
-                  className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Log Hours</span>
-                </button>
+              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Deadline Due</span>
+                <p className="font-black text-slate-800 dark:text-white">{selectedTask.dueDate || 'N/A'}</p>
               </div>
-            </motion.div>
+              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Actual Hours</span>
+                <p className="font-black text-blue-500">{selectedTask.actualTime || 0} hrs logged</p>
+              </div>
+              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl space-y-0.5">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Assignee</span>
+                <p className="font-black text-slate-800 dark:text-white">{selectedTask.assignee || 'Unassigned'}</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200/40 dark:border-white/5">
+              <button
+                type="button"
+                onClick={() => {
+                  handleStartTimer(selectedTask.id);
+                  setSelectedTask(null);
+                  showToast(`Started live timer for "${selectedTask.title}"!`);
+                }}
+                className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Play className="w-3.5 h-3.5 fill-current" />
+                <span>Start Stopwatch</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setLogTimeTaskId(selectedTask.id);
+                  setIsLogTimeModalOpen(true);
+                  setSelectedTask(null);
+                }}
+                className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Log Hours</span>
+              </button>
+            </div>
           </div>
-        )}
-      </AnimatePresence>
+        </div>,
+        document.body
+      )}
 
       {/* MANUAL LOG HOURS MODAL */}
-      <AnimatePresence>
-        {isLogTimeModalOpen && (
+      {isLogTimeModalOpen && createPortal(
+        <div
+          className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root"
+          onClick={() => setIsLogTimeModalOpen(false)}
+        >
           <div
-            className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/70 backdrop-blur-sm p-4 touch-none overscroll-contain select-none"
-            onClick={() => setIsLogTimeModalOpen(false)}
+            role="dialog"
+            aria-modal="true"
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-md max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain pointer-events-auto select-text touch-auto"
           >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              onClick={(e) => e.stopPropagation()}
-              className="w-full max-w-md max-h-[88vh] overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-white/10 rounded-3xl p-5 sm:p-6 shadow-2xl space-y-4 modal-dialog-contain overscroll-contain"
-            >
-              <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
-                <div className="flex items-center gap-2">
-                  <Clock className="w-5 h-5 text-blue-500" />
-                  <h3 className="text-base font-black text-slate-900 dark:text-white">Log Work Hours</h3>
-                </div>
-                <button
-                  onClick={() => setIsLogTimeModalOpen(false)}
-                  className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-white/5 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+            <div className="flex items-center justify-between border-b border-slate-200/50 dark:border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <Clock className="w-5 h-5 text-blue-500" />
+                <h3 className="text-base font-black text-slate-900 dark:text-white">Log Work Hours</h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsLogTimeModalOpen(false)}
+                className="p-1.5 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl bg-slate-100 dark:bg-white/5 transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleManualTimeSubmit} className="space-y-3.5 text-xs">
+              <div className="space-y-1">
+                <label className="font-bold text-slate-400">Target Task</label>
+                <LuxurySelect
+                  value={logTimeTaskId || ''}
+                  onChange={(val) => setLogTimeTaskId(Number(val))}
+                  placeholder="Select Target Task..."
+                  options={tasks.map(t => ({
+                    value: String(t.id),
+                    label: t.title,
+                    subLabel: t.status ? t.status.replace('_', ' ') : undefined
+                  }))}
+                />
               </div>
 
-              <form onSubmit={handleManualTimeSubmit} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="font-bold text-slate-400">Target Task</label>
+                  <label className="font-bold text-slate-400">Duration (Hours)</label>
+                  <input
+                    type="number"
+                    step="0.5"
+                    min="0.5"
+                    max="24"
+                    value={logTimeHours}
+                    onChange={(e) => setLogTimeHours(e.target.value)}
+                    className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-black outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="font-bold text-slate-400">Activity Category</label>
                   <LuxurySelect
-                    value={logTimeTaskId || ''}
-                    onChange={(val) => setLogTimeTaskId(Number(val))}
-                    placeholder="Select Target Task..."
-                    options={tasks.map(t => ({
-                      value: String(t.id),
-                      label: t.title,
-                      subLabel: t.status ? t.status.replace('_', ' ') : undefined
-                    }))}
+                    value={logTimeCategory}
+                    onChange={(val) => setLogTimeCategory(val)}
+                    options={[
+                      { value: 'Development', label: 'Development' },
+                      { value: 'UI/UX Design', label: 'UI/UX Design' },
+                      { value: 'Testing & QA', label: 'Testing & QA' },
+                      { value: 'Architecture', label: 'Architecture' },
+                      { value: 'Code Review', label: 'Code Review' },
+                      { value: 'Bug Fix', label: 'Bug Fix' },
+                    ]}
                   />
                 </div>
+              </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-400">Duration (Hours)</label>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      max="24"
-                      value={logTimeHours}
-                      onChange={(e) => setLogTimeHours(e.target.value)}
-                      className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-black outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <label className="font-bold text-slate-400">Activity Category</label>
-                    <LuxurySelect
-                      value={logTimeCategory}
-                      onChange={(val) => setLogTimeCategory(val)}
-                      options={[
-                        { value: 'Development', label: 'Development' },
-                        { value: 'UI/UX Design', label: 'UI/UX Design' },
-                        { value: 'Testing & QA', label: 'Testing & QA' },
-                        { value: 'Architecture', label: 'Architecture' },
-                        { value: 'Code Review', label: 'Code Review' },
-                        { value: 'Bug Fix', label: 'Bug Fix' },
-                      ]}
-                    />
-                  </div>
-                </div>
+              <div className="space-y-1">
+                <label className="font-bold text-slate-400">Work Contribution Notes</label>
+                <textarea
+                  rows={3}
+                  placeholder="Briefly describe what you worked on..."
+                  value={logTimeNotes}
+                  onChange={(e) => setLogTimeNotes(e.target.value)}
+                  className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-medium outline-none focus:ring-2 focus:ring-blue-500 resize-none"
+                />
+              </div>
 
-                <div className="space-y-1">
-                  <label className="font-bold text-slate-400">Work Contribution Notes</label>
-                  <textarea
-                    rows={3}
-                    placeholder="Briefly describe what you worked on..."
-                    value={logTimeNotes}
-                    onChange={(e) => setLogTimeNotes(e.target.value)}
-                    className="w-full p-2.5 bg-white/5 border border-slate-200/70 dark:border-white/10 rounded-xl text-slate-800 dark:text-white font-medium outline-none focus:ring-2 focus:ring-blue-500 resize-none"
-                  />
-                </div>
-
-                <div className="flex items-center justify-end gap-2 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsLogTimeModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmittingLog}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-md cursor-pointer transition-all disabled:opacity-50"
-                  >
-                    {isSubmittingLog ? 'Saving...' : 'Submit Log'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+              <div className="flex items-center justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setIsLogTimeModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingLog}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white font-black rounded-xl shadow-md cursor-pointer transition-all disabled:opacity-50"
+                >
+                  {isSubmittingLog ? 'Saving...' : 'Submit Log'}
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </AnimatePresence>
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

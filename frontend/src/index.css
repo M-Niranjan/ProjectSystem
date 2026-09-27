@@ -87,6 +87,18 @@
     pointer-events: none !important;
   }
 
+  /* Critical: Modal dialogs, portals, overlays, and interactive forms must ALWAYS retain pointer events */
+  body.modal-scroll-locked .modal-dialog-contain,
+  body.modal-scroll-locked .modal-dialog-contain *,
+  body.modal-scroll-locked [role="dialog"],
+  body.modal-scroll-locked [role="dialog"] *,
+  body.modal-scroll-locked .pointer-events-auto,
+  body.modal-scroll-locked .pointer-events-auto *,
+  body.modal-scroll-locked .modal-dialog-root,
+  body.modal-scroll-locked .modal-dialog-root * {
+    pointer-events: auto !important;
+  }
+
   .modal-backdrop-lock {
     overscroll-behavior: contain;
     touch-action: none;
