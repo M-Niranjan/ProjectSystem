@@ -1,15 +1,34 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
-import { ResponsiveContainer, AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell, Tooltip, XAxis, YAxis, CartesianGrid } from 'recharts';
-import { LayoutDashboard, CheckSquare, Clock, Users, ArrowUpRight, ArrowRight, CloudSun, Calendar, Plus, Shield, Briefcase, Award, AlertCircle, UserCheck, CheckCircle2, XCircle, FileText, ChevronRight, FolderGit2, Sparkles, Activity, Lock, Settings, Timer, ShieldCheck, KeyRound, Building2, ScrollText, Network, UserPlus } from 'lucide-react';
+import {
+  Clock,
+  CheckSquare,
+  Users,
+  ArrowRight,
+  Plus,
+  Shield,
+  Briefcase,
+  Award,
+  AlertCircle,
+  CheckCircle2,
+  FolderGit2,
+  Timer,
+  ShieldCheck,
+  KeyRound,
+  Building2,
+  ScrollText,
+  Network,
+  UserPlus,
+  Info,
+  Sparkles,
+  ArrowUpRight
+} from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 import LuxurySelect from '../components/common/LuxurySelect';
-
-const COLORS = ['#64748B', '#3B82F6', '#6366F1', '#8B5CF6', '#F59E0B', '#22C55E'];
 
 interface DashboardProps {
   forcedRole?: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';
@@ -35,18 +54,15 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
     totalTasks: 0,
     completedTasks: 0,
     pendingTasks: 0,
-    productivityScore: 100,
+    productivityScore: 98,
   });
 
   // Employee specific state
   const [myTasks, setMyTasks] = useState<any[]>([]);
   const [pendingTasks, setPendingTasks] = useState<any[]>([]);
-  const [declineTargetId, setDeclineTargetId] = useState<number | null>(null);
-  const [declineReason, setDeclineReason] = useState('');
 
-  // Manager specific state
+  // Manager & Admin specific state
   const [employeeDirectory, setEmployeeDirectory] = useState<any[]>([]);
-  const [allTasks, setAllTasks] = useState<any[]>([]);
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
@@ -55,9 +71,9 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDesc, setNewTaskDesc] = useState('');
   const [newTaskAssigneeId, setNewTaskAssigneeId] = useState('');
-  const [newTaskPriority, setNewTaskPriority] = useState('HIGH');
-  const [newTaskDueDate, setNewTaskDueDate] = useState('');
-  const [newTaskHours, setNewTaskHours] = useState('8');
+  const [newTaskPriority] = useState('HIGH');
+  const [newTaskDueDate] = useState('');
+  const [newTaskHours] = useState('8');
   const [newTaskProjectId, setNewTaskProjectId] = useState('');
   
   const [formSuccess, setFormSuccess] = useState('');
@@ -74,7 +90,9 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       if (isEmployee) {
         const tasksRes = await api.get('/api/tasks');
         const allTasksList = tasksRes.data || [];
-        const assigned = allTasksList.filter((t: any) => t.assignee && (t.assignee.id === user?.id || t.assignee.name === user?.name));
+        const assigned = allTasksList.filter(
+          (t: any) => t.assignee && (t.assignee.id === user?.id || t.assignee.name === user?.name)
+        );
         setMyTasks(assigned);
 
         const pending = assigned.filter((t: any) => t.status === 'PENDING_ACCEPTANCE');
@@ -90,31 +108,29 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           totalTasks: total,
           completedTasks: completed,
           pendingTasks: total - completed,
-          productivityScore: total > 0 ? Math.round((completed / total) * 100) : 100
+          productivityScore: total > 0 ? Math.round((completed / total) * 100) : 98
         });
 
       } else {
         const reportsRes = await api.get('/api/reports/analytics');
         if (reportsRes.data) {
-          setStats(prev => ({ ...prev, ...reportsRes.data }));
+          setStats(prev => ({ ...prev, ...reportsRes.data, productivityScore: prev.productivityScore || 98 }));
         }
 
         const teamsRes = await api.get('/api/teams');
-        // System Administrator manages the portal only - filter out ROLE_ADMIN and Niranjan from task assignment directory
-        const assignableStaff = (teamsRes.data || []).filter((e: any) => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan');
+        const assignableStaff = (teamsRes.data || []).filter(
+          (e: any) => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan'
+        );
         setEmployeeDirectory(assignableStaff);
-        if (assignableStaff.length > 0) {
-          setNewTaskAssigneeId(assignableStaff[0].id.toString());
+        if (assignableStaff.length > 0 && !newTaskAssigneeId) {
+          setNewTaskAssigneeId((assignableStaff[0].id || assignableStaff[0].uid).toString());
         }
 
         const projectsRes = await api.get('/api/projects');
         setProjectsList(projectsRes.data || []);
-        if (projectsRes.data.length > 0) {
+        if (projectsRes.data.length > 0 && !newTaskProjectId) {
           setNewTaskProjectId(projectsRes.data[0].id.toString());
         }
-
-        const allTasksRes = await api.get('/api/tasks');
-        setAllTasks(allTasksRes.data || []);
 
         try {
           const auditRes = await api.get('/api/admin/audit-logs');
@@ -201,578 +217,431 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       setNewTaskTitle('');
       setNewTaskDesc('');
       loadDashboardData();
+      window.dispatchEvent(new Event('task-status-updated'));
     } catch (err) {
       setFormError('Failed to save and assign task.');
     }
   };
 
-  const overdueCount = myTasks.filter(t => t.status !== 'COMPLETED' && t.dueDate && new Date(t.dueDate) < new Date()).length;
+  const getRoleBadge = (emp: any) => {
+    const normRole = normalizeRole(emp.role);
+    if (normRole === 'ROLE_MANAGER') return 'Lead';
+    const des = (emp.designation || '').toLowerCase();
+    if (des.includes('frontend')) return 'Frontend';
+    if (des.includes('backend')) return 'Backend';
+    if (des.includes('qa') || des.includes('test')) return 'QA';
+    return 'Developer';
+  };
+
+  // Teammates to display (guaranteeing Vinay, Ram, Mallu as in Option 2)
+  const displayTeammates = employeeDirectory.length > 0
+    ? employeeDirectory.filter(e => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan')
+    : [
+        { id: 1007, name: 'Vinay', role: 'ROLE_MANAGER', designation: 'Lead' },
+        { id: 1006, name: 'Ram', role: 'ROLE_EMPLOYEE', designation: 'Frontend' },
+        { id: 1008, name: 'Mallu', role: 'ROLE_EMPLOYEE', designation: 'Developer' }
+      ];
+
   const activeCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
 
-  const weeklyProductivity = [
-    { name: 'Mon', completed: 4 },
-    { name: 'Tue', completed: 6 },
-    { name: 'Wed', completed: 8 },
-    { name: 'Thu', completed: 5 },
-    { name: 'Fri', completed: 9 },
-    { name: 'Sat', completed: 3 },
-  ];
-
-  const userDistribution = [
-    { name: 'Admins', value: 1 },
-    { name: 'Team Leads', value: 1 },
-    { name: 'Developers & QA', value: 3 },
-  ];
-
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
-      {/* Top Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+    <div className="space-y-6 select-none pt-1 sm:pt-2 pb-12 w-full min-w-0">
+      {/* ========================================================================= */}
+      {/* OPTION 2 UNIFIED HEADER ACROSS ALL DASHBOARDS */}
+      {/* ========================================================================= */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5">
-            {isAdmin ? (
-              <><Shield className="w-6 h-6 sm:w-7 sm:h-7 text-purple-400 flex-shrink-0 drop-shadow-[0_0_12px_rgba(168,85,247,0.6)]" /> Admin Dashboard</>
-            ) : isTeamLead ? (
-              <><Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-blue-400 flex-shrink-0 drop-shadow-[0_0_12px_rgba(59,130,246,0.6)]" /> Team Lead Dashboard</>
-            ) : (
-              <><CheckSquare className="w-6 h-6 sm:w-7 sm:h-7 text-emerald-400 flex-shrink-0 drop-shadow-[0_0_12px_rgba(16,185,129,0.6)]" /> Employee Workspace</>
-            )}
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+            {isAdmin ? 'Admin Dashboard' : isTeamLead ? 'Team Lead Dashboard' : 'Employee Workspace'}
           </h1>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
-            Welcome back, <span className="text-slate-900 dark:text-white font-bold">{user?.name}</span>! Roles: <span className="font-bold text-cyan-600 dark:text-cyan-400 uppercase tracking-wide">{formatRoleName(user?.role)}</span>
+          <p className="text-sm font-normal text-slate-400 mt-1">
+            Welcome back, <span className="text-slate-200 font-semibold">{user?.name}</span> •{' '}
+            {isAdmin ? 'System Administrator & Executive Portal' : isTeamLead ? 'Team Lead & Engineering Manager' : 'Team Member & Engineer'}
           </p>
         </div>
 
-        {/* Clock & Weather widgets */}
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3 w-full sm:w-auto">
-          <div className="glass-card-dashboard px-3.5 sm:px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 group min-w-0 border border-slate-200 dark:border-white/10 rounded-2xl bg-white/80 dark:bg-white/[0.04] shadow-sm">
-            <CloudSun className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 dark:text-amber-400 flex-shrink-0 drop-shadow-[0_0_8px_rgba(245,158,11,0.5)]" />
-            <div className="text-left min-w-0">
-              <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider truncate">Workspace System</p>
-              <p className="text-xs font-bold text-slate-800 dark:text-white truncate">Optimal, 22°C</p>
-            </div>
+        {/* Option 2 Telemetry Capsule (Digital Clock & Active Workspace) */}
+        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
+          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-mono text-slate-300 flex items-center gap-2 shadow-sm">
+            <Clock className="w-3.5 h-3.5 text-slate-400" />
+            <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           </div>
 
-          <div className="glass-card-dashboard px-3.5 sm:px-4 py-2 flex items-center gap-2.5 cursor-pointer hover:scale-105 group min-w-0 border border-slate-200 dark:border-white/10 rounded-2xl bg-white/80 dark:bg-white/[0.04] shadow-sm">
-            <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-600 dark:text-cyan-400 flex-shrink-0 drop-shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
-            <div className="text-left min-w-0">
-              <p className="text-[9px] sm:text-[10px] text-slate-500 dark:text-slate-400 font-extrabold uppercase tracking-wider truncate">Digital Clock</p>
-              <p className="text-xs font-bold text-slate-800 dark:text-white font-mono truncate">
-                {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-              </p>
-            </div>
+          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-semibold text-slate-300 flex items-center gap-2 shadow-sm">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+            <span>Active workspace</span>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
+      {/* 1. ADMIN DASHBOARD VIEW (OPTION 2 TITANIUM MINIMALIST STUDIO AESTHETIC) */}
+      {/* ========================================================================= */}
       {isAdmin && (
-        <div className="space-y-4 sm:space-y-6 w-full min-w-0">
-          {/* Admin Metric Cards with Left-Top Icons & Cool Glassmorphism */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 w-full min-w-0">
+        <div className="space-y-6 w-full min-w-0">
+          {/* Row 1: 4 Symmetrical KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: Active Projects */}
-            <div className="glass-card-dashboard glass-glow-cyan group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.2)] group-hover:scale-110 group-hover:shadow-[0_0_22px_rgba(6,182,212,0.35)] transition-all duration-300 flex-shrink-0">
-                  <Timer className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 dark:border-cyan-500/30 uppercase tracking-wider flex-shrink-0 shadow-xs dark:shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                  Live
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Active Projects</span>
+                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                  i
                 </span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Active Projects</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-cyan-600 dark:text-cyan-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-500 dark:bg-cyan-400 animate-pulse flex-shrink-0"></span>
-                  <span className="truncate">Hospital, SaaS</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">{stats.activeProjects || 2}</div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital, SaaS Workspace</p>
               </div>
             </div>
 
-            {/* Card 2: Completed */}
-            <div className="glass-card-dashboard glass-glow-emerald group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.2)] group-hover:scale-110 group-hover:shadow-[0_0_22px_rgba(16,185,129,0.35)] transition-all duration-300 flex-shrink-0">
-                  <CheckCircle2 className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 dark:border-emerald-500/30 uppercase tracking-wider flex-shrink-0 shadow-xs dark:shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                  Done
-                </span>
+            {/* Card 2: Completed Deliverables */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Completed Projects</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Completed</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.completedProjects}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0"></span>
-                  <span className="truncate">On-Time Delivery</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-black text-white tracking-tight">{stats.completedProjects || 1}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                    On Track
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">100% On-Time Delivery</p>
               </div>
             </div>
 
             {/* Card 3: Total Teams */}
-            <div className="glass-card-dashboard glass-glow-blue group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.2)] group-hover:scale-110 group-hover:shadow-[0_0_22px_rgba(59,130,246,0.35)] transition-all duration-300 flex-shrink-0">
-                  <Users className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 dark:border-blue-500/30 uppercase tracking-wider flex-shrink-0 shadow-xs dark:shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                  Teams
-                </span>
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Active Teams</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Total Teams</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">3</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-blue-600 dark:text-blue-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0"></span>
-                  <span className="truncate">Engineering, QA</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white tracking-tight">3</span>
+                  <span className="text-xs font-medium text-slate-400">Engineering, QA</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full w-2/3"></div>
+                </div>
               </div>
             </div>
 
-            {/* Card 4: Total Users */}
-            <div className="glass-card-dashboard glass-glow-purple group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl flex items-center justify-center bg-purple-500/10 dark:bg-purple-500/15 border border-purple-500/30 text-purple-600 dark:text-purple-400 shadow-[0_0_15px_rgba(168,85,247,0.2)] group-hover:scale-110 group-hover:shadow-[0_0_22px_rgba(168,85,247,0.35)] transition-all duration-300 flex-shrink-0">
-                  <ShieldCheck className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 dark:border-purple-500/30 uppercase tracking-wider flex-shrink-0 shadow-xs dark:shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                  RBAC
-                </span>
+            {/* Card 4: Governance & Security Health */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Governance & Security</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 truncate">Total Users</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">5</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-purple-600 dark:text-purple-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-500 dark:bg-purple-400 animate-pulse flex-shrink-0"></span>
-                  <span className="truncate">RBAC Active</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">98%</div>
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                    Optimal Security
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Admin Navigation Quick Module Grid */}
-          <div className="glass-panel p-4 sm:p-6 space-y-4 sm:space-y-5 rounded-2xl sm:rounded-3xl w-full min-w-0 border border-white/10 shadow-2xl">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-white flex items-center gap-2 tracking-tight">
-                <Sparkles className="w-4 h-4 text-purple-400 flex-shrink-0 animate-pulse" /> Admin System Modules Navigation
+          {/* Row 2: Action Alert Banner */}
+          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+            <div className="pl-3 sm:pl-2">
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                System Security & RBAC Configuration Active
               </h3>
-              <span className="text-[9px] sm:text-[10px] font-black text-slate-400 uppercase tracking-wider">Quick Actions</span>
+              <p className="text-xs text-slate-400 mt-1">
+                All role permissions, user access policies, and audit trails are operating under enterprise governance.
+              </p>
             </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-4 w-full min-w-0">
-              {/* 1: User Directory */}
-              <button
-                onClick={() => setView('users')}
-                className="glass-card-dashboard glass-glow-cyan group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 shadow-[0_0_12px_rgba(244,63,94,0.18)] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(244,63,94,0.3)] transition-all duration-300 flex-shrink-0">
-                    <Users className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">User Directory</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Create & assign roles</p>
-                </div>
-              </button>
-
-              {/* 2: Roles & Perms */}
-              <button
-                onClick={() => setView('roles')}
-                className="glass-card-dashboard glass-glow-cyan group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-blue-500/10 dark:bg-blue-500/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-[0_0_12px_rgba(59,130,246,0.18)] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(59,130,246,0.3)] transition-all duration-300 flex-shrink-0">
-                    <KeyRound className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">Roles & Perms</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">RBAC matrix</p>
-                </div>
-              </button>
-
-              {/* 3: Org Settings */}
-              <button
-                onClick={() => setView('organization')}
-                className="glass-card-dashboard glass-glow-cyan group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-cyan-500/10 dark:bg-cyan-500/15 border border-cyan-500/30 text-cyan-600 dark:text-cyan-400 shadow-[0_0_12px_rgba(6,182,212,0.18)] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(6,182,212,0.3)] transition-all duration-300 flex-shrink-0">
-                    <Building2 className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-cyan-600 dark:group-hover:text-cyan-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors truncate">Org Settings</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Working defaults</p>
-                </div>
-              </button>
-
-              {/* 4: Teams Config */}
-              <button
-                onClick={() => setView('teams')}
-                className="glass-card-dashboard glass-glow-emerald group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.18)] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(245,158,11,0.3)] transition-all duration-300 flex-shrink-0">
-                    <Network className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">Teams Config</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Assign Team Leads</p>
-                </div>
-              </button>
-
-              {/* 5: Audit Logs */}
-              <button
-                onClick={() => setView('audit-logs')}
-                className="glass-card-dashboard glass-glow-emerald group p-3.5 sm:p-4.5 rounded-xl sm:rounded-[22px] flex flex-col justify-between text-left cursor-pointer hover:-translate-y-1.5 transition-all duration-300 w-full min-w-0"
-              >
-                <div className="flex items-start justify-between w-full">
-                  <div className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center bg-emerald-500/10 dark:bg-emerald-500/15 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.18)] group-hover:scale-110 group-hover:shadow-[0_0_18px_rgba(16,185,129,0.3)] transition-all duration-300 flex-shrink-0">
-                    <ScrollText className="w-5 h-5 stroke-[1.8]" />
-                  </div>
-                  <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform flex-shrink-0" />
-                </div>
-                <div className="mt-3 sm:mt-4 space-y-0.5 min-w-0">
-                  <p className="text-xs font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors truncate">Audit Logs</p>
-                  <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium truncate">Security history</p>
-                </div>
-              </button>
-            </div>
+            <button
+              type="button"
+              onClick={() => setView('audit-logs')}
+              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+              className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+            >
+              View Audit Logs <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Admin System Audit Stream */}
-          <div className="glass-panel p-4 sm:p-6 space-y-4 rounded-2xl sm:rounded-3xl w-full min-w-0 overflow-hidden">
-            <div className="flex justify-between items-center gap-2">
-              <h3 className="text-xs sm:text-sm font-black text-slate-800 dark:text-white flex items-center gap-2.5 min-w-0">
-                <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg flex items-center justify-center bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 shadow-xs flex-shrink-0">
-                  <ScrollText className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2]" />
-                </div>
-                <span className="truncate">System Security & Activity Log Feed</span>
-              </h3>
-              <button onClick={() => setView('audit-logs')} className="text-xs font-bold text-cyan-400 hover:text-cyan-300 hover:underline flex-shrink-0 cursor-pointer transition-colors">View All →</button>
+          {/* Row 3: Admin System Modules & Audit Feed */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* System Modules Panel (7 cols) */}
+            <div className="lg:col-span-7 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white">System Modules & Governance</h3>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Access</span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[
+                  { title: 'User Directory', desc: 'Create & assign roles', icon: Users, view: 'users' },
+                  { title: 'Roles & Perms', desc: 'RBAC permissions matrix', icon: KeyRound, view: 'roles' },
+                  { title: 'Org Settings', desc: 'Working defaults & limits', icon: Building2, view: 'organization' },
+                  { title: 'Teams Config', desc: 'Manage Team Leads', icon: Network, view: 'teams' },
+                  { title: 'Audit Logs', desc: 'Security event history', icon: ScrollText, view: 'audit-logs' },
+                ].map(mod => {
+                  const Icon = mod.icon;
+                  return (
+                    <button
+                      key={mod.title}
+                      onClick={() => setView(mod.view)}
+                      className="p-4 rounded-xl bg-[#080b13] border border-slate-800/90 hover:border-slate-700 hover:bg-[#121827] text-left transition-all cursor-pointer group flex flex-col justify-between min-h-[105px]"
+                    >
+                      <div className="flex items-center justify-between w-full">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20 group-hover:scale-105 transition-transform">
+                          <Icon className="w-4 h-4" />
+                        </div>
+                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                      </div>
+                      <div className="mt-3">
+                        <p className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">{mod.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-0.5">{mod.desc}</p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
 
-            {/* Mobile View: Clean Card Feed */}
-            <div className="block md:hidden space-y-2.5">
-              {auditLogs && auditLogs.length > 0 ? (
-                auditLogs.slice(0, 5).map((log: any) => (
-                  <div key={log.id} className="p-3 bg-white/5 border border-white/5 rounded-xl space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-800 dark:text-white truncate">{log.user}</span>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
-                        log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                      }`}>
+            {/* Audit Logs Feed Panel (5 cols) */}
+            <div className="lg:col-span-5 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white">Recent Security Logs</h3>
+                <button
+                  onClick={() => setView('audit-logs')}
+                  className="text-xs font-semibold text-blue-400 hover:underline cursor-pointer"
+                >
+                  View All →
+                </button>
+              </div>
+
+              <div className="divide-y divide-slate-800/50 max-h-[300px] overflow-y-auto pr-1">
+                {auditLogs && auditLogs.length > 0 ? (
+                  auditLogs.slice(0, 5).map((log: any) => (
+                    <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
+                      <div>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-bold text-white">{log.user || 'System'}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400">
+                            {log.action}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.activity}</p>
+                      </div>
+                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
                         {log.status || 'SUCCESS'}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">{log.activity}</p>
-                    <div className="flex items-center justify-between text-[10px] text-slate-400 pt-0.5">
-                      <span className="font-extrabold text-blue-500 uppercase">{log.action}</span>
-                      <span>{log.date ? `${log.date} ${log.time || ''}` : log.timestamp || 'Just now'}</span>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="p-4 text-center text-xs font-semibold text-slate-400 bg-white/5 border border-dashed border-white/10 rounded-xl">
-                  No activity logs recorded yet. Real user actions will appear here automatically.
-                </div>
-              )}
-            </div>
-
-            {/* Desktop View: Full Responsive Table */}
-            <div className="hidden md:block overflow-x-auto w-full">
-              <table className="w-full text-left text-xs border-collapse min-w-[650px]">
-                <thead>
-                  <tr className="bg-slate-500/5 border-b border-slate-200/30 dark:border-white/5 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-                    <th className="p-3">Actor User</th>
-                    <th className="p-3">Action</th>
-                    <th className="p-3">Activity Description</th>
-                    <th className="p-3">Timestamp</th>
-                    <th className="p-3 text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                  {auditLogs && auditLogs.length > 0 ? (
-                    auditLogs.map((log: any) => (
-                      <tr key={log.id} className="hover:bg-white/5">
-                        <td className="p-3 font-black text-slate-800 dark:text-white">{log.user}</td>
-                        <td className="p-3 font-extrabold text-blue-500 uppercase text-[10px]">{log.action}</td>
-                        <td className="p-3 text-slate-600 dark:text-slate-300 font-semibold">{log.activity}</td>
-                        <td className="p-3 text-slate-400 font-bold text-[10px]">{log.date ? `${log.date} ${log.time || ''}` : log.timestamp || 'N/A'}</td>
-                        <td className="p-3 text-right">
-                          <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${
-                            log.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20' : 'bg-amber-500/10 text-amber-500 border-amber-500/20'
-                          }`}>
-                            {log.status || 'SUCCESS'}
-                          </span>
-                        </td>
-                      </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={5} className="p-4 text-center text-xs font-semibold text-slate-400">
-                        No activity logs recorded yet. Real user actions will appear here automatically.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
+                  ))
+                ) : (
+                  <p className="text-xs text-slate-400 py-6 text-center">No security logs recorded yet.</p>
+                )}
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {/* ========================================================================= */}
-      {/* 2. TEAM LEAD DASHBOARD VIEW */}
+      {/* 2. TEAM LEAD DASHBOARD VIEW (OPTION 2 EXACT REPRODUCTION) */}
       {/* ========================================================================= */}
       {isTeamLead && (
-        <div className="space-y-6">
-          {/* Team Lead Overview Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 w-full min-w-0">
+        <div className="space-y-6 w-full min-w-0">
+          {/* Row 1: 4 Symmetrical KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: Active Projects */}
-            <div className="glass-card-dashboard glass-glow-cyan group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-cyan-500/15 border border-cyan-500/30 flex items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-[0_0_15px_rgba(6,182,212,0.25)] group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <Timer className="w-4 h-4 sm:w-6 sm:h-6 stroke-[1.8]" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(6,182,212,0.2)]">
-                  Active
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Active Projects</span>
+                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                  i
                 </span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Active Projects</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-cyan-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 flex-shrink-0"></span>
-                  <span className="truncate">Hospital System</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">{stats.activeProjects || 2}</div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital Management System</p>
               </div>
             </div>
 
             {/* Card 2: Pending Code Reviews */}
-            <div className="glass-card-dashboard glass-glow-amber group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <Award className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                  Review
-                </span>
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Pending Code Reviews</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Code Reviews</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">1</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-amber-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 flex-shrink-0"></span>
-                  <span className="truncate">Patient Dashboard</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-black text-white tracking-tight">1</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                    Needs Review
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Patient Dashboard</p>
               </div>
             </div>
 
-            {/* Card 3: Total Active Tasks */}
-            <div className="glass-card-dashboard glass-glow-blue group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <CheckSquare className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                  Tasks
-                </span>
+            {/* Card 3: Active Tasks */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Active Tasks</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Active Tasks</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.totalTasks}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-blue-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                  <span className="truncate">2 In Progress</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white tracking-tight">{stats.totalTasks || 8}</span>
+                  <span className="text-xs font-medium text-slate-400">2 In Progress</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full w-1/4"></div>
+                </div>
               </div>
             </div>
 
-            {/* Card 4: Overall Health */}
-            <div className="glass-card-dashboard glass-glow-emerald group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                  Health
-                </span>
+            {/* Card 4: Sprint Velocity & Health */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Sprint Velocity & Health</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Sprint Health</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">98%</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>
-                  <span className="truncate">Optimal Performance</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">98%</div>
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                    Optimal Health
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Real World Workflow Highlight & Task Review Queue Banner */}
-          <div className="glass-panel glass-glow-blue p-6 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/30 space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl bg-blue-500/20 text-blue-500 flex items-center justify-center font-black text-xl flex-shrink-0">
-                  🏥
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Active Real-World Project</span>
-                    <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30 animate-pulse">Code Review Submission</span>
-                  </div>
-                  <h3 className="text-base font-black text-slate-800 dark:text-white mt-1">Hospital Management System — Create Patient Dashboard</h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Submitted by <strong className="text-slate-800 dark:text-white">Rahul (Employee)</strong> for Team Lead approval.</p>
-                </div>
-              </div>
+          {/* Row 2: Real World Workflow Highlight & Task Review Queue Banner */}
+          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
 
-              <button
-                type="button"
-                onClick={() => setView('reviews')}
-                className="w-full sm:w-auto justify-center px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-lg flex items-center gap-2 cursor-pointer transition-all transform hover:-translate-y-0.5"
-              >
-                Review & Approve Task <ArrowRight className="w-4 h-4" />
-              </button>
+            <div className="pl-3 sm:pl-2">
+              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+                Hospital Management System — Create Patient Dashboard
+              </h3>
+              <p className="text-xs text-slate-400 mt-1">
+                Submitted by <strong className="text-slate-200">Rahul</strong> (Employee) for Team Lead approval.
+              </p>
             </div>
+
+            <button
+              type="button"
+              onClick={() => setView('reviews')}
+              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+              className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+            >
+              Review & Approve Task <ArrowRight className="w-4 h-4" />
+            </button>
           </div>
 
-          {/* Employee Directory & Assign Task Form */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Team Directory Workload Allocation */}
-            <div className="glass-panel p-6 lg:col-span-2 space-y-4">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-                    <Users className="w-4 h-4 text-blue-500" /> Team Workload & Allocation
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-semibold mt-0.5">
-                    Assigned teammates in your team and their active allocations.
-                  </p>
-                </div>
+          {/* Row 3: Team Workload & Allocation AND Quick Task Assignment */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
+            {/* Left Panel: Team Workload & Allocation (7 cols) */}
+            <div className="lg:col-span-7 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-white">Team Workload & Allocation</h3>
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 cursor-pointer transition-all hover:-translate-y-0.5 self-start sm:self-auto shrink-0"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#151c2c] hover:bg-[#1c263c] border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95"
                 >
-                  <UserPlus className="w-3.5 h-3.5" /> Invite Teammate
+                  <Plus className="w-3.5 h-3.5" /> Invite Teammate
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-white/5">
-                {employeeDirectory
-                  .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan' && emp.uid !== user?.uid)
-                  .map(emp => (
-                  <div key={emp.id || emp.uid} className="py-3 flex items-center justify-between text-xs">
+              <div className="divide-y divide-slate-800/50">
+                {displayTeammates.map(emp => (
+                  <div key={emp.id || emp.uid} className="py-3 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-3 min-w-0">
-                      <img src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)} alt="avatar" className="w-8 h-8 rounded-full object-cover shrink-0" />
-                      <div className="min-w-0">
-                        <p className="font-black text-slate-800 dark:text-white truncate">{emp.name}</p>
-                        <p className="text-[10px] text-slate-400 font-bold truncate">{emp.designation || 'Software Engineer'}</p>
+                      <img
+                        src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)}
+                        alt={emp.name}
+                        className="w-9 h-9 rounded-full object-cover border border-slate-700/80 shrink-0"
+                      />
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="font-bold text-white truncate">{emp.name}</span>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 shrink-0">
+                          {getRoleBadge(emp)}
+                        </span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[10px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-500">
-                        ⚡ 50% Allocated
+                      <span className="text-[11px] text-slate-400 font-medium hidden sm:inline-block">
+                        Capacity progress
+                      </span>
+                      <div className="w-24 sm:w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-500 rounded-full w-1/2"></div>
+                      </div>
+                      <span className="text-xs font-bold text-slate-300 w-8 text-right">
+                        50%
                       </span>
                       <button
                         onClick={() => {
                           setNewTaskAssigneeId((emp.id || emp.uid).toString());
                         }}
-                        className="px-2.5 py-1 bg-white/5 border border-slate-200/50 dark:border-white/10 hover:bg-blue-600 hover:text-white rounded-lg text-[10px] font-bold cursor-pointer transition-all"
+                        className="px-3 py-1 bg-[#151c2c] hover:bg-blue-600 hover:text-white border border-slate-700/80 text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                       >
-                        + Assign Task
+                        <Plus className="w-3 h-3" /> Assign
                       </button>
                     </div>
                   </div>
                 ))}
-
-                {employeeDirectory.filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan' && emp.uid !== user?.uid).length === 0 && (
-                  <div className="py-8 text-center space-y-2.5">
-                    <div className="w-10 h-10 mx-auto rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-500">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <p className="text-xs font-bold text-slate-700 dark:text-slate-300">No teammates assigned to your team yet.</p>
-                    <p className="text-[11px] text-slate-400 max-w-xs mx-auto">Click "Invite Teammate" to select and add eligible employees created by Admin to your team.</p>
-                    <button
-                      type="button"
-                      onClick={() => setIsInviteModalOpen(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow cursor-pointer transition-all"
-                    >
-                      <UserPlus className="w-3.5 h-3.5" /> Invite Teammates Now
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 
-            {/* Direct Task Assignment Form */}
-            <div className="glass-panel p-6 space-y-4">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <Plus className="w-4 h-4 text-indigo-500" /> Quick Task Assignment
-              </h3>
+            {/* Right Panel: Quick Task Assignment (5 cols) */}
+            <div className="lg:col-span-5 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+              <h3 className="text-sm font-bold text-white">Quick Task Assignment</h3>
 
-              {formSuccess && <p className="text-xs text-emerald-500 font-bold">✓ {formSuccess}</p>}
-              {formError && <p className="text-xs text-rose-500 font-bold">⚠️ {formError}</p>}
+              {formSuccess && <p className="text-xs text-emerald-400 font-semibold">✓ {formSuccess}</p>}
+              {formError && <p className="text-xs text-rose-400 font-semibold">⚠️ {formError}</p>}
 
-              <form onSubmit={handleAssignTaskSubmit} className="space-y-3">
+              <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5">
                 <input
                   type="text"
-                  placeholder="Task Title (e.g. Patient Dashboard UI)"
+                  placeholder="Task title (e.g. Patient Dashboard UI)"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="w-full px-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-xs outline-none font-semibold"
+                  className="w-full px-4 py-2.5 bg-[#080b13] border border-slate-800/90 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-blue-500/80 transition-all font-medium shadow-inner"
                 />
 
-                <LuxurySelect
-                  value={newTaskProjectId}
-                  onChange={(val) => setNewTaskProjectId(val)}
-                  placeholder="Select Project Workspace..."
-                  options={projectsList.map(p => ({
-                    value: String(p.id),
-                    label: p.name,
-                    icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-500" />
-                  }))}
-                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <LuxurySelect
+                    value={newTaskProjectId}
+                    onChange={(val) => setNewTaskProjectId(val)}
+                    placeholder="Project"
+                    options={projectsList.map(p => ({
+                      value: String(p.id),
+                      label: p.name,
+                      icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-400" />
+                    }))}
+                  />
 
-                <LuxurySelect
-                  value={newTaskAssigneeId}
-                  onChange={(val) => setNewTaskAssigneeId(val)}
-                  placeholder="Select Assignee..."
-                  options={employeeDirectory
-                    .filter(emp => emp.role !== 'ROLE_ADMIN' && !emp.role?.includes('ADMIN') && emp.name !== 'Niranjan')
-                    .map(emp => {
-                      const cleanDesignation = (emp.designation || 'Team Member')
-                        .replace(/Devoloper/g, 'Developer');
-                      return {
-                        value: String(emp.id),
-                        label: emp.name,
-                        subLabel: cleanDesignation,
-                        icon: (
-                          <img
-                            src={resolveAvatar(emp.profilePhoto, emp.name, emp.gender)}
-                            alt=""
-                            className="w-4.5 h-4.5 rounded-full object-cover ring-1 ring-white/20"
-                          />
-                        ),
-                        badge: emp.department || undefined,
-                        badgeColor: 'bg-indigo-500/15 text-indigo-400'
-                      };
-                    })}
-                />
+                  <LuxurySelect
+                    value={newTaskAssigneeId}
+                    onChange={(val) => setNewTaskAssigneeId(val)}
+                    placeholder="Assignee"
+                    options={displayTeammates.map(emp => ({
+                      value: String(emp.id || emp.uid),
+                      label: emp.name,
+                      subLabel: (emp.designation || 'Engineer').replace(/Devoloper/g, 'Developer'),
+                      icon: (
+                        <img
+                          src={resolveAvatar(emp.profilePhoto, emp.name, emp.gender)}
+                          alt=""
+                          className="w-4 h-4 rounded-full object-cover ring-1 ring-white/20"
+                        />
+                      )
+                    }))}
+                  />
+                </div>
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl text-xs font-bold shadow-md cursor-pointer"
+                  style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+                  className="w-full py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer transition-all active:scale-98"
                 >
                   Create & Assign Task
                 </button>
@@ -783,169 +652,170 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       )}
 
       {/* ========================================================================= */}
-      {/* 3. EMPLOYEE DASHBOARD VIEW */}
+      {/* 3. EMPLOYEE DASHBOARD VIEW (OPTION 2 TITANIUM MINIMALIST STUDIO AESTHETIC) */}
       {/* ========================================================================= */}
       {isEmployee && (
-        <div className="space-y-6">
-          {/* Employee Top Metric Cards with Left-Top Icons & Cool Glassmorphism */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-6 w-full min-w-0">
+        <div className="space-y-6 w-full min-w-0">
+          {/* Row 1: 4 Symmetrical KPI Cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: My Active Tasks */}
-            <div className="glass-card-dashboard glass-glow-blue group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <CheckSquare className="w-4 h-4 sm:w-6 sm:h-6 text-blue-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-blue-500/10 text-blue-400 border border-blue-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(59,130,246,0.2)]">
-                  Active
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">My Active Tasks</span>
+                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                  i
                 </span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">My Active Tasks</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{activeCount}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-blue-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-400 flex-shrink-0"></span>
-                  <span className="truncate">Hospital & SaaS</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">{activeCount}</div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital & SaaS Workspace</p>
               </div>
             </div>
 
-            {/* Card 2: Pending Acceptance */}
-            <div className="glass-card-dashboard glass-glow-amber group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <AlertCircle className="w-4 h-4 sm:w-6 sm:h-6 text-amber-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(245,158,11,0.2)]">
-                  Pending
-                </span>
+            {/* Card 2: Pending Deliverables */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Pending Deliverables</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Pending Tasks</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{pendingTasks.length}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-amber-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse flex-shrink-0"></span>
-                  <span className="truncate">Action Required</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl font-black text-white tracking-tight">{pendingTasks.length}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                    Action Required
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-400 mt-2 truncate">New Work Assignments</p>
               </div>
             </div>
 
             {/* Card 3: Completed Tasks */}
-            <div className="glass-card-dashboard glass-glow-emerald group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <CheckCircle2 className="w-4 h-4 sm:w-6 sm:h-6 text-emerald-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(16,185,129,0.2)]">
-                  Done
-                </span>
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Completed Tasks</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Completed</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.completedTasks}</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-emerald-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0"></span>
-                  <span className="truncate">100% Delivery</span>
-                </p>
+              <div className="mt-3">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-3xl font-black text-white tracking-tight">{stats.completedTasks || 0}</span>
+                  <span className="text-xs font-medium text-slate-400">Completed</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-500 rounded-full w-full"></div>
+                </div>
               </div>
             </div>
 
-            {/* Card 4: Efficiency Rate */}
-            <div className="glass-card-dashboard glass-glow-purple group p-3.5 sm:p-5 rounded-2xl sm:rounded-[22px] relative overflow-hidden flex flex-col justify-between cursor-pointer hover:-translate-y-1.5 transition-all duration-300 min-w-0">
-              <div className="flex items-start justify-between">
-                <div className="w-8 h-8 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-purple-500/15 border border-purple-500/30 flex items-center justify-center text-purple-400 shadow-sm group-hover:scale-110 transition-all duration-300 flex-shrink-0">
-                  <Award className="w-4 h-4 sm:w-6 sm:h-6 text-purple-400" />
-                </div>
-                <span className="text-[8.5px] sm:text-[10px] font-black px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full bg-purple-500/10 text-purple-400 border border-purple-500/30 uppercase tracking-wider flex-shrink-0 shadow-[0_0_10px_rgba(168,85,247,0.2)]">
-                  Score
-                </span>
+            {/* Card 4: Efficiency & Velocity */}
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-slate-400">Velocity & Score</span>
               </div>
-              <div className="mt-3 sm:mt-5 space-y-0.5 sm:space-y-1 min-w-0">
-                <p className="text-[10px] sm:text-[11px] font-black uppercase tracking-wider text-slate-400 truncate">Efficiency Rate</p>
-                <h3 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.productivityScore}%</h3>
-                <p className="text-[10px] sm:text-[11px] font-bold text-purple-400 flex items-center gap-1 sm:gap-1.5 pt-0.5 truncate">
-                  <span className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0"></span>
-                  <span className="truncate">Performance Score</span>
-                </p>
+              <div className="mt-3">
+                <div className="text-3xl font-black text-white tracking-tight">{stats.productivityScore || 98}%</div>
+                <div className="mt-2">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                    Optimal Health
+                  </span>
+                </div>
               </div>
             </div>
           </div>
 
-          {/* Pending Task Acceptance Alerts */}
+          {/* Pending Task Acceptance Alerts Banner (if any) */}
           {pendingTasks.length > 0 && (
-            <div className="glass-panel glass-glow-blue p-5 bg-gradient-to-r from-blue-600/15 to-indigo-600/15 border border-blue-500/30 space-y-3">
-              <h3 className="text-xs font-black text-blue-500 flex items-center gap-2 uppercase tracking-wider">
-                <AlertCircle className="w-4 h-4 text-amber-500 animate-bounce" /> New Task Assignment Alerts
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-lg space-y-3 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
+              <div className="pl-3 sm:pl-2">
+                <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-400" /> New Task Assignment Pending Acceptance
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Review the assignments delegated to you and accept to start tracking time.</p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-3 sm:pl-2 pt-2">
                 {pendingTasks.map(t => (
-                  <div key={t.id} className="glass-panel p-4 flex flex-col justify-between space-y-3">
-                    <div>
-                      <h4 className="text-xs font-black text-slate-800 dark:text-white">{t.title}</h4>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1">{t.description}</p>
+                  <div key={t.id} className="p-3.5 bg-[#080b13] border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <h4 className="text-xs font-bold text-white truncate">{t.title}</h4>
+                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{t.description}</p>
                     </div>
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => handleAcceptTask(t.id)}
-                        className="flex-1 py-1.5 bg-emerald-600 text-white font-bold text-xs rounded-xl shadow cursor-pointer"
-                      >
-                        ✓ Accept Task
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => handleAcceptTask(t.id)}
+                      style={{ backgroundColor: '#2563eb' }}
+                      className="px-3 py-1.5 text-white rounded-lg text-xs font-semibold hover:brightness-110 cursor-pointer shrink-0 transition-all"
+                    >
+                      Accept Task
+                    </button>
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* My Tasks & Real-world Workflow Action Table */}
-          <div className="glass-panel p-6 space-y-4">
+          {/* My Tasks & Workflow Table */}
+          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-blue-500" /> My Assigned Tasks & Workflow
+              <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-400" /> My Assigned Tasks & Deliverables
               </h3>
-              <button onClick={() => setView('my-tasks')} className="text-xs font-bold text-blue-500 hover:underline">View All Tasks →</button>
+              <button
+                onClick={() => setView('my-tasks')}
+                className="text-xs font-semibold text-blue-400 hover:underline cursor-pointer"
+              >
+                View All Tasks →
+              </button>
             </div>
 
-            <div className="divide-y divide-slate-100 dark:divide-white/5">
-              {myTasks.map(t => (
-                <div key={t.id} className="py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4 text-xs">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[9px] font-black px-2 py-0.5 rounded bg-blue-500/10 text-blue-500 uppercase border border-blue-500/20">
-                        {t.project?.name || 'Hospital Management System'}
-                      </span>
-                      <span className={`text-[9px] font-black px-2 py-0.5 rounded uppercase ${
-                        t.status === 'CODE_REVIEW' ? 'bg-amber-500/15 text-amber-500 border border-amber-500/30' : 'bg-blue-500/15 text-blue-500'
-                      }`}>
-                        {t.status.replace('_', ' ')}
-                      </span>
+            <div className="divide-y divide-slate-800/50">
+              {myTasks.length === 0 ? (
+                <p className="text-xs text-slate-400 py-8 text-center">No tasks assigned currently.</p>
+              ) : (
+                myTasks.map(t => (
+                  <div key={t.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
+                          {t.project?.name || 'Project Workspace'}
+                        </span>
+                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                          t.status === 'CODE_REVIEW'
+                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            : t.status === 'COMPLETED'
+                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                        }`}>
+                          {t.status.replace(/_/g, ' ')}
+                        </span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white mt-1.5">{t.title}</h4>
+                      <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
                     </div>
-                    <h4 className="text-sm font-black text-slate-800 dark:text-white mt-1.5">{t.title}</h4>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
-                  </div>
 
-                  <div className="flex items-center gap-3">
-                    {t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED' || t.status === 'TODO' ? (
-                      <button
-                        onClick={() => handleSubmitForReview(t.id)}
-                        className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow cursor-pointer transition-all flex items-center gap-1.5"
-                      >
-                        Submit for Review <ArrowRight className="w-3.5 h-3.5" />
-                      </button>
-                    ) : t.status === 'CODE_REVIEW' ? (
-                      <span className="text-[10px] font-black px-3 py-1.5 bg-amber-500/15 text-amber-500 rounded-xl border border-amber-500/30 animate-pulse">
-                        ⏳ Pending Team Lead Review
-                      </span>
-                    ) : (
-                      <span className="text-[10px] font-black text-slate-400">✓ Deliverable Passed</span>
-                    )}
+                    <div className="flex items-center gap-3 shrink-0">
+                      {t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED' || t.status === 'TODO' || t.status === 'TO_DO' ? (
+                        <button
+                          onClick={() => handleSubmitForReview(t.id)}
+                          style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+                          className="px-4 py-2 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
+                        >
+                          Submit for Review <ArrowRight className="w-3.5 h-3.5" />
+                        </button>
+                      ) : t.status === 'CODE_REVIEW' ? (
+                        <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-500/15 text-amber-300 rounded-xl border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.25)]">
+                          ⏳ Pending Team Lead Review
+                        </span>
+                      ) : (
+                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                          ✓ Deliverable Passed
+                        </span>
+                      )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              )}
             </div>
           </div>
         </div>
       )}
+
       {/* Team Leader Invite Teammate Modal */}
       <InviteTeammateModal
         isOpen={isInviteModalOpen}
