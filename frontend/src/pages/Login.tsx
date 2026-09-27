@@ -12,7 +12,7 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
-import { signInWithEmailPassword, fetchFirestoreUserDoc } from '../services/firebase';
+import { signInWithEmailPassword, signInWithGoogle, fetchFirestoreUserDoc } from '../services/firebase';
 import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 import { useScrollLock } from '../hooks/useScrollLock';
 
@@ -26,6 +26,7 @@ export default function Login() {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe] = useState(true);
+  const [googleLoading, setGoogleLoading] = useState(false);
 
   // Forgot password OTP step modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
@@ -160,6 +161,107 @@ export default function Login() {
     }
   };
 
+  // Dedicated Google Sign In (ONLY Google Provider)
+  const handleGoogleSignIn = async () => {
+    clearError();
+    setGoogleLoading(true);
+    useAuthStore.setState({ loading: true, error: null });
+
+    try {
+      const userCredential = await signInWithGoogle();
+      const user = userCredential.user;
+      if (user && user.uid) {
+        let userData = await fetchFirestoreUserDoc(user.uid);
+        const fbToken = await user.getIdToken();
+
+        // If no user doc found in Firestore by UID, sync with backend firebase-login
+        if (!userData) {
+          try {
+            const syncRes = await api.post(
+              '/api/auth/firebase-login',
+              {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName,
+                photoURL: user.photoURL,
+              },
+              {
+                headers: { Authorization: `Bearer ${fbToken}` },
+              }
+            );
+            if (syncRes.data?.user) {
+              userData = syncRes.data.user;
+            }
+          } catch (syncErr) {
+            console.warn('Backend firebase-login sync warning:', syncErr);
+          }
+        }
+
+        // Secondary fallback to /api/auth/me
+        if (!userData) {
+          try {
+            const meRes = await api.get('/api/auth/me', {
+              headers: { Authorization: `Bearer ${fbToken}` },
+            });
+            if (meRes.data && (meRes.data.id || meRes.data.email)) {
+              userData = meRes.data;
+            }
+          } catch { }
+        }
+
+        const rawRole = (userData as any)?.role ?? (userData as any)?.roleCode;
+        const normalizedRole = normalizeRole(rawRole);
+
+        if (normalizedRole) {
+          const targetRoute = getDashboardPathForRole(normalizedRole);
+          if (targetRoute) {
+            const loggedInUser = {
+              id: user.uid,
+              email: user.email || '',
+              name: (userData as any)?.name || (userData as any)?.displayName || user.displayName || user.email?.split('@')[0],
+              role: normalizedRole,
+              designation: (userData as any)?.designation || (normalizedRole === 'ROLE_ADMIN' ? 'System Administrator' : normalizedRole === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
+              department: (userData as any)?.department || (normalizedRole === 'ROLE_ADMIN' ? 'Executive' : normalizedRole === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
+              experience: (userData as any)?.experience || 5,
+              skills: (userData as any)?.skills || '',
+              createdAt: (userData as any)?.createdAt || new Date().toISOString(),
+            };
+
+            const token = fbToken;
+            const storage = rememberMe ? localStorage : sessionStorage;
+            storage.setItem('token', token);
+            if (rememberMe) {
+              sessionStorage.setItem('token', token);
+            } else {
+              localStorage.removeItem('token');
+            }
+            useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
+            resetLoginForm();
+            navigate(targetRoute, { replace: true });
+            return;
+          }
+        }
+
+        useAuthStore.setState({
+          error: 'Access Denied: This Google account has not been authorized. Only administrator-approved accounts can log in.',
+          loading: false,
+        });
+      }
+    } catch (err: any) {
+      console.error('Google Sign In Error:', err);
+      if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
+        useAuthStore.setState({ loading: false });
+      } else {
+        useAuthStore.setState({
+          error: err.message || 'Google sign-in could not be completed. Please try again.',
+          loading: false,
+        });
+      }
+    } finally {
+      setGoogleLoading(false);
+    }
+  };
+
   const handleOpenForgotModal = () => {
     const currentEmail = getValues('email');
     setForgotEmail(currentEmail || '');
@@ -254,7 +356,10 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between items-center py-10 px-4 bg-white dark:bg-black text-slate-900 dark:text-white overflow-hidden select-none transition-colors duration-300">
+    <div className="relative min-h-screen flex flex-col justify-between items-center py-10 px-4 login-bg-executive-titanium text-slate-900 dark:text-white overflow-hidden select-none transition-colors duration-300">
+      {/* Option 2: Executive Titanium Architectural Blueprint Grid Overlay */}
+      <div className="blueprint-grid-overlay" aria-hidden="true" />
+
       {/* Top-Right Theme Toggle Button */}
       <div className="absolute top-5 right-5 z-20">
         <button
@@ -271,7 +376,7 @@ export default function Login() {
       {/* Main Content Area */}
       <div className="relative z-10 w-full max-w-md flex flex-col items-center my-auto">
         {/* Brand Header */}
-        <div className="flex flex-col items-center mb-8 text-center">
+        <div className="flex flex-col items-center mb-7 text-center">
           {/* Ascending 3-Bar Logo */}
           <div className="flex items-end gap-1.5 h-12 mb-3">
             <div className="w-3.5 h-6 rounded-md bg-gradient-to-t from-sky-400 to-blue-500 shadow-sm" />
@@ -290,12 +395,12 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Auth Card Container */}
+        {/* Option 1: Obsidian Minimalist Glass Auth Card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full glass-card-login rounded-3xl p-8 sm:p-9 shadow-2xl transition-all border border-slate-200/80 dark:border-white/15"
+          className="w-full obsidian-glass-card p-8 sm:p-9 shadow-2xl relative transition-all"
         >
           <div>
             <div className="text-center mb-6">
@@ -323,16 +428,16 @@ export default function Login() {
               <input type="text" name="prevent_autofill_user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
               <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
 
-              {/* Email Field */}
+              {/* Email Field with Obsidian Glass & Anti-Autofill Neutralization */}
               <div>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-300 pointer-events-none z-10" />
                   <input
                     type="email"
                     placeholder="Email address"
                     autoComplete="new-password"
                     {...registerLogin('email')}
-                    className="w-full pl-10 pr-4 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
+                    className="obsidian-input w-full pl-10 pr-4 py-3 placeholder-slate-400 text-xs font-medium outline-none transition-all"
                   />
                 </div>
                 {loginErrors.email && (
@@ -340,21 +445,21 @@ export default function Login() {
                 )}
               </div>
 
-              {/* Password Field */}
+              {/* Password Field with Obsidian Glass & Anti-Autofill Neutralization */}
               <div>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 dark:text-slate-300 pointer-events-none z-10" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     placeholder="Password"
                     autoComplete="new-password"
                     {...registerLogin('password')}
-                    className="w-full pl-10 pr-10 py-3 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 text-xs font-medium outline-none focus:border-blue-500 focus:ring-3 focus:ring-blue-500/20 transition-all backdrop-blur-md"
+                    className="obsidian-input w-full pl-10 pr-10 py-3 placeholder-slate-400 text-xs font-medium outline-none transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer z-10"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -375,13 +480,13 @@ export default function Login() {
                 </button>
               </div>
 
-              {/* Submit Sign In Button */}
+              {/* Option 1: Electric Blue-to-Violet Sign In Button */}
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full py-3 px-4 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 active:scale-[0.99] text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                disabled={loading || googleLoading}
+                className="btn-obsidian-submit w-full py-3.5 px-4 font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
-                {loading ? (
+                {loading && !googleLoading ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     <span>Signing in...</span>
@@ -395,11 +500,58 @@ export default function Login() {
               </button>
             </form>
 
+            {/* Option 1: Clean Minimalist Divider */}
+            <div className="relative my-4 flex items-center justify-center">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-300/80 dark:border-white/10" />
+              </div>
+              <div className="relative bg-white/90 dark:bg-[#0d101a] px-3 text-[10px] font-bold text-slate-400 dark:text-slate-400 uppercase tracking-widest rounded-full border border-slate-200/80 dark:border-white/10">
+                or
+              </div>
+            </div>
+
+            {/* Option 1: Dedicated Google Sign In Button (ONLY Google Provider) */}
+            <button
+              type="button"
+              onClick={handleGoogleSignIn}
+              disabled={loading || googleLoading}
+              className="btn-google-sign-in w-full py-3 px-4 flex items-center justify-center gap-3 font-semibold text-xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+            >
+              {googleLoading ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
+                  <span>Connecting with Google...</span>
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+                    <path
+                      fill="#4285F4"
+                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.25v3.15C3.26 21.36 7.34 24 12 24z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.25C.45 8.18 0 9.99 0 12s.45 3.82 1.25 5.42l4.03-3.15z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.34 0 3.26 2.64 1.25 6.58l4.03 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
+                    />
+                  </svg>
+                  <span>Sign in with Google</span>
+                </>
+              )}
+            </button>
+
             {/* Restricted Workspace Notice */}
-            <div className="mt-6 pt-5 border-t border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-center">
+            <div className="mt-5 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-center">
               <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Restricted Workspace &bull; Only administrator-approved email accounts can log in.
+                Restricted Workspace &bull; Only administrator-approved accounts can log in.
               </p>
             </div>
           </div>
@@ -431,12 +583,12 @@ export default function Login() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2 }}
-              className="w-full max-w-sm max-h-[88vh] overflow-y-auto glass-panel rounded-3xl p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 relative text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
+              className="w-full max-w-sm max-h-[88vh] overflow-y-auto obsidian-glass-card rounded-3xl p-6 shadow-2xl border border-slate-200/80 dark:border-white/15 relative text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
             >
               <button
                 type="button"
                 onClick={() => setShowForgotModal(false)}
-                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors"
+                className="absolute top-4 right-4 p-1.5 rounded-full text-slate-400 hover:text-slate-700 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
                 title="Close"
               >
                 <X className="w-4 h-4" />
@@ -487,12 +639,12 @@ export default function Login() {
                     value={forgotEmail}
                     onChange={(e) => setForgotEmail(e.target.value)}
                     disabled={forgotLoading}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
+                    className="obsidian-input w-full px-3.5 py-2.5 text-xs font-medium outline-none"
                   />
                   <button
                     type="submit"
                     disabled={forgotLoading}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
                   >
                     {forgotLoading ? 'Sending OTP...' : 'Send OTP Code'}
                   </button>
@@ -513,19 +665,19 @@ export default function Login() {
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
                     disabled={forgotLoading}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white text-center font-mono tracking-widest text-sm font-bold outline-none focus:border-blue-500 backdrop-blur-md"
+                    className="obsidian-input w-full px-3.5 py-2.5 text-center font-mono tracking-widest text-sm font-bold outline-none"
                   />
                   <button
                     type="submit"
                     disabled={forgotLoading || otpCode.length !== 6}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
                   >
                     {forgotLoading ? 'Verifying...' : 'Verify OTP'}
                   </button>
                   <button
                     type="button"
                     onClick={() => setOtpStep(1)}
-                    className="w-full text-center text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium"
+                    className="w-full text-center text-xs text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 font-medium cursor-pointer"
                   >
                     Resend Code
                   </button>
@@ -545,7 +697,7 @@ export default function Login() {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                     disabled={forgotLoading}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
+                    className="obsidian-input w-full px-3.5 py-2.5 text-xs font-medium outline-none"
                   />
                   <input
                     type="password"
@@ -554,12 +706,12 @@ export default function Login() {
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     disabled={forgotLoading}
-                    className="w-full px-3.5 py-2.5 bg-white/70 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-800 dark:text-white text-xs font-medium outline-none focus:border-blue-500 backdrop-blur-md"
+                    className="obsidian-input w-full px-3.5 py-2.5 text-xs font-medium outline-none"
                   />
                   <button
                     type="submit"
                     disabled={forgotLoading || !newPassword || !confirmPassword}
-                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors"
+                    className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-xs transition-colors cursor-pointer"
                   >
                     {forgotLoading ? 'Saving...' : 'Save New Password'}
                   </button>

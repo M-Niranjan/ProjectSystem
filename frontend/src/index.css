@@ -211,6 +211,176 @@ aside.glass-panel {
   transform: translateY(-1px);
 }
 
+/* ============================================================
+   Option 2: Executive Titanium Precision Background & Blueprint Grid
+   ============================================================ */
+.login-bg-executive-titanium {
+  background-color: #080a10;
+  position: relative;
+  overflow: hidden;
+}
+
+:root:not(.dark) .login-bg-executive-titanium {
+  background-color: #f4f6fa;
+}
+
+.blueprint-grid-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle at 50% 30%, rgba(59, 130, 246, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.08) 0%, transparent 50%),
+    linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+:root:not(.dark) .blueprint-grid-overlay {
+  background-image: 
+    radial-gradient(circle at 50% 30%, rgba(59, 130, 246, 0.06) 0%, transparent 60%),
+    radial-gradient(circle at 85% 85%, rgba(99, 102, 241, 0.04) 0%, transparent 50%),
+    linear-gradient(to right, rgba(15, 23, 42, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(15, 23, 42, 0.045) 1px, transparent 1px);
+  background-size: 100% 100%, 100% 100%, 36px 36px, 36px 36px;
+}
+
+/* ============================================================
+   Option 1: Obsidian Minimalist Glass Card & Inputs
+   ============================================================ */
+.obsidian-glass-card {
+  background: rgba(13, 16, 26, 0.85);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.75), 0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  border-radius: 28px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:root:not(.dark) .obsidian-glass-card {
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.1), 0 0 0 1px rgba(255, 255, 255, 0.8) inset;
+  border-radius: 28px;
+}
+
+/* Obsidian Frosted Inputs */
+.obsidian-input {
+  background: rgba(19, 23, 34, 0.9) !important;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f8fafc !important;
+  border-radius: 14px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.obsidian-input:focus {
+  border-color: rgba(99, 102, 241, 0.85);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+  background: rgba(23, 28, 42, 0.98) !important;
+  outline: none;
+}
+
+:root:not(.dark) .obsidian-input {
+  background: #ffffff !important;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #0f172a !important;
+}
+
+:root:not(.dark) .obsidian-input:focus {
+  border-color: rgba(79, 70, 229, 0.7);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  background: #ffffff !important;
+  outline: none;
+}
+
+/* Anti-White Browser Autofill Resets */
+input:-webkit-autofill,
+input:-webkit-autofill:hover, 
+input:-webkit-autofill:focus, 
+input:-webkit-autofill:active,
+.obsidian-input:-webkit-autofill,
+.obsidian-input:-webkit-autofill:hover, 
+.obsidian-input:-webkit-autofill:focus, 
+.obsidian-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #131722 inset !important;
+  -webkit-text-fill-color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
+  transition: background-color 50000s ease-in-out 0s;
+  border-radius: inherit;
+}
+
+:root:not(.dark) input:-webkit-autofill,
+:root:not(.dark) input:-webkit-autofill:hover, 
+:root:not(.dark) input:-webkit-autofill:focus, 
+:root:not(.dark) input:-webkit-autofill:active,
+:root:not(.dark) .obsidian-input:-webkit-autofill,
+:root:not(.dark) .obsidian-input:-webkit-autofill:hover, 
+:root:not(.dark) .obsidian-input:-webkit-autofill:focus, 
+:root:not(.dark) .obsidian-input:-webkit-autofill:active {
+  -webkit-box-shadow: 0 0 0 1000px #ffffff inset !important;
+  -webkit-text-fill-color: #0f172a !important;
+  caret-color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  transition: background-color 50000s ease-in-out 0s;
+  border-radius: inherit;
+}
+
+/* Option 1: Dedicated Google Sign In Button */
+.btn-google-sign-in {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #f1f5f9;
+  border-radius: 14px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.btn-google-sign-in:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+:root:not(.dark) .btn-google-sign-in {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  color: #1e293b;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+:root:not(.dark) .btn-google-sign-in:hover {
+  background: #f8fafc;
+  border-color: rgba(0, 0, 0, 0.22);
+  color: #0f172a;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+/* Option 1: Electric Blue-to-Violet Sign In Button */
+.btn-obsidian-submit {
+  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 50%, #7c3aed 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  box-shadow: 0 8px 24px -4px rgba(79, 70, 229, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  border-radius: 14px;
+  transition: all 0.2s ease;
+}
+
+.btn-obsidian-submit:hover {
+  background: linear-gradient(135deg, #1d4ed8 0%, #4338ca 50%, #6d28d9 100%);
+  box-shadow: 0 12px 32px -4px rgba(79, 70, 229, 0.65), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transform: translateY(-1px);
+}
+
 /* HD Icon Utilities */
 .hd-icon-badge {
   display: inline-flex;

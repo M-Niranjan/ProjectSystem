@@ -67,7 +67,48 @@ export class AuthController {
       const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
       if (!idToken) return res.status(401).json({ message: 'Firebase ID token required.' });
       const decoded = await FirebaseAdminService.verifyIdToken(idToken);
-      const profile = await FirebaseAdminService.getFirestoreUserDoc(decoded.uid);
+      let profile: any = await FirebaseAdminService.getFirestoreUserDoc(decoded.uid);
+
+      if (!profile && decoded.email) {
+        profile = await FirebaseAdminService.getUserByEmailFromFirestore(decoded.email);
+        if (profile) {
+          try {
+            await FirebaseAdminService.setFirestoreUserDoc(decoded.uid, {
+              ...profile,
+              uid: decoded.uid,
+              googleUid: decoded.uid,
+              email: decoded.email,
+              photoURL: decoded.picture || profile.profilePhoto,
+            });
+          } catch (e) {
+            console.warn('Could not mirror Firestore user to Google UID:', e);
+          }
+        }
+      }
+
+      if (!profile && decoded.email) {
+        const sqliteUser = await User.findOne({ where: { email: decoded.email.trim().toLowerCase() } });
+        if (sqliteUser) {
+          profile = sqliteUser.toJSON();
+          delete profile.password;
+          try {
+            await FirebaseAdminService.setFirestoreUserDoc(decoded.uid, {
+              uid: decoded.uid,
+              name: sqliteUser.name,
+              email: sqliteUser.email,
+              role: sqliteUser.role,
+              designation: sqliteUser.designation,
+              department: sqliteUser.department,
+              skills: sqliteUser.skills,
+              status: sqliteUser.status,
+              createdAt: new Date().toISOString(),
+            });
+          } catch (e) {
+            console.warn('Could not mirror SQLite user to Firestore:', e);
+          }
+        }
+      }
+
       if (!profile || !profile.role) return res.status(403).json({ message: 'User profile or role is not configured.' });
 
       const roleMap: Record<string, Role> = {
@@ -80,7 +121,7 @@ export class AuthController {
       if (!verifiedRole) return res.status(403).json({ message: 'Invalid user role.' });
 
       const token = jwt.sign(
-        { id: decoded.uid, email: decoded.email, role: verifiedRole, name: profile.name },
+        { id: decoded.uid, email: decoded.email || profile.email, role: verifiedRole, name: profile.name },
         JWT_SECRET,
         { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
       );
