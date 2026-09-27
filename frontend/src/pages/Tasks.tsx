@@ -295,8 +295,8 @@ export default function Tasks() {
 
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
-      {/* Title & Actions Header */}
-      <div className="flex flex-col 2xl:flex-row 2xl:items-center justify-between gap-4 w-full min-w-0">
+      {/* Title & Primary Action Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full min-w-0">
         <div className="min-w-0">
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white truncate">
             Workspace Tasks
@@ -306,45 +306,40 @@ export default function Tasks() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-2.5 max-w-full">
-          {user?.role !== 'ROLE_EMPLOYEE' && (
-            <label className="flex items-center gap-2 text-xs font-black text-slate-700 dark:text-slate-300 cursor-pointer bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl px-3 py-2 flex-shrink-0">
-              <input
-                type="checkbox"
-                checked={showMyTasksOnly}
-                onChange={(e) => setShowMyTasksOnly(e.target.checked)}
-                className="w-3.5 h-3.5 rounded border-slate-300 text-blue-600 cursor-pointer"
-              />
-              🧑 My Tasks Only
-            </label>
-          )}
+        {isTeamLeader && (
+          <button
+            onClick={() => setTaskModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-600 hover:to-emerald-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-teal-500/20 active:scale-[0.98] transition-all cursor-pointer whitespace-nowrap flex-shrink-0 self-start sm:self-auto"
+          >
+            <Plus className="w-4 h-4" /> Add Task
+          </button>
+        )}
+      </div>
 
-          <div className="relative flex-shrink-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-3 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs w-32 sm:w-44"
-            />
-          </div>
+      {/* Dedicated Search & Filter Toolbar (Option 2) */}
+      <div className="glass-panel p-2.5 sm:p-3 rounded-2xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 border border-slate-200/50 dark:border-white/5">
+        {/* Left: Search Input */}
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search tasks, descriptions, keys..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-3.5 py-2.5 bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 rounded-xl text-slate-800 dark:text-white placeholder-slate-400 outline-none focus:border-teal-500/60 focus:ring-2 focus:ring-teal-500/20 transition-all font-semibold text-xs"
+          />
+        </div>
 
-          {isTeamLeader && (
-            <button
-              onClick={() => setTaskModalOpen(true)}
-              className="flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer transition-colors whitespace-nowrap flex-shrink-0"
-            >
-              <Plus className="w-4 h-4" /> Add Task
-            </button>
-          )}
-
+        {/* Right: View Toggles & My Tasks Toggle */}
+        <div className="flex flex-wrap items-center gap-2.5 shrink-0 justify-between md:justify-end">
           {/* View Toggles (Grid / List / Group by Assignee) */}
-          <div className="flex items-center gap-1 bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl flex-shrink-0">
+          <div className="flex items-center gap-1 bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 p-1 rounded-xl">
             <button
               onClick={() => { setIsGridView(true); setGroupByAssignee(false); }}
-              className={`px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
-                isGridView && !groupByAssignee ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+                isGridView && !groupByAssignee
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Grid View"
             >
@@ -352,8 +347,10 @@ export default function Tasks() {
             </button>
             <button
               onClick={() => { setIsGridView(false); setGroupByAssignee(false); }}
-              className={`px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
-                !isGridView && !groupByAssignee ? 'bg-blue-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
+              className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+                !isGridView && !groupByAssignee
+                  ? 'bg-teal-600 text-white shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="List View"
             >
@@ -362,8 +359,10 @@ export default function Tasks() {
             {isTeamLeader && (
               <button
                 onClick={() => setGroupByAssignee(!groupByAssignee)}
-                className={`px-2.5 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-colors ${
-                  groupByAssignee ? 'bg-indigo-600 text-white shadow-xs' : 'text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                className={`px-3 py-1.5 rounded-lg font-bold text-xs flex items-center gap-1.5 cursor-pointer transition-all ${
+                  groupByAssignee
+                    ? 'bg-indigo-600 text-white shadow-xs'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Group Tasks by Assignee"
               >
@@ -371,6 +370,19 @@ export default function Tasks() {
               </button>
             )}
           </div>
+
+          {/* My Tasks Only Filter Toggle */}
+          {user?.role !== 'ROLE_EMPLOYEE' && (
+            <label className="flex items-center gap-2 text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer bg-slate-100/70 dark:bg-white/5 border border-slate-200/60 dark:border-white/10 hover:border-slate-300 dark:hover:border-white/20 rounded-xl px-3 py-2 transition-all shrink-0">
+              <input
+                type="checkbox"
+                checked={showMyTasksOnly}
+                onChange={(e) => setShowMyTasksOnly(e.target.checked)}
+                className="w-3.5 h-3.5 rounded border-slate-300 text-teal-600 cursor-pointer focus:ring-teal-500/30"
+              />
+              <span>🧑 My Tasks Only</span>
+            </label>
+          )}
         </div>
       </div>
 
