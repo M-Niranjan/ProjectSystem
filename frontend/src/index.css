@@ -136,6 +136,33 @@
   background: rgba(161, 161, 170, 0.45);
 }
 
+/* ============================================================
+   Complete Scrollbar Hiding Utilities
+   Hides the scrollbar completely while mouse-wheel, touchpad,
+   and touch scrolling continue to work flawlessly.
+   ============================================================ */
+.no-scrollbar,
+.hide-scrollbar,
+.sidebar-scrollable-nav,
+aside nav,
+aside.glass-panel nav,
+aside {
+  -ms-overflow-style: none !important; /* IE and Edge */
+  scrollbar-width: none !important;    /* Firefox */
+}
+
+.no-scrollbar::-webkit-scrollbar,
+.hide-scrollbar::-webkit-scrollbar,
+.sidebar-scrollable-nav::-webkit-scrollbar,
+aside nav::-webkit-scrollbar,
+aside.glass-panel nav::-webkit-scrollbar,
+aside::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  background: transparent !important;
+}
+
 /* Crystal Clean Surface & Glass Classes with TRUE Transparency */
 .glass-panel {
   background: var(--bg-card);

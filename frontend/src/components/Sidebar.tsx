@@ -180,7 +180,7 @@ export default function Sidebar() {
             if (e.cancelable) e.preventDefault();
           }
         }}
-        className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between pt-3.5 glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden overscroll-contain select-none h-[100dvh] max-h-[100dvh] ${
+        className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between pt-3.5 glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden overscroll-contain select-none h-[100dvh] max-h-[100dvh] overflow-hidden ${
           isMobile ? 'z-50' : 'z-30'
         }`}
       >
@@ -237,8 +237,15 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Menu Navigation Items - Flexibly scrollable in the middle */}
-        <nav className="sidebar-scrollable-nav flex-1 min-h-0 px-3 space-y-1.5 overflow-y-auto overscroll-contain scrollbar-thin">
+        {/* Menu Navigation Items - Flexibly scrollable without visible scrollbars */}
+        <nav 
+          tabIndex={-1}
+          className="sidebar-scrollable-nav no-scrollbar hide-scrollbar flex-1 min-h-0 px-3 space-y-1.5 overflow-y-auto overflow-x-hidden overscroll-contain outline-none"
+          style={{
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
           {allowedItems.map((item) => {
             const Icon = item.icon;
             const targetPath = item.view === 'dashboard'
