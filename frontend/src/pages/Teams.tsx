@@ -305,15 +305,18 @@ export default function Teams() {
       </div>
 
       {/* Members Grid layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6">
         {members.map(member => (
-          <div key={member.id} className="glass-panel p-6 flex flex-col justify-between min-h-[220px] relative group">
+          <div 
+            key={member.id} 
+            className="bg-white dark:bg-[#0e131f]/85 border border-slate-200/90 dark:border-slate-800/80 rounded-2xl shadow-sm hover:shadow-md transition-all p-5 sm:p-6 flex flex-col justify-between min-h-[220px] relative group"
+          >
             {/* Hover card action icons overlay */}
             <div className="absolute top-4 right-4 flex items-center gap-1.5 z-10">
               <button
                 type="button"
                 onClick={(e) => handleOpenView(member, e)}
-                className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+                className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-white/5 dark:hover:bg-white/15 text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
                 title="View Teammate Details"
               >
                 <Eye className="w-3.5 h-3.5" />
@@ -322,7 +325,7 @@ export default function Teams() {
                 <button
                   type="button"
                   onClick={(e) => handleOpenEdit(member, e)}
-                  className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-500/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
                   title="Edit Teammate"
                 >
                   <Pencil className="w-3.5 h-3.5" />
@@ -335,18 +338,18 @@ export default function Teams() {
                 <img
                   src={resolveAvatar(member.profilePhoto, member.name, member.gender)}
                   alt="Avatar"
-                  className="w-16 h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
+                  className="w-14 h-14 sm:w-16 sm:h-16 rounded-xl object-cover ring-2 ring-blue-500/10"
                 />
                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-green-500 border-2 border-white dark:border-slate-900 animate-pulse"></span>
               </div>
               <div className="min-w-0 pr-12">
                 <h3 className="text-sm font-black text-slate-800 dark:text-white truncate">{member.name}</h3>
-                <p className="text-[10px] font-bold text-blue-500 mt-0.5 truncate">{member.designation || 'Software Engineer'}</p>
-                <p className="text-[9px] text-slate-400 font-bold uppercase mt-1 tracking-wider truncate">{member.department || 'Engineering'}</p>
+                <p className="text-[11px] font-bold text-blue-600 dark:text-blue-400 mt-0.5 truncate">{member.designation || 'Software Engineer'}</p>
+                <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider truncate">{member.department || 'Engineering'}</p>
               </div>
             </div>
 
-            <div className="space-y-3 border-t border-slate-200/30 dark:border-white/5 pt-4">
+            <div className="space-y-3 border-t border-slate-100 dark:border-white/5 pt-4 mt-4">
               {/* PDF Spec: Resource Capacity & Workload Allocation Bar */}
               {(() => {
                 const workloadPercent = memberWorkloads[member.id] || 0;
@@ -354,16 +357,16 @@ export default function Teams() {
                 const capacityHours = Math.round((workloadPercent / 100) * 40);
 
                 return (
-                  <div className="space-y-1 bg-white/5 p-2.5 rounded-xl border border-slate-200/40 dark:border-white/5">
+                  <div className="space-y-1.5 bg-slate-50 dark:bg-white/[0.03] p-2.5 rounded-xl border border-slate-200/70 dark:border-white/5">
                     <div className="flex justify-between items-center text-[10px] font-black">
-                      <span className="text-slate-400 uppercase tracking-wider flex items-center gap-1">
+                      <span className="text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1">
                         ⚡ Workload Allocation
                       </span>
                       <span className={isOverallocated ? 'text-red-500 font-extrabold animate-pulse' : 'text-slate-700 dark:text-slate-200'}>
                         {workloadPercent}% {isOverallocated ? '⚠️ Overbooked' : `(${capacityHours}h/40h)`}
                       </span>
                     </div>
-                    <div className="w-full bg-slate-200/40 dark:bg-white/10 h-1.5 rounded-full overflow-hidden">
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
                       <div
                         className={`h-full rounded-full transition-all duration-500 ${
                           isOverallocated
@@ -379,9 +382,9 @@ export default function Teams() {
                 );
               })()}
 
-              <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
                 <span className="flex items-center gap-1.5 truncate pr-2">
-                  <Mail className="w-3.5 h-3.5" /> {member.email}
+                  <Mail className="w-3.5 h-3.5 text-slate-400" /> {member.email}
                 </span>
                 
                 <span className="flex items-center gap-1 flex-shrink-0">
@@ -555,31 +558,31 @@ export default function Teams() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Full Name</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Full Name</label>
                   <input
                     type="text"
                     required
                     placeholder="Jane Doe"
                     value={inviteName}
                     onChange={(e) => setInviteName(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Email Address</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Email Address</label>
                   <input
                     type="email"
                     required
                     placeholder="jane@company.com"
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
                     Password {isEditMode ? '(Leave blank to keep current)' : ''}
                   </label>
                   <div className="relative">
@@ -590,12 +593,12 @@ export default function Teams() {
                       placeholder={isEditMode ? '•••••••• (unchanged)' : 'Enter initial account password'}
                       value={invitePassword}
                       onChange={(e) => setInvitePassword(e.target.value)}
-                      className="w-full pl-4 pr-10 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      className="w-full pl-4 pr-10 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                     />
                     <button
                       type="button"
                       onClick={() => setShowInvitePassword(!showInvitePassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white cursor-pointer"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
                       title={showInvitePassword ? "Hide password" : "Show password"}
                     >
                       {showInvitePassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -603,20 +606,20 @@ export default function Teams() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Designation</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Designation</label>
                     <input
                       type="text"
                       placeholder="e.g. Lead Designer"
                       value={inviteDesignation}
                       onChange={(e) => setInviteDesignation(e.target.value)}
-                      className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                     />
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Department</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Department</label>
                     <LuxurySelect
                       value={inviteDept}
                       onChange={(val) => setInviteDept(val)}
@@ -631,9 +634,9 @@ export default function Teams() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Security Role</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Security Role</label>
                     <LuxurySelect
                       value={inviteRole}
                       onChange={(val) => setInviteRole(val)}
@@ -646,24 +649,24 @@ export default function Teams() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Experience (Yrs)</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Experience (Yrs)</label>
                     <input
                       type="number"
                       value={inviteExp}
                       onChange={(e) => setInviteExp(Number(e.target.value))}
-                      className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                      className="w-full px-4 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Competencies (Comma separated)</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Competencies (Comma separated)</label>
                   <input
                     type="text"
                     placeholder="e.g. React, Node, CSS"
                     value={inviteSkills}
                     onChange={(e) => setInviteSkills(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-900 transition-all font-semibold text-xs"
                   />
                 </div>
 
@@ -671,7 +674,7 @@ export default function Teams() {
                   <button
                     type="button"
                     onClick={closeInviteModal}
-                    className="px-4 py-2 border border-slate-200/50 dark:border-white/5 rounded-xl hover:bg-white/10 text-slate-500 dark:text-slate-400 font-bold text-xs cursor-pointer transition-colors"
+                    className="px-4 py-2 border border-slate-200 dark:border-white/10 rounded-xl hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300 font-bold text-xs cursor-pointer transition-colors"
                   >
                     Cancel
                   </button>

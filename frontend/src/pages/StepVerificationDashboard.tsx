@@ -200,24 +200,24 @@ export default function StepVerificationDashboard() {
       const isZip = att.endsWith('.zip');
 
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-white/5 border border-slate-700/80 text-slate-200">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 border border-slate-200 dark:bg-white/5 dark:border-slate-700/80 text-slate-700 dark:text-slate-200">
           <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-            isPdf ? 'bg-rose-500/20 text-rose-400' :
-            isFig ? 'bg-purple-500/20 text-purple-400' :
-            isDoc ? 'bg-blue-500/20 text-blue-400' :
-            isZip ? 'bg-amber-500/20 text-amber-400' : 'bg-slate-700 text-slate-300'
+            isPdf ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-400' :
+            isFig ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-400' :
+            isDoc ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-400' :
+            isZip ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
           }`}>
             {isPdf ? 'PDF' : isFig ? 'Figma' : isDoc ? 'DOCX' : isZip ? 'ZIP' : 'FILE'}
           </span>
-          <span className="truncate max-w-[130px] font-medium text-slate-300" title={att}>{att}</span>
+          <span className="truncate max-w-[130px] font-medium text-slate-700 dark:text-slate-300" title={att}>{att}</span>
         </span>
       );
     }
 
     if (step.status === 'APPROVED_COMPLETED') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300">DOCS</span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400">
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">DOCS</span>
           <span className="truncate max-w-[130px] font-medium">Verified Blueprint</span>
         </span>
       );
@@ -225,16 +225,16 @@ export default function StepVerificationDashboard() {
 
     if (step.status === 'PENDING_APPROVAL') {
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-500/10 border border-blue-500/20 text-blue-400">
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-blue-500/20 text-blue-300">CODE</span>
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400">
+          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300">CODE</span>
           <span className="truncate max-w-[130px] font-medium">PR #42 & Specs</span>
         </span>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-500 bg-slate-900/50 border border-slate-800">
-        <Lock className="w-3 h-3 text-slate-600" />
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium text-slate-500 bg-slate-100 border border-slate-200 dark:bg-slate-900/50 dark:border-slate-800">
+        <Lock className="w-3 h-3 text-slate-400 dark:text-slate-600" />
         <span className="italic">Pending Submission</span>
       </span>
     );
@@ -249,29 +249,29 @@ export default function StepVerificationDashboard() {
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       
       {/* ========================================================================= */}
-      {/* TOP COMMAND HEADER WITH TELEMETRY (OPTION 2 OBSIDIAN EXECUTIVE STYLE) */}
+      {/* TOP COMMAND HEADER WITH TELEMETRY (CONCEPT 2 EXECUTIVE LUMINOUS) */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-3 font-heading">
-            <div className="w-9 h-9 rounded-2xl bg-[#0e131f] border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3 font-heading">
+            <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-200/80 text-blue-600 dark:bg-[#0e131f] dark:border-blue-500/40 dark:text-blue-400 flex items-center justify-center shadow-xs dark:shadow-lg dark:shadow-blue-500/20 shrink-0">
               <ShieldCheck className="w-5 h-5" />
             </div>
             TASK STEP VERIFICATION AND APPROVAL
           </h1>
-          <p className="text-xs font-normal text-slate-400 mt-1 pl-12">
+          <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-1 pl-12">
             Sequential milestone gating: Employees submit work proof; Team Leaders inspect & sign-off; unlocks next step automatically.
           </p>
         </div>
 
-        {/* Option 2 Telemetry Capsule (Digital Clock & Active Pipeline) */}
+        {/* Telemetry Capsule (Digital Clock & Active Pipeline) */}
         <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-mono text-slate-300 flex items-center gap-2 shadow-sm">
+          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>03:25 PM • Active</span>
           </div>
 
-          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-semibold text-slate-300 flex items-center gap-2 shadow-sm">
+          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             <span>Pipeline Enforced</span>
           </div>
@@ -279,37 +279,37 @@ export default function StepVerificationDashboard() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER RIBBON (EXACT OPTION 2) */}
+      {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER RIBBON */}
       {/* ========================================================================= */}
-      <div className="bg-[#0e131f]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-6">
+      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xs dark:shadow-xl relative overflow-hidden space-y-6">
         {/* Parent Task Metadata Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-800/80 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 {currentTaskMeta.title}
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20">
                 {currentTaskMeta.project}
               </span>
             </div>
-            <div className="text-xs text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
-              <span>Owner: <strong className="text-slate-200">{currentTaskMeta.owner}</strong></span>
+            <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
+              <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.owner}</strong></span>
               <span>•</span>
-              <span>Start Date: <strong className="text-slate-200">{currentTaskMeta.startDate}</strong></span>
+              <span>Start Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.startDate}</strong></span>
               <span>•</span>
-              <span>Due Date: <strong className="text-slate-200">{currentTaskMeta.dueDate}</strong></span>
+              <span>Due Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.dueDate}</strong></span>
             </div>
           </div>
 
           {/* Quick Task Switcher Pills */}
-          <div className="flex items-center gap-1.5 bg-[#07080c]/80 p-1 rounded-xl border border-slate-800/80 self-start md:self-auto shrink-0">
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 self-start md:self-auto shrink-0">
             <button
               onClick={() => setSelectedTaskId(201)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedTaskId === 201
-                  ? 'bg-[#1c2438] text-white border border-white/10 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Task #201
@@ -318,8 +318,8 @@ export default function StepVerificationDashboard() {
               onClick={() => setSelectedTaskId(102)}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedTaskId === 102
-                  ? 'bg-[#1c2438] text-white border border-white/10 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               Task #102
@@ -328,8 +328,8 @@ export default function StepVerificationDashboard() {
               onClick={() => setSelectedTaskId('ALL')}
               className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
                 selectedTaskId === 'ALL'
-                  ? 'bg-[#1c2438] text-white border border-white/10 shadow-sm'
-                  : 'text-slate-400 hover:text-white hover:bg-white/5'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
             >
               All Pipelines
@@ -337,21 +337,21 @@ export default function StepVerificationDashboard() {
           </div>
         </div>
 
-        {/* Sequential Stepper Nodes with Illuminated Connecting Lines */}
-        <div className="pt-2 pb-2">
-          <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-4">
+        {/* Sequential Stepper Nodes with Illuminated Connecting Lines (Horizontally scrollable on mobile to prevent squishing) */}
+        <div className="pt-2 pb-2 overflow-x-auto custom-scrollbar">
+          <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-4 min-w-[520px] sm:min-w-0">
             
             {/* Background connecting rail */}
-            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-800/80 z-0">
+            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800/80 z-0">
               {/* Active progressive glowing blue/cyan bar */}
               <div
-                className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-all duration-500 shadow-[0_0_12px_rgba(59,130,246,0.6)]"
+                className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-all duration-500 shadow-sm"
                 style={{ width: selectedTaskId === 201 ? '45%' : selectedTaskId === 102 ? '45%' : '60%' }}
               />
             </div>
 
             {/* Stepper Nodes */}
-            {currentTaskMeta.milestones.map((m, idx) => {
+            {currentTaskMeta.milestones.map((m) => {
               const isApproved = m.status === 'APPROVED';
               const isActive = m.status === 'ACTIVE';
               const isLocked = m.status === 'LOCKED';
@@ -362,16 +362,16 @@ export default function StepVerificationDashboard() {
                   <div
                     className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
                       isApproved
-                        ? 'bg-[#0e131f] border-2 border-emerald-400 text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.5)]'
+                        ? 'bg-white dark:bg-[#0e131f] border-2 border-emerald-500 text-emerald-600 dark:text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
                         : isActive
-                        ? 'bg-[#0e131f] border-2 border-cyan-400 text-cyan-300 shadow-[0_0_20px_rgba(34,211,238,0.6)] scale-110'
-                        : 'bg-[#0e131f] border-2 border-slate-700 text-slate-400 opacity-60'
+                        ? 'bg-white dark:bg-[#0e131f] border-2 border-blue-600 dark:border-cyan-400 text-blue-600 dark:text-cyan-300 shadow-[0_0_20px_rgba(37,99,235,0.25)] scale-110'
+                        : 'bg-slate-100 dark:bg-[#0e131f] border-2 border-slate-300 dark:border-slate-700 text-slate-400 opacity-70'
                     }`}
                   >
                     {isApproved ? (
                       <Check className="w-5 h-5 stroke-[2.5]" />
                     ) : isLocked ? (
-                      <Lock className="w-4 h-4 text-slate-500" />
+                      <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     ) : (
                       <span className="font-mono text-xs font-black">{m.step}</span>
                     )}
@@ -380,12 +380,12 @@ export default function StepVerificationDashboard() {
                   {/* Node Label Below */}
                   <div className="mt-2.5 text-center">
                     <span className={`block text-xs font-bold tracking-tight whitespace-nowrap ${
-                      isActive ? 'text-white' : isApproved ? 'text-slate-200' : 'text-slate-400'
+                      isActive ? 'text-slate-900 dark:text-white' : isApproved ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400'
                     }`}>
                       {m.name}
                     </span>
                     <span className={`block text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
-                      isApproved ? 'text-emerald-400' : isActive ? 'text-cyan-400 animate-pulse' : 'text-slate-400'
+                      isApproved ? 'text-emerald-600 dark:text-emerald-400' : isActive ? 'text-blue-600 dark:text-cyan-400 animate-pulse' : 'text-slate-400'
                     }`}>
                       {isApproved ? 'Verified ✓' : isActive ? 'In Progress' : 'Locked'}
                     </span>
@@ -398,11 +398,11 @@ export default function StepVerificationDashboard() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 2. COMMAND TOOLBAR: SEGMENTED FILTER PILLS & SEARCH (OPTION 2 STANDARD) */}
+      {/* 2. COMMAND TOOLBAR: SEGMENTED FILTER PILLS & SEARCH */}
       {/* ========================================================================= */}
-      <div className="bg-[#0e131f]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs dark:shadow-lg">
         {/* Segmented Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-[#07080c]/80 p-1.5 rounded-xl border border-slate-800/80 overflow-x-auto">
+        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-x-auto custom-scrollbar">
           {[
             { id: 'all', label: 'All Steps', count: totalStepsCount },
             { id: 'pending', label: 'Needs Review', count: pendingStepsCount },
@@ -417,8 +417,8 @@ export default function StepVerificationDashboard() {
                 onClick={() => setActiveTab(tab.id as any)}
                 className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#1c2438] text-white border border-white/10 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-white/5'
+                    ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>{tab.label}</span>
@@ -426,10 +426,10 @@ export default function StepVerificationDashboard() {
                   <span
                     className={`px-1.5 py-0.2 text-[9px] font-black rounded-full ${
                       isActive
-                        ? 'bg-blue-500/30 text-blue-300'
+                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/30 dark:text-blue-300'
                         : tab.id === 'pending'
-                        ? 'bg-amber-500/20 text-amber-400'
-                        : 'bg-slate-800 text-slate-400'
+                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
+                        : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                     }`}
                   >
                     {tab.count}
@@ -448,35 +448,35 @@ export default function StepVerificationDashboard() {
             placeholder="Search step title, deliverable, or submitter..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#07080c]/80 border border-slate-800/80 rounded-xl text-xs font-semibold text-white placeholder-slate-500 outline-none focus:border-blue-500 transition-all"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#07080c]/80 border border-slate-200/90 dark:border-slate-800/80 rounded-xl text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 transition-all"
           />
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. STEP VERIFICATION & APPROVAL MATRIX TABLE (EXACT OPTION 2 DESIGN) */}
+      {/* 3. STEP VERIFICATION & APPROVAL MATRIX TABLE */}
       {/* ========================================================================= */}
       {activeTab !== 'audit' && (
-        <div className="bg-[#0e131f]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl overflow-hidden shadow-2xl">
+        <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-xs dark:shadow-2xl">
           {/* Card Table Subheader */}
-          <div className="px-6 py-4 border-b border-slate-800/80 flex items-center justify-between">
+          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between">
             <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
-              <h3 className="text-sm font-bold text-white tracking-tight uppercase">
+              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.6)]" />
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight uppercase">
                 Step Verification and Approval
               </h3>
             </div>
             <div className="flex items-center gap-3">
-              <span className="text-xs font-mono text-slate-400">
+              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
                 {filteredSteps.length} of {totalStepsCount} Steps Filtered
               </span>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto custom-scrollbar">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
-                <tr className="border-b border-slate-800/80 bg-slate-900/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-200/90 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/50 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-5 w-24">Step No.</th>
                   <th className="py-3.5 px-4 min-w-[260px]">Task Name & Objective</th>
                   <th className="py-3.5 px-4 min-w-[170px]">Deliverable</th>
@@ -486,7 +486,7 @@ export default function StepVerificationDashboard() {
                   <th className="py-3.5 px-5 text-right w-28">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60 font-medium text-slate-300">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
                 {filteredSteps.map((step) => {
                   const isApproved = step.status === 'APPROVED_COMPLETED';
                   const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
@@ -499,15 +499,15 @@ export default function StepVerificationDashboard() {
                   return (
                     <tr
                       key={step.id}
-                      className={`hover:bg-white/[0.02] transition-colors group ${
-                        isPending ? 'bg-amber-500/[0.02]' : ''
+                      className={`hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group ${
+                        isPending ? 'bg-amber-500/[0.03]' : ''
                       }`}
                     >
                       {/* 1. Step No. Badge */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-2">
-                          <FileCode className="w-4 h-4 text-slate-500 group-hover:text-blue-400 transition-colors shrink-0" />
-                          <span className="font-mono text-xs font-bold text-slate-300">
+                          <FileCode className="w-4 h-4 text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors shrink-0" />
+                          <span className="font-mono text-xs font-bold text-slate-800 dark:text-slate-300">
                             {getStepNumberBadge(step)}
                           </span>
                         </div>
@@ -516,10 +516,10 @@ export default function StepVerificationDashboard() {
                       {/* 2. Task Name & Objective */}
                       <td className="py-4 px-4">
                         <div className="space-y-0.5">
-                          <h4 className="font-bold text-white text-xs group-hover:text-blue-400 transition-colors">
+                          <h4 className="font-bold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {step.title}
                           </h4>
-                          <p className="text-[11px] text-slate-400 line-clamp-1 leading-snug">
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
                             {step.objective}
                           </p>
                         </div>
@@ -537,23 +537,23 @@ export default function StepVerificationDashboard() {
                             <img
                               src={getAvatarByName(step.evidence.submittedBy.name)}
                               alt={step.evidence.submittedBy.name}
-                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-700"
+                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
                             />
                             <div className="min-w-0">
-                              <span className="font-bold text-white text-xs block truncate">
+                              <span className="font-bold text-slate-900 dark:text-white text-xs block truncate">
                                 {step.evidence.submittedBy.name}
                               </span>
-                              <span className="text-[10px] text-slate-400 block">
+                              <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
                                 Engineer
                               </span>
                             </div>
                           </div>
                         ) : (
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <div className="w-7 h-7 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-400">
+                          <div className="flex items-center gap-2 text-slate-400">
+                            <div className="w-7 h-7 rounded-full bg-slate-100 border border-slate-200 dark:bg-slate-800 dark:border-slate-700 flex items-center justify-center text-[10px] font-bold text-slate-500 dark:text-slate-400">
                               ?
                             </div>
-                            <span className="text-xs italic text-slate-400">Unassigned</span>
+                            <span className="text-xs italic text-slate-500 dark:text-slate-400">Unassigned</span>
                           </div>
                         )}
                       </td>
@@ -561,58 +561,58 @@ export default function StepVerificationDashboard() {
                       {/* 5. Progress Micro Bar */}
                       <td className="py-4 px-4 text-center">
                         <div className="w-full max-w-[80px] mx-auto space-y-1">
-                          <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                          <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                             <div
                               className={`h-full rounded-full transition-all duration-300 ${
                                 isApproved
                                   ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]'
                                   : isPending
-                                  ? 'bg-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.5)]'
+                                  ? 'bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]'
                                   : isChanges
-                                  ? 'bg-amber-400'
-                                  : 'bg-slate-700'
+                                  ? 'bg-amber-500'
+                                  : 'bg-slate-300 dark:bg-slate-700'
                               }`}
                               style={{ width: `${progressPct}%` }}
                             />
                           </div>
-                          <span className="text-[10px] font-mono text-slate-400 font-bold">
+                          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 font-bold">
                             {progressPct}%
                           </span>
                         </div>
                       </td>
 
-                      {/* 6. Glowing Status Badge */}
+                      {/* 6. Status Badge */}
                       <td className="py-4 px-4 text-center">
                         {isApproved ? (
-                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                             ✓ VERIFIED
                           </span>
                         ) : isPending ? (
-                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-400 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)] animate-pulse">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30 animate-pulse">
                             NEEDS REVIEW
                           </span>
                         ) : isChanges ? (
-                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-orange-500/15 text-orange-400 border border-orange-500/30">
+                          <span className="inline-flex items-center justify-center px-3 py-1 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30">
                             REVISION ACTIVE
                           </span>
                         ) : (
-                          <span className="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700">
-                            <Lock className="w-3 h-3" />
+                          <span className="inline-flex items-center justify-center gap-1 px-3 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
+                            <Lock className="w-3 h-3 text-slate-400" />
                             LOCKED STEP
                           </span>
                         )}
                       </td>
 
-                      {/* 7. Action Button (Electric Royal Blue for Pending) */}
+                      {/* 7. Action Button */}
                       <td className="py-4 px-5 text-right">
                         {isPending ? (
                           <button
                             onClick={() => setInspectingStep(step)}
                             style={{
                               backgroundColor: '#2563eb',
-                              boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)'
+                              boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)'
                             }}
-                            className="px-4 py-1.5 hover:brightness-110 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5"
+                            className="px-4 py-1.5 hover:brightness-110 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5 shadow"
                           >
                             <span>Review</span>
                             <ArrowRight className="w-3.5 h-3.5" />
@@ -620,7 +620,7 @@ export default function StepVerificationDashboard() {
                         ) : (
                           <button
                             onClick={() => setInspectingStep(step)}
-                            className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 text-xs font-semibold cursor-pointer transition-all"
+                            className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 text-xs font-semibold cursor-pointer transition-all"
                           >
                             View Details
                           </button>
@@ -636,24 +636,24 @@ export default function StepVerificationDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* 4. AUDIT & ACTIVITY HISTORY STREAM (WHEN AUDIT TAB IS SELECTED) */}
+      {/* 4. AUDIT & ACTIVITY HISTORY STREAM */}
       {/* ========================================================================= */}
       {activeTab === 'audit' && (
-        <div className="bg-[#0e131f]/90 backdrop-blur-xl p-6 border border-slate-800/80 rounded-2xl space-y-6 shadow-xl">
+        <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl p-6 border border-slate-200/90 dark:border-slate-800/80 rounded-2xl space-y-6 shadow-xs dark:shadow-xl">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Activity className="w-5 h-5 text-emerald-400" /> Immutable Step Verification Audit History
+            <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+              <Activity className="w-5 h-5 text-emerald-600 dark:text-emerald-400" /> Immutable Step Verification Audit History
             </h2>
-            <p className="text-xs text-slate-400 mt-1">
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
               Chronological cryptographic log of step submissions, Team Leader verification sign-offs, revision notes, and automatic milestone unlocks.
             </p>
           </div>
 
-          <div className="relative pl-6 space-y-6 border-l-2 border-slate-800">
+          <div className="relative pl-6 space-y-6 border-l-2 border-slate-200 dark:border-slate-800">
             {auditLogs.map((log) => (
               <div key={log.id} className="relative space-y-1">
                 <span
-                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-[#07080c] ${
+                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-[#07080c] ${
                     log.action === 'STEP_APPROVED'
                       ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
                       : log.action === 'WORK_SUBMITTED'
@@ -662,9 +662,9 @@ export default function StepVerificationDashboard() {
                   }`}
                 />
                 <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-white flex items-center gap-2">
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
                     <span>{log.actorName} ({formatRoleName(log.actorRole, 'title')})</span>
-                    <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 bg-blue-500/10 text-blue-400 rounded uppercase border border-blue-500/20">
+                    <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded uppercase border border-blue-200 dark:border-blue-500/20">
                       {log.action.replace('_', ' ')}
                     </span>
                   </h4>
@@ -672,7 +672,7 @@ export default function StepVerificationDashboard() {
                     {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
-                <p className="text-xs text-slate-300 font-medium">{log.details}</p>
+                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">{log.details}</p>
               </div>
             ))}
           </div>
@@ -683,58 +683,58 @@ export default function StepVerificationDashboard() {
       {/* 5. STEP INSPECTION & SIGN-OFF MODAL (PORTALED TO DOCUMENT.BODY) */}
       {/* ========================================================================= */}
       {inspectingStep && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root">
           <div
             onClick={() => setInspectingStep(null)}
-            className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm cursor-pointer"
+            className="absolute inset-0 bg-slate-950/60 dark:bg-slate-950/70 backdrop-blur-sm cursor-pointer"
           />
 
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="relative pointer-events-auto select-text touch-auto w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 bg-[#0e131f] border border-slate-800 rounded-3xl shadow-2xl space-y-5 text-white modal-dialog-contain overscroll-contain"
+            className="relative pointer-events-auto select-text touch-auto w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-[#0e131f] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-5 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
           >
             {/* Modal Header */}
-            <div className="flex items-start justify-between border-b border-slate-800/80 pb-4">
+            <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
               <div className="space-y-1">
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-mono text-[10px] font-bold">
+                  <span className="px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-400 font-mono text-[10px] font-bold">
                     STEP {inspectingStep.stepNumber}
                   </span>
                   <span className="text-[10px] font-mono text-slate-400">Task #{inspectingStep.taskId}</span>
                 </div>
-                <h3 className="text-base font-bold text-white mt-1">
+                <h3 className="text-base font-bold text-slate-900 dark:text-white mt-1">
                   {inspectingStep.title}
                 </h3>
               </div>
               <button
                 type="button"
                 onClick={() => setInspectingStep(null)}
-                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             {/* Objective & Expected Output */}
-            <div className="p-4 rounded-xl bg-[#07080c]/60 border border-slate-800/80 space-y-2">
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Milestone Objective</span>
-              <p className="text-xs text-slate-300 leading-relaxed">{inspectingStep.objective}</p>
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-between text-xs">
-                <span className="text-slate-400">Expected Deliverable:</span>
-                <span className="font-semibold text-blue-400">{inspectingStep.expectedOutput}</span>
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Milestone Objective</span>
+              <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{inspectingStep.objective}</p>
+              <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
+                <span className="text-slate-500 dark:text-slate-400">Expected Deliverable:</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">{inspectingStep.expectedOutput}</span>
               </div>
             </div>
 
             {/* Submitted Evidence Box */}
             {inspectingStep.evidence ? (
               <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl text-xs space-y-3">
-                <div className="flex justify-between items-center font-bold text-[10px] text-emerald-400 uppercase">
+                <div className="flex justify-between items-center font-bold text-[10px] text-emerald-600 dark:text-emerald-400 uppercase">
                   <span>Submitted Work Evidence</span>
                   <span>By {inspectingStep.evidence.submittedBy.name}</span>
                 </div>
-                <p className="font-normal text-slate-200 leading-relaxed">
+                <p className="font-normal text-slate-700 dark:text-slate-200 leading-relaxed">
                   {inspectingStep.evidence.description}
                 </p>
                 {inspectingStep.evidence.attachments && (
@@ -742,7 +742,7 @@ export default function StepVerificationDashboard() {
                     {inspectingStep.evidence.attachments.map((att: string) => (
                       <span
                         key={att}
-                        className="px-2.5 py-1 rounded-lg bg-[#07080c] border border-emerald-500/30 text-emerald-300 text-[11px] font-mono"
+                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#07080c] border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono shadow-xs"
                       >
                         📄 {att}
                       </span>
@@ -751,8 +751,8 @@ export default function StepVerificationDashboard() {
                 )}
               </div>
             ) : (
-              <div className="p-4 bg-slate-900/60 border border-slate-800 rounded-2xl text-xs text-slate-400 flex items-center gap-2">
-                <Lock className="w-4 h-4 text-slate-500" />
+              <div className="p-4 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs text-slate-500 dark:text-slate-400 flex items-center gap-2">
+                <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                 <span>Employee has not submitted work evidence proof for this milestone step yet.</span>
               </div>
             )}
@@ -761,7 +761,7 @@ export default function StepVerificationDashboard() {
             {isTeamLeader && (inspectingStep.status === 'PENDING_APPROVAL' || inspectingStep.status === 'SUBMITTED_FOR_REVIEW') && (
               <div className="space-y-4 pt-2">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+                  <label className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     Team Leader Review Feedback / Sign-off Notes
                   </label>
                   <textarea
@@ -769,15 +769,15 @@ export default function StepVerificationDashboard() {
                     placeholder="Enter review remarks, approval sign-off note, or requested modifications..."
                     value={reviewerNotes}
                     onChange={(e) => setReviewerNotes(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-[#07080c]/80 border border-slate-800 rounded-xl text-xs font-semibold text-white placeholder-slate-500 outline-none focus:border-blue-500 resize-none"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-[#07080c]/80 border border-slate-200 dark:border-slate-800 rounded-xl text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 resize-none"
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => handleVerifyAction('REJECT')}
-                    className="px-3.5 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                    className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
                   >
                     ✖ Reject Step
                   </button>
@@ -786,7 +786,7 @@ export default function StepVerificationDashboard() {
                     <button
                       type="button"
                       onClick={() => handleVerifyAction('REQUEST_CHANGES')}
-                      className="px-4 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                      className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
                     >
                       ↺ Request Revisions
                     </button>
@@ -795,9 +795,9 @@ export default function StepVerificationDashboard() {
                       onClick={() => handleVerifyAction('APPROVE')}
                       style={{
                         backgroundColor: '#2563eb',
-                        boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)'
+                        boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)'
                       }}
-                      className="px-5 py-2 hover:brightness-110 text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2"
+                      className="px-5 py-2 hover:brightness-110 text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2 shadow"
                     >
                       <Check className="w-4 h-4" />
                       <span>Approve & Unlock Next Step</span>

@@ -247,27 +247,28 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   return (
     <div className="space-y-6 select-none pt-1 sm:pt-2 pb-12 w-full min-w-0">
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
       {/* OPTION 2 UNIFIED HEADER ACROSS ALL DASHBOARDS */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white flex items-center gap-2.5">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5 font-heading">
             {isAdmin ? 'Admin Dashboard' : isTeamLead ? 'Team Lead Dashboard' : 'Employee Workspace'}
           </h1>
-          <p className="text-sm font-normal text-slate-400 mt-1">
-            Welcome back, <span className="text-slate-200 font-semibold">{user?.name}</span> •{' '}
+          <p className="text-sm font-normal text-slate-500 dark:text-slate-400 mt-1">
+            Welcome back, <span className="text-slate-800 dark:text-slate-200 font-semibold">{user?.name}</span> •{' '}
             {isAdmin ? 'System Administrator & Executive Portal' : isTeamLead ? 'Team Lead & Engineering Manager' : 'Team Member & Engineer'}
           </p>
         </div>
 
         {/* Option 2 Telemetry Capsule (Digital Clock & Active Workspace) */}
         <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-mono text-slate-300 flex items-center gap-2 shadow-sm">
+          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
             <Clock className="w-3.5 h-3.5 text-slate-400" />
             <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           </div>
 
-          <div className="px-3.5 py-1.5 rounded-xl bg-[#0e131f] border border-slate-800/80 text-xs font-semibold text-slate-300 flex items-center gap-2 shadow-sm">
+          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
             <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
             <span>Active workspace</span>
           </div>
@@ -282,60 +283,60 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           {/* Row 1: 4 Symmetrical KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: Active Projects */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Active Projects</span>
-                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
+                <span className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">
                   i
                 </span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">{stats.activeProjects || 2}</div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital, SaaS Workspace</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects || 2}</div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital, SaaS Workspace</p>
               </div>
             </div>
 
             {/* Card 2: Completed Deliverables */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Completed Projects</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Completed Projects</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-white tracking-tight">{stats.completedProjects || 1}</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.completedProjects || 1}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
                     On Track
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">100% On-Time Delivery</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">100% On-Time Delivery</p>
               </div>
             </div>
 
             {/* Card 3: Total Teams */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Active Teams</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Teams</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white tracking-tight">3</span>
-                  <span className="text-xs font-medium text-slate-400">Engineering, QA</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">3</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Engineering, QA</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full w-2/3"></div>
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-2/3"></div>
                 </div>
               </div>
             </div>
 
             {/* Card 4: Governance & Security Health */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Governance & Security</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Governance & Security</span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">98%</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">98%</div>
                 <div className="mt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
                     Optimal Security
                   </span>
                 </div>
@@ -344,20 +345,20 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           </div>
 
           {/* Row 2: Action Alert Banner */}
-          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600"></div>
             <div className="pl-3 sm:pl-2">
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 System Security & RBAC Configuration Active
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
                 All role permissions, user access policies, and audit trails are operating under enterprise governance.
               </p>
             </div>
             <button
               type="button"
               onClick={() => setView('audit-logs')}
-              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
               className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               View Audit Logs <ArrowRight className="w-4 h-4" />
@@ -367,10 +368,10 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           {/* Row 3: Admin System Modules & Audit Feed */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* System Modules Panel (7 cols) */}
-            <div className="lg:col-span-7 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="lg:col-span-7 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white">System Modules & Governance</h3>
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Quick Access</span>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">System Modules & Governance</h3>
+                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Quick Access</span>
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -386,17 +387,17 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                     <button
                       key={mod.title}
                       onClick={() => setView(mod.view)}
-                      className="p-4 rounded-xl bg-[#080b13] border border-slate-800/90 hover:border-slate-700 hover:bg-[#121827] text-left transition-all cursor-pointer group flex flex-col justify-between min-h-[105px]"
+                      className="p-4 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200/80 hover:border-blue-400 dark:bg-[#080b13] dark:border-slate-800/90 dark:hover:border-slate-700 dark:hover:bg-[#121827] text-left transition-all cursor-pointer group flex flex-col justify-between min-h-[105px]"
                     >
                       <div className="flex items-center justify-between w-full">
-                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20 group-hover:scale-105 transition-transform">
+                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
                           <Icon className="w-4 h-4" />
                         </div>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-500 group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 dark:text-slate-500 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
                       </div>
                       <div className="mt-3">
-                        <p className="text-xs font-bold text-white group-hover:text-blue-300 transition-colors">{mod.title}</p>
-                        <p className="text-[10px] text-slate-400 mt-0.5">{mod.desc}</p>
+                        <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">{mod.title}</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{mod.desc}</p>
                       </div>
                     </button>
                   );
@@ -405,31 +406,31 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             </div>
 
             {/* Audit Logs Feed Panel (5 cols) */}
-            <div className="lg:col-span-5 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="lg:col-span-5 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white">Recent Security Logs</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent Security Logs</h3>
                 <button
                   onClick={() => setView('audit-logs')}
-                  className="text-xs font-semibold text-blue-400 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
                   View All →
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-800/50 max-h-[300px] overflow-y-auto pr-1">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[300px] overflow-y-auto pr-1">
                 {auditLogs && auditLogs.length > 0 ? (
                   auditLogs.slice(0, 5).map((log: any) => (
                     <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
                       <div>
                         <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-white">{log.user || 'System'}</span>
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-500/10 text-blue-400">
+                          <span className="font-bold text-slate-900 dark:text-white">{log.user || 'System'}</span>
+                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
                             {log.action}
                           </span>
                         </div>
-                        <p className="text-[11px] text-slate-400 mt-0.5 line-clamp-1">{log.activity}</p>
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{log.activity}</p>
                       </div>
-                      <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
                         {log.status || 'SUCCESS'}
                       </span>
                     </div>
@@ -451,60 +452,60 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           {/* Row 1: 4 Symmetrical KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: Active Projects */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-blue-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Active Projects</span>
-                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
+                <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">
                   i
                 </span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">{stats.activeProjects || 2}</div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital Management System</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects || 2}</div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital Management System</p>
               </div>
             </div>
 
             {/* Card 2: Pending Code Reviews */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-amber-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Pending Code Reviews</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Code Reviews</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-white tracking-tight">1</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">1</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                     Needs Review
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Patient Dashboard</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Patient Dashboard</p>
               </div>
             </div>
 
             {/* Card 3: Active Tasks */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-blue-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Active Tasks</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Tasks</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white tracking-tight">{stats.totalTasks || 8}</span>
-                  <span className="text-xs font-medium text-slate-400">2 In Progress</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.totalTasks || 8}</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">2 In Progress</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full w-1/4"></div>
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-1/4"></div>
                 </div>
               </div>
             </div>
 
             {/* Card 4: Sprint Velocity & Health */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-emerald-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Sprint Velocity & Health</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Sprint Velocity & Health</span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">98%</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">98%</div>
                 <div className="mt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                     Optimal Health
                   </span>
                 </div>
@@ -513,22 +514,22 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           </div>
 
           {/* Row 2: Real World Workflow Highlight & Task Review Queue Banner */}
-          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600 dark:bg-blue-500"></div>
 
             <div className="pl-3 sm:pl-2">
-              <h3 className="text-base sm:text-lg font-bold text-white tracking-tight">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                 Hospital Management System — Create Patient Dashboard
               </h3>
-              <p className="text-xs text-slate-400 mt-1">
-                Submitted by <strong className="text-slate-200">Rahul</strong> (Employee) for Team Lead approval.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Submitted by <strong className="text-slate-800 dark:text-slate-200">Rahul</strong> (Employee) for Team Lead approval.
               </p>
             </div>
 
             <button
               type="button"
               onClick={() => setView('reviews')}
-              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
               className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
             >
               Review & Approve Task <ArrowRight className="w-4 h-4" />
@@ -538,50 +539,50 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           {/* Row 3: Team Workload & Allocation AND Quick Task Assignment */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
             {/* Left Panel: Team Workload & Allocation (7 cols) */}
-            <div className="lg:col-span-7 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+            <div className="lg:col-span-7 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-white">Team Workload & Allocation</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Team Workload & Allocation</h3>
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-[#151c2c] hover:bg-[#1c263c] border border-slate-700/80 text-slate-200 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-[#151c2c] dark:hover:bg-[#1c263c] dark:border-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95"
                 >
                   <Plus className="w-3.5 h-3.5" /> Invite Teammate
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-800/50">
+              <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
                 {displayTeammates.map(emp => (
                   <div key={emp.id || emp.uid} className="py-3 flex items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-3 min-w-0">
                       <img
                         src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)}
                         alt={emp.name}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-700/80 shrink-0"
+                        className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700/80 shrink-0"
                       />
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-bold text-white truncate">{emp.name}</span>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-800 text-slate-300 shrink-0">
+                        <span className="font-bold text-slate-900 dark:text-white truncate">{emp.name}</span>
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 shrink-0">
                           {getRoleBadge(emp)}
                         </span>
                       </div>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] text-slate-400 font-medium hidden sm:inline-block">
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline-block">
                         Capacity progress
                       </span>
-                      <div className="w-24 sm:w-32 h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full w-1/2"></div>
+                      <div className="w-24 sm:w-32 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-1/2"></div>
                       </div>
-                      <span className="text-xs font-bold text-slate-300 w-8 text-right">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-8 text-right">
                         50%
                       </span>
                       <button
                         onClick={() => {
                           setNewTaskAssigneeId((emp.id || emp.uid).toString());
                         }}
-                        className="px-3 py-1 bg-[#151c2c] hover:bg-blue-600 hover:text-white border border-slate-700/80 text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95"
+                        className="px-3 py-1 bg-slate-50 hover:bg-blue-600 hover:text-white border border-slate-200 dark:bg-[#151c2c] dark:hover:bg-blue-600 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95"
                       >
                         <Plus className="w-3 h-3" /> Assign
                       </button>
@@ -592,11 +593,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             </div>
 
             {/* Right Panel: Quick Task Assignment (5 cols) */}
-            <div className="lg:col-span-5 bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
-              <h3 className="text-sm font-bold text-white">Quick Task Assignment</h3>
+            <div className="lg:col-span-5 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white">Quick Task Assignment</h3>
 
-              {formSuccess && <p className="text-xs text-emerald-400 font-semibold">✓ {formSuccess}</p>}
-              {formError && <p className="text-xs text-rose-400 font-semibold">⚠️ {formError}</p>}
+              {formSuccess && <p className="text-xs text-emerald-600 dark:text-emerald-400 font-semibold">✓ {formSuccess}</p>}
+              {formError && <p className="text-xs text-rose-600 dark:text-rose-400 font-semibold">⚠️ {formError}</p>}
 
               <form onSubmit={handleAssignTaskSubmit} className="space-y-3.5">
                 <input
@@ -604,7 +605,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   placeholder="Task title (e.g. Patient Dashboard UI)"
                   value={newTaskTitle}
                   onChange={(e) => setNewTaskTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-[#080b13] border border-slate-800/90 rounded-xl text-xs text-slate-200 placeholder:text-slate-500 outline-none focus:border-blue-500/80 transition-all font-medium shadow-inner"
+                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200/90 rounded-xl text-xs text-slate-900 placeholder:text-slate-400 dark:bg-[#080b13] dark:border-slate-800/90 dark:text-slate-200 dark:placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all font-medium"
                 />
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -615,7 +616,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                     options={projectsList.map(p => ({
                       value: String(p.id),
                       label: p.name,
-                      icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-400" />
+                      icon: <FolderGit2 className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     }))}
                   />
 
@@ -631,7 +632,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                         <img
                           src={resolveAvatar(emp.profilePhoto, emp.name, emp.gender)}
                           alt=""
-                          className="w-4 h-4 rounded-full object-cover ring-1 ring-white/20"
+                          className="w-4 h-4 rounded-full object-cover ring-1 ring-slate-200 dark:ring-white/20"
                         />
                       )
                     }))}
@@ -640,8 +641,8 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
 
                 <button
                   type="submit"
-                  style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
-                  className="w-full py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow-md cursor-pointer transition-all active:scale-98"
+                  style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
+                  className="w-full py-2.5 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow cursor-pointer transition-all active:scale-98"
                 >
                   Create & Assign Task
                 </button>
@@ -659,60 +660,60 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           {/* Row 1: 4 Symmetrical KPI Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: My Active Tasks */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-blue-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">My Active Tasks</span>
-                <span className="w-5 h-5 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center text-[10px] font-bold">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">My Active Tasks</span>
+                <span className="w-5 h-5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">
                   i
                 </span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">{activeCount}</div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">Hospital & SaaS Workspace</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{activeCount}</div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital & SaaS Workspace</p>
               </div>
             </div>
 
             {/* Card 2: Pending Deliverables */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-amber-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Pending Deliverables</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Deliverables</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-white tracking-tight">{pendingTasks.length}</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 shadow-[0_0_10px_rgba(245,158,11,0.25)]">
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{pendingTasks.length}</span>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
                     Action Required
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-400 mt-2 truncate">New Work Assignments</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">New Work Assignments</p>
               </div>
             </div>
 
             {/* Card 3: Completed Tasks */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-emerald-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Completed Tasks</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Completed Tasks</span>
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-white tracking-tight">{stats.completedTasks || 0}</span>
-                  <span className="text-xs font-medium text-slate-400">Completed</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.completedTasks || 0}</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Completed</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-800 rounded-full mt-3 overflow-hidden">
-                  <div className="h-full bg-blue-500 rounded-full w-full"></div>
+                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
+                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-full"></div>
                 </div>
               </div>
             </div>
 
             {/* Card 4: Efficiency & Velocity */}
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg relative overflow-hidden group hover:border-slate-700/80 transition-all flex flex-col justify-between">
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:border-emerald-400/50 dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-400">Velocity & Score</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Velocity & Score</span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-white tracking-tight">{stats.productivityScore || 98}%</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.productivityScore || 98}%</div>
                 <div className="mt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.25)]">
+                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                     Optimal Health
                   </span>
                 </div>
@@ -722,25 +723,25 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
 
           {/* Pending Task Acceptance Alerts Banner (if any) */}
           {pendingTasks.length > 0 && (
-            <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-amber-500/30 rounded-2xl p-5 shadow-lg space-y-3 relative overflow-hidden">
+            <div className="bg-amber-50/70 dark:bg-[#0e131f]/85 backdrop-blur-xl border border-amber-200 dark:border-amber-500/30 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-3 relative overflow-hidden">
               <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-500"></div>
               <div className="pl-3 sm:pl-2">
-                <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-amber-400" /> New Task Assignment Pending Acceptance
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-amber-500 dark:text-amber-400" /> New Task Assignment Pending Acceptance
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">Review the assignments delegated to you and accept to start tracking time.</p>
+                <p className="text-xs text-slate-600 dark:text-slate-400 mt-1">Review the assignments delegated to you and accept to start tracking time.</p>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pl-3 sm:pl-2 pt-2">
                 {pendingTasks.map(t => (
-                  <div key={t.id} className="p-3.5 bg-[#080b13] border border-slate-800 rounded-xl flex items-center justify-between gap-3">
+                  <div key={t.id} className="p-3.5 bg-white border border-amber-200/80 dark:bg-[#080b13] dark:border-slate-800 rounded-xl flex items-center justify-between gap-3 shadow-xs">
                     <div className="min-w-0">
-                      <h4 className="text-xs font-bold text-white truncate">{t.title}</h4>
-                      <p className="text-[10px] text-slate-400 truncate mt-0.5">{t.description}</p>
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{t.title}</h4>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate mt-0.5">{t.description}</p>
                     </div>
                     <button
                       onClick={() => handleAcceptTask(t.id)}
                       style={{ backgroundColor: '#2563eb' }}
-                      className="px-3 py-1.5 text-white rounded-lg text-xs font-semibold hover:brightness-110 cursor-pointer shrink-0 transition-all"
+                      className="px-3 py-1.5 text-white rounded-lg text-xs font-semibold hover:brightness-110 cursor-pointer shrink-0 transition-all shadow-xs"
                     >
                       Accept Task
                     </button>
@@ -751,20 +752,20 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           )}
 
           {/* My Tasks & Workflow Table */}
-          <div className="bg-[#0e131f]/85 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-5 shadow-lg space-y-4">
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-white flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-blue-400" /> My Assigned Tasks & Deliverables
+              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> My Assigned Tasks & Deliverables
               </h3>
               <button
                 onClick={() => setView('my-tasks')}
-                className="text-xs font-semibold text-blue-400 hover:underline cursor-pointer"
+                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
                 View All Tasks →
               </button>
             </div>
 
-            <div className="divide-y divide-slate-800/50">
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
               {myTasks.length === 0 ? (
                 <p className="text-xs text-slate-400 py-8 text-center">No tasks assigned currently.</p>
               ) : (
@@ -772,38 +773,38 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   <div key={t.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase">
+                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 uppercase">
                           {t.project?.name || 'Project Workspace'}
                         </span>
                         <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
                           t.status === 'CODE_REVIEW'
-                            ? 'bg-amber-500/15 text-amber-300 border border-amber-500/30'
+                            ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
                             : t.status === 'COMPLETED'
-                            ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/30'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
+                            : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30'
                         }`}>
                           {t.status.replace(/_/g, ' ')}
                         </span>
                       </div>
-                      <h4 className="text-sm font-bold text-white mt-1.5">{t.title}</h4>
-                      <p className="text-xs text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
+                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1.5">{t.title}</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
                     </div>
 
                     <div className="flex items-center gap-3 shrink-0">
                       {t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED' || t.status === 'TODO' || t.status === 'TO_DO' ? (
                         <button
                           onClick={() => handleSubmitForReview(t.id)}
-                          style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.4)' }}
+                          style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
                           className="px-4 py-2 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
                         >
                           Submit for Review <ArrowRight className="w-3.5 h-3.5" />
                         </button>
                       ) : t.status === 'CODE_REVIEW' ? (
-                        <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-500/15 text-amber-300 rounded-xl border border-amber-500/30 shadow-[0_0_8px_rgba(245,158,11,0.25)]">
+                        <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 rounded-xl dark:border-amber-500/30">
                           ⏳ Pending Team Lead Review
                         </span>
                       ) : (
-                        <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-2.5 py-1 rounded-full">
+                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
                           ✓ Deliverable Passed
                         </span>
                       )}

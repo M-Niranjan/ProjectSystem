@@ -208,20 +208,20 @@ export default function CreateTaskModal() {
 
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Task Title</label>
+                <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Task Title</label>
                 <input
                   type="text"
                   required
                   placeholder="e.g. Integrate Auth Token verification"
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                 />
               </div>
 
               <div className="space-y-1">
                 <div className="flex justify-between items-center">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Description</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Description</label>
                   {aiAnalyzing && (
                     <span className="text-[8px] font-black text-blue-500 uppercase tracking-widest flex items-center gap-1">
                       <Sparkles className="w-3 h-3 animate-spin" /> AI analyzing description...
@@ -233,13 +233,13 @@ export default function CreateTaskModal() {
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   onBlur={handleDescriptionBlur}
-                  className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs h-20 resize-none"
+                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs h-20 resize-none"
                 ></textarea>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1">
                     <Folder className="w-3.5 h-3.5 text-blue-500" /> Project Workspace
                   </label>
                   <LuxurySelect
@@ -255,7 +255,7 @@ export default function CreateTaskModal() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1">
                     <User className="w-3.5 h-3.5 text-blue-500" /> Assignee
                   </label>
                   <LuxurySelect
@@ -275,9 +275,9 @@ export default function CreateTaskModal() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Priority</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Priority</label>
                   <LuxurySelect
                     value={priority}
                     onChange={(val) => setPriority(val)}
@@ -291,7 +291,7 @@ export default function CreateTaskModal() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1">
                     <Clock className="w-3.5 h-3.5 text-amber-500" /> Est Hours
                   </label>
                   <input
@@ -299,14 +299,14 @@ export default function CreateTaskModal() {
                     step="0.5"
                     value={estimatedTime}
                     onChange={(e) => setEstimatedTime(Number(e.target.value))}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status (Stage)</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Status (Stage)</label>
                   <LuxurySelect
                     value={status}
                     onChange={(val) => setStatus(val)}
@@ -322,20 +322,20 @@ export default function CreateTaskModal() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Due Date</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Due Date</label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => setDueDate(e.target.value)}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                   />
                 </div>
               </div>
 
               {/* PDF Spec Modules: Task Dependency Graph & Resource Capacity Allocation */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1">
                     🔗 Precedent Dependency
                   </label>
                   <LuxurySelect
@@ -356,7 +356,7 @@ export default function CreateTaskModal() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider flex items-center gap-1">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider flex items-center gap-1">
                     ⚡ Resource Allocation %
                   </label>
                   <input
@@ -366,7 +366,7 @@ export default function CreateTaskModal() {
                     step="10"
                     value={allocationPercent}
                     onChange={(e) => setAllocationPercent(Number(e.target.value))}
-                    className="w-full px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                     placeholder="e.g. 50% or 100%"
                   />
                 </div>

@@ -362,10 +362,10 @@ export default function Tasks() {
       {/* Tier 1: Title & Primary Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-white">
+          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Workspace Tasks
           </h1>
-          <p className="text-sm font-normal text-slate-400 mt-1">
+          <p className="text-sm font-normal text-slate-500 dark:text-slate-400 mt-1">
             Manage and track progress across all team tasks for this workspace.
           </p>
         </div>
@@ -373,8 +373,8 @@ export default function Tasks() {
         {isTeamLeader && (
           <button
             onClick={() => setTaskModalOpen(true)}
-            style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 16px 0 rgba(37, 99, 235, 0.45)' }}
-            className="flex items-center gap-2 px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto"
+            style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 16px 0 rgba(37, 99, 235, 0.35)' }}
+            className="flex items-center gap-2 px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-sm active:scale-95 transition-all cursor-pointer whitespace-nowrap self-start sm:self-auto shadow"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" /> Add Task
           </button>
@@ -382,29 +382,29 @@ export default function Tasks() {
       </div>
 
       {/* Tier 2: Dedicated Frosted Search & Controls Toolbar (Option 2) */}
-      <div className="bg-[#0e131f]/90 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-3 px-4 shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-3 px-4 shadow-xs dark:shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
         {/* Left: Search Input */}
         <div className="relative w-full md:w-96">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
             placeholder="Search tasks..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-[#080b13] border border-slate-800/90 rounded-xl text-slate-200 placeholder:text-slate-500 outline-none focus:border-blue-500/80 transition-all font-normal text-sm shadow-inner"
+            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#080b13] border border-slate-200/90 dark:border-slate-800/90 rounded-xl text-slate-900 dark:text-slate-200 placeholder:text-slate-400 dark:placeholder:text-slate-500 outline-none focus:border-blue-500 transition-all font-normal text-sm"
           />
         </div>
 
         {/* Right: View Toggles & My Tasks Toggle */}
         <div className="flex items-center gap-5 shrink-0 justify-between md:justify-end flex-wrap">
           {/* View Toggles (Grid / List / Group Assignee) */}
-          <div className="flex items-center gap-1 bg-[#080b13] border border-slate-800/90 p-1 rounded-xl">
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90 p-1 rounded-xl">
             <button
               onClick={() => { setIsGridView(true); setGroupByAssignee(false); }}
               className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                 isGridView && !groupByAssignee
-                  ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-white/10 font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="Grid View"
             >
@@ -414,8 +414,8 @@ export default function Tasks() {
               onClick={() => { setIsGridView(false); setGroupByAssignee(false); }}
               className={`px-3.5 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                 !isGridView && !groupByAssignee
-                  ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
-                  : 'text-slate-400 hover:text-white'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-white/10 font-semibold'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
               }`}
               title="List View"
             >
@@ -426,8 +426,8 @@ export default function Tasks() {
                 onClick={() => setGroupByAssignee(!groupByAssignee)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium flex items-center gap-1.5 cursor-pointer transition-all ${
                   groupByAssignee
-                    ? 'bg-[#1c2438] text-white shadow-sm border border-white/10 font-semibold'
-                    : 'text-slate-400 hover:text-white'
+                    ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-white/10 font-semibold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                 }`}
                 title="Group Tasks by Assignee"
               >
@@ -436,15 +436,15 @@ export default function Tasks() {
             )}
           </div>
 
-          {/* My Tasks Only iOS Switch */}
+          {/* My Tasks Only Switch */}
           {user?.role !== 'ROLE_EMPLOYEE' && (
             <div
               onClick={() => setShowMyTasksOnly(!showMyTasksOnly)}
               className="flex items-center gap-3 cursor-pointer select-none"
             >
-              <span className="text-sm font-medium text-slate-300">My Tasks Only</span>
+              <span className="text-sm font-medium text-slate-700 dark:text-slate-300">My Tasks Only</span>
               <div
-                style={{ backgroundColor: showMyTasksOnly ? '#2563eb' : '#334155' }}
+                style={{ backgroundColor: showMyTasksOnly ? '#2563eb' : '#cbd5e1' }}
                 className="w-11 h-6 rounded-full transition-colors relative p-0.5 inline-flex items-center"
               >
                 <span
@@ -460,8 +460,8 @@ export default function Tasks() {
 
       {/* TEAM LEADER ASSIGNEE TRACKER (Option 2 Design) */}
       {isTeamLeader && (
-        <div className="bg-[#0e131f]/80 backdrop-blur-xl border border-slate-800/80 rounded-2xl p-4 px-5 shadow-lg space-y-3">
-          <div className="text-[11px] font-bold text-slate-400 tracking-wider uppercase">
+        <div className="bg-white dark:bg-[#0e131f]/80 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 px-5 shadow-xs dark:shadow-lg space-y-3">
+          <div className="text-[11px] font-bold text-slate-500 dark:text-slate-400 tracking-wider uppercase">
             TEAM LEAD ASSIGNEE TRACKER
           </div>
 
@@ -471,8 +471,8 @@ export default function Tasks() {
               onClick={() => setAssigneeFilter('ALL')}
               className={`px-5 py-2 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                 assigneeFilter === 'ALL'
-                  ? 'bg-[#1c2438] text-white border border-slate-700/80 shadow-sm'
-                  : 'bg-[#111624] text-slate-400 border border-slate-800/80 hover:text-slate-200'
+                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700/80 shadow-xs'
+                  : 'bg-slate-50 dark:bg-[#111624] text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-800/80 hover:text-slate-900 dark:hover:text-slate-200'
               }`}
             >
               All Members
@@ -482,8 +482,8 @@ export default function Tasks() {
               onClick={() => setAssigneeFilter(assigneeFilter === 'UNASSIGNED' ? 'ALL' : 'UNASSIGNED')}
               className={`px-5 py-2 rounded-full text-xs font-medium transition-all cursor-pointer ${
                 assigneeFilter === 'UNASSIGNED'
-                  ? 'bg-[#1c2438] text-white border border-amber-500/50 shadow-sm'
-                  : 'bg-[#111624] text-slate-300 border border-slate-800/80 hover:border-slate-700'
+                  ? 'bg-amber-50 dark:bg-[#1c2438] text-amber-800 dark:text-white border border-amber-300 dark:border-amber-500/50 shadow-xs'
+                  : 'bg-slate-50 dark:bg-[#111624] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700'
               }`}
             >
               Unassigned
@@ -502,21 +502,21 @@ export default function Tasks() {
                   onClick={() => setAssigneeFilter(isSelected ? 'ALL' : String(member.id))}
                   className={`flex items-center gap-3 px-3.5 py-1.5 rounded-full border transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-[#1c2438] border-blue-500/60 shadow-[0_0_12px_rgba(59,130,246,0.25)]'
-                      : 'bg-[#111624] border-slate-800/80 hover:border-slate-700 hover:bg-[#141b2c]'
+                      ? 'bg-blue-50 dark:bg-[#1c2438] border-blue-400 dark:border-blue-500/60 shadow-xs'
+                      : 'bg-slate-50 dark:bg-[#111624] border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-100 dark:hover:bg-[#141b2c]'
                   }`}
                 >
                   <img
                     src={resolveAvatar(member.profilePhoto, member.name, (member as any).gender)}
                     alt={member.name}
-                    className="w-8 h-8 rounded-full object-cover border border-slate-700/80 shrink-0"
+                    className="w-8 h-8 rounded-full object-cover border border-slate-200 dark:border-slate-700/80 shrink-0"
                   />
                   <div className="text-left">
-                    <div className="text-xs font-bold text-white flex items-center gap-1.5 leading-tight">
+                    <div className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-1.5 leading-tight">
                       <span>{member.name}</span>
                       <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
                     </div>
-                    <div className="text-[10px] text-slate-400 font-medium leading-tight mt-0.5">
+                    <div className="text-[10px] text-slate-500 dark:text-slate-400 font-medium leading-tight mt-0.5">
                       {memberTaskCount} tasks
                     </div>
                   </div>
@@ -533,7 +533,7 @@ export default function Tasks() {
         <div className="relative">
           <button
             onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-            className="bg-[#0e131f] border border-slate-800/90 hover:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-2.5 text-xs font-bold text-slate-200 shadow-md transition-all cursor-pointer"
+            className="bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-xs transition-all cursor-pointer"
           >
             <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 flex items-center justify-center text-[10px] text-white shadow-xs font-bold">
               📊
@@ -545,7 +545,7 @@ export default function Tasks() {
           </button>
 
           {isProjectDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-64 bg-[#0e131f] border border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 backdrop-blur-xl">
+            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-[#0e131f] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 backdrop-blur-xl">
               <button
                 onClick={() => {
                   setActiveProjectId(null);
@@ -553,8 +553,8 @@ export default function Tasks() {
                 }}
                 className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
                   activeProjectId === null
-                    ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
-                    : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                    ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border-l-2 border-blue-500'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
                 <span>📁</span>
@@ -569,8 +569,8 @@ export default function Tasks() {
                   }}
                   className={`w-full text-left px-4 py-2 text-xs font-semibold flex items-center gap-2 cursor-pointer ${
                     activeProjectId === p.id
-                      ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500'
-                      : 'text-slate-300 hover:bg-white/5 hover:text-white'
+                      ? 'bg-blue-50 dark:bg-blue-600/20 text-blue-600 dark:text-blue-400 border-l-2 border-blue-500'
+                      : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <span>📁</span>
@@ -582,7 +582,7 @@ export default function Tasks() {
         </div>
 
         {/* Right: Status Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
           {[
             { id: 'ALL', label: 'ALL' },
             { id: 'BACKLOG', label: 'BACKLOG' },
@@ -599,8 +599,8 @@ export default function Tasks() {
                 onClick={() => setStatusFilter(tab.id)}
                 className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-[#1c2438] text-white border border-slate-700/80 shadow-sm font-bold'
-                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'
+                    ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700/80 shadow-xs font-bold'
+                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5'
                 }`}
               >
                 {tab.label}
@@ -822,15 +822,15 @@ export default function Tasks() {
         )
       ) : (
         /* ================= OPTION 2 TABLE LIST VIEW ================= */
-        <div className="bg-[#0e131f]/70 backdrop-blur-xl border border-slate-800/80 rounded-2xl shadow-xl overflow-hidden w-full">
-          <div className="overflow-x-auto w-full">
+        <div className="bg-white dark:bg-[#0e131f]/70 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl shadow-xs dark:shadow-xl overflow-hidden w-full">
+          <div className="overflow-x-auto w-full custom-scrollbar">
             <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
-                <tr className="border-b border-slate-800/80 bg-slate-900/40 text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                <tr className="border-b border-slate-200/90 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/40 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
                   <th className="py-3.5 px-4 w-12 text-center">
                     <input
                       type="checkbox"
-                      className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
+                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
                     />
                   </th>
                   <th className="py-3.5 px-4 w-24">ID</th>
@@ -842,7 +842,7 @@ export default function Tasks() {
                   <th className="py-3.5 px-4 w-24 text-right pr-6">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
                 {filteredTasks.length === 0 ? (
                   <tr>
                     <td colSpan={8} className="py-14 text-center text-slate-400 font-medium">
@@ -855,20 +855,20 @@ export default function Tasks() {
                     return (
                       <tr
                         key={task.id}
-                        className="hover:bg-[#141b2c]/60 transition-colors group cursor-pointer"
+                        className="hover:bg-slate-50/80 dark:hover:bg-[#141b2c]/60 transition-colors group cursor-pointer"
                         onClick={() => openTaskDetail(task)}
                       >
                         <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                           <input
                             type="checkbox"
-                            className="w-4 h-4 rounded border-slate-700 bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
+                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
                           />
                         </td>
-                        <td className="py-3.5 px-4 text-slate-400 font-mono text-xs">
+                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">
                           PM-{task.id}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-white font-medium text-xs sm:text-sm group-hover:text-blue-300 transition-colors">
+                          <span className="text-slate-900 dark:text-white font-semibold text-xs sm:text-sm group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
                             {task.title}
                           </span>
                         </td>
@@ -883,42 +883,42 @@ export default function Tasks() {
                         >
                           {task.assignee ? (
                             <div className="flex items-center -space-x-1.5" title={task.assignee.name}>
-                              <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-[#0e131f] shadow-sm shrink-0">
+                              <div className="w-6 h-6 rounded-full bg-purple-600 text-white font-bold text-[10px] flex items-center justify-center ring-2 ring-white dark:ring-[#0e131f] shadow-xs shrink-0">
                                 {initial}
                               </div>
                               <img
                                 src={resolveAvatar(task.assignee.profilePhoto, task.assignee.name, (task.assignee as any).gender)}
                                 alt={task.assignee.name}
-                                className="w-6 h-6 rounded-full object-cover ring-2 ring-[#0e131f] shadow-sm shrink-0"
+                                className="w-6 h-6 rounded-full object-cover ring-2 ring-white dark:ring-[#0e131f] shadow-xs shrink-0"
                               />
                             </div>
                           ) : (
-                            <span className="text-xs text-slate-500 italic">Unassigned</span>
+                            <span className="text-xs text-slate-400 italic">Unassigned</span>
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-slate-300 font-medium text-xs">
+                          <span className="text-slate-700 dark:text-slate-300 font-medium text-xs">
                             {task.priority === 'HIGH' || task.priority === 'CRITICAL' ? 'High' : task.priority === 'LOW' ? 'Low' : 'Medium'}
                           </span>
                         </td>
                         <td className="py-3.5 px-4">
                           {renderStatusBadge(task.status)}
                         </td>
-                        <td className="py-3.5 px-4 text-slate-400 font-medium text-xs whitespace-nowrap">
+                        <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-medium text-xs whitespace-nowrap">
                           {formatDisplayDate(task.dueDate)}
                         </td>
                         <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                           <div className="flex items-center justify-end gap-2 text-slate-400">
                             <button
                               onClick={() => openTaskDetail(task)}
-                              className="p-1 hover:text-white transition-colors cursor-pointer"
+                              className="p-1 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                               title="Edit task"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
                             <button
                               onClick={() => openTaskDetail(task)}
-                              className="p-1 hover:text-white transition-colors cursor-pointer"
+                              className="p-1 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
                               title="More options"
                             >
                               <MoreHorizontal className="w-4 h-4" />

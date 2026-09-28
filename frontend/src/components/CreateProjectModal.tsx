@@ -160,30 +160,30 @@ export default function CreateProjectModal() {
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Project Name</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Project Name</label>
                   <input
                     type="text"
                     required
                     placeholder="e.g. Notion Sync Engine"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                   />
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Description</label>
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Description</label>
                   <textarea
                     placeholder="Provide context and milestone targets..."
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs h-16 resize-none"
+                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs h-16 resize-none"
                   ></textarea>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Status</label>
                     <LuxurySelect
                       value={status}
                       onChange={(val) => setStatus(val)}
@@ -197,7 +197,7 @@ export default function CreateProjectModal() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Priority</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Priority</label>
                     <LuxurySelect
                       value={priority}
                       onChange={(val) => setPriority(val)}
@@ -211,10 +211,10 @@ export default function CreateProjectModal() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <div className="flex items-center justify-between">
-                      <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
+                      <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
                         Budget ({selectedCurrency.symbol} {selectedCurrency.code})
                       </label>
                     </div>
@@ -234,7 +234,7 @@ export default function CreateProjectModal() {
                         type="number"
                         value={budget}
                         onChange={(e) => setBudget(Number(e.target.value))}
-                        className="w-full pl-16 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                        className="w-full pl-16 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                       />
 
                       {/* Currency Dropdown Menu */}
@@ -277,14 +277,14 @@ export default function CreateProjectModal() {
                   </div>
 
                   <div className="space-y-1">
-                    <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Deadline</label>
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Deadline</label>
                     <div className="relative">
                       <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <input
                         type="date"
                         value={deadline}
                         onChange={(e) => setDeadline(e.target.value)}
-                        className="w-full pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
+                        className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
                       />
                     </div>
                   </div>
