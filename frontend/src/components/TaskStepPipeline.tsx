@@ -37,6 +37,7 @@ import {
   submitStepWork,
   verifyStepWork,
 } from '../services/stepVerificationService';
+import TaskPdfUploader from './TaskPdfUploader';
 
 interface TaskStepPipelineProps {
   taskId: number;
@@ -314,6 +315,18 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
                       </a>
                     </div>
                   )}
+
+                  {/* Task PDF deliverable card */}
+                  <div className="pt-1">
+                    <TaskPdfUploader
+                      taskId={taskId}
+                      stepId={step.id}
+                      stepNumber={step.stepNumber}
+                      stepTitle={step.title}
+                      canUpload={!isTeamLeader && (step.status === 'CHANGES_REQUESTED' || step.status === 'IN_PROGRESS')}
+                      onUploadSuccess={() => loadSteps()}
+                    />
+                  </div>
                 </div>
               )}
 
@@ -402,6 +415,22 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
                 />
               </div>
 
+              {/* Upload Your Task PDF Deliverable */}
+              <div className="pt-2 border-t border-slate-200/50 dark:border-white/10">
+                <TaskPdfUploader
+                  taskId={taskId}
+                  stepId={submittingStep.id}
+                  stepNumber={submittingStep.stepNumber}
+                  stepTitle={submittingStep.title}
+                  canUpload={true}
+                  onUploadSuccess={(sub) => {
+                    if (!submitDescription.trim()) {
+                      setSubmitDescription(`Uploaded task PDF evidence: ${sub.fileName} (${sub.version})`);
+                    }
+                  }}
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
@@ -437,9 +466,19 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
             </div>
 
             {verifyingStep.evidence && (
-              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-xs space-y-1">
+              <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-xs space-y-2">
                 <p className="font-black text-blue-500">Submitted Proof by {verifyingStep.evidence.submittedBy.name}:</p>
                 <p className="font-semibold text-slate-700 dark:text-slate-300">{verifyingStep.evidence.description}</p>
+                
+                <div className="pt-1">
+                  <TaskPdfUploader
+                    taskId={taskId}
+                    stepId={verifyingStep.id}
+                    stepNumber={verifyingStep.stepNumber}
+                    stepTitle={verifyingStep.title}
+                    canUpload={false}
+                  />
+                </div>
               </div>
             )}
 

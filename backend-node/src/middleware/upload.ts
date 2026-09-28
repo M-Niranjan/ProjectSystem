@@ -21,3 +21,16 @@ export const upload = multer({
   storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB max file size
 });
+
+export const uploadPdf = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
+    if (isPdf) {
+      cb(null, true);
+    } else {
+      cb(new Error('Please upload a valid PDF file. Only PDF documents are accepted.'));
+    }
+  },
+});

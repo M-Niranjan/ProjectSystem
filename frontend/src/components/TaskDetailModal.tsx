@@ -7,6 +7,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import TaskStepPipeline from './TaskStepPipeline';
 import { useScrollLock } from '../hooks/useScrollLock';
+import PremiumPdfViewerModal from './common/PremiumPdfViewerModal';
 
 interface Task {
   id: number;
@@ -61,6 +62,17 @@ export default function TaskDetailModal() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // PDF Viewer Modal State
+  const [viewingPdf, setViewingPdf] = useState<{
+    isOpen: boolean;
+    url: string;
+    fileName: string;
+  }>({
+    isOpen: false,
+    url: '',
+    fileName: '',
+  });
 
   // Subtasks list
   const [subtasks, setSubtasks] = useState<any[]>([]);
@@ -548,26 +560,56 @@ export default function TaskDetailModal() {
                 </div>
 
                 <div className="space-y-2 max-h-36 overflow-y-auto pr-1">
-                  {attachments.map(att => (
-                    <a
-                      key={att.id}
-                      href={att.fileUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center justify-between p-2 bg-slate-100/30 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5 hover:border-blue-500/20 transition-all text-xs"
-                    >
-                      <div className="flex items-center gap-2 truncate">
-                        <Link className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
-                        <span className="font-bold text-slate-700 dark:text-slate-300 truncate">{att.fileName}</span>
+                  {attachments.map(att => {
+                    const isPdf = att.fileName.toLowerCase().endsWith('.pdf') || att.fileType === 'application/pdf';
+                    return (
+                      <div
+                        key={att.id}
+                        onClick={() => {
+                          if (isPdf) {
+                            setViewingPdf({
+                              isOpen: true,
+                              url: att.fileUrl,
+                              fileName: att.fileName,
+                            });
+                          } else {
+                            window.open(att.fileUrl, '_blank');
+                          }
+                        }}
+                        className={`flex items-center justify-between p-2 bg-slate-100/30 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5 hover:border-blue-500/20 transition-all text-xs cursor-pointer ${
+                          isPdf ? 'hover:bg-red-500/5 hover:border-red-500/30' : ''
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          {isPdf ? (
+                            <span className="text-red-500 font-bold text-xs">PDF</span>
+                          ) : (
+                            <Link className="w-3.5 h-3.5 text-blue-500 flex-shrink-0" />
+                          )}
+                          <span className="font-bold text-slate-700 dark:text-slate-300 truncate">{att.fileName}</span>
+                        </div>
+                        {isPdf && (
+                          <span className="text-[10px] font-bold text-blue-500 hover:underline">
+                            View PDF
+                          </span>
+                        )}
                       </div>
-                    </a>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
           </motion.div>
         </div>
       )}
+
+      {/* In-App PDF Viewer Modal */}
+      <PremiumPdfViewerModal
+        isOpen={viewingPdf.isOpen}
+        onClose={() => setViewingPdf(prev => ({ ...prev, isOpen: false }))}
+        pdfUrl={viewingPdf.url}
+        fileName={viewingPdf.fileName}
+      />
     </AnimatePresence>
   );
 }

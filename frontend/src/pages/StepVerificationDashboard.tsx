@@ -45,6 +45,8 @@ import {
   getStepAuditLogs,
   getStepNotifications,
 } from '../services/stepVerificationService';
+import PremiumPdfViewerModal from '../components/common/PremiumPdfViewerModal';
+import TaskPdfUploader from '../components/TaskPdfUploader';
 
 interface ParentTaskMeta {
   id: number;
@@ -108,8 +110,41 @@ export default function StepVerificationDashboard() {
   const [inspectingStep, setInspectingStep] = useState<TaskStep | null>(null);
   const [reviewerNotes, setReviewerNotes] = useState('');
 
+  // Premium PDF Viewer State
+  const [pdfViewerState, setPdfViewerState] = useState<{
+    isOpen: boolean;
+    pdfUrl: string;
+    fileName: string;
+    fileSize?: string;
+    version?: string;
+    uploadedBy?: string;
+    uploadedAt?: string;
+    isVerified?: boolean;
+  }>({
+    isOpen: false,
+    pdfUrl: '',
+    fileName: '',
+  });
+
+  const openPdfViewer = (
+    url: string,
+    name: string,
+    opts?: { fileSize?: string; version?: string; uploadedBy?: string; uploadedAt?: string; isVerified?: boolean }
+  ) => {
+    setPdfViewerState({
+      isOpen: true,
+      pdfUrl: url,
+      fileName: name,
+      fileSize: opts?.fileSize || '2.4 MB',
+      version: opts?.version || 'Version 1',
+      uploadedBy: opts?.uploadedBy || 'Ram',
+      uploadedAt: opts?.uploadedAt || new Date().toISOString(),
+      isVerified: opts?.isVerified ?? true,
+    });
+  };
+
   // Freeze background completely when step inspection modal is open
-  useScrollLock(!!inspectingStep);
+  useScrollLock(!!inspectingStep || pdfViewerState.isOpen);
 
   const loadData = () => {
     let combinedSteps: TaskStep[] = [];
@@ -200,16 +235,34 @@ export default function StepVerificationDashboard() {
       const isZip = att.endsWith('.zip');
 
       return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 border border-slate-200 dark:bg-white/5 dark:border-slate-700/80 text-slate-700 dark:text-slate-200">
+        <span 
+          onClick={(e) => {
+            if (isPdf) {
+              e.stopPropagation();
+              openPdfViewer(
+                att === 'Architecture_v1.2.pdf' ? '/Architecture_v1.2.pdf' : `/uploads/${att}`,
+                att,
+                {
+                  uploadedBy: step.evidence?.submittedBy?.name || 'Ram',
+                  isVerified: step.status === 'APPROVED_COMPLETED',
+                }
+              );
+            }
+          }}
+          className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-50 border border-slate-200 dark:bg-white/5 dark:border-slate-700/80 text-slate-700 dark:text-slate-200 ${
+            isPdf ? 'cursor-pointer hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-500/10 transition-all' : ''
+          }`}
+          title={isPdf ? `Click to view ${att}` : att}
+        >
           <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
             isPdf ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-400' :
             isFig ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-400' :
             isDoc ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-400' :
             isZip ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
           }`}>
-            {isPdf ? 'PDF' : isFig ? 'Figma' : isDoc ? 'DOCX' : isZip ? 'ZIP' : 'FILE'}
+            {isPdf ? 'PDF ↗' : isFig ? 'Figma' : isDoc ? 'DOCX' : isZip ? 'ZIP' : 'FILE'}
           </span>
-          <span className="truncate max-w-[130px] font-medium text-slate-700 dark:text-slate-300" title={att}>{att}</span>
+          <span className="truncate max-w-[130px] font-medium text-slate-700 dark:text-slate-300">{att}</span>
         </span>
       );
     }
@@ -739,14 +792,40 @@ export default function StepVerificationDashboard() {
                 </p>
                 {inspectingStep.evidence.attachments && (
                   <div className="flex flex-wrap gap-2 pt-1">
-                    {inspectingStep.evidence.attachments.map((att: string) => (
-                      <span
-                        key={att}
-                        className="px-2.5 py-1 rounded-lg bg-white dark:bg-[#07080c] border border-emerald-500/30 text-emerald-700 dark:text-emerald-300 text-[11px] font-mono shadow-xs"
-                      >
-                        📄 {att}
-                      </span>
-                    ))}
+                    {inspectingStep.evidence.attachments.map((att: string) => {
+                      const isPdf = att.toLowerCase().endsWith('.pdf');
+                      return (
+                        <button
+                          key={att}
+                          type="button"
+                          onClick={() => {
+                            if (isPdf) {
+                              openPdfViewer(
+                                att === 'Architecture_v1.2.pdf' ? '/Architecture_v1.2.pdf' : `/uploads/${att}`,
+                                att,
+                                {
+                                  uploadedBy: inspectingStep.evidence?.submittedBy?.name || 'Ram',
+                                  isVerified: inspectingStep.status === 'APPROVED_COMPLETED',
+                                }
+                              );
+                            }
+                          }}
+                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono shadow-xs transition-all flex items-center gap-1.5 ${
+                            isPdf
+                              ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-500/20 hover:border-red-500/50 cursor-pointer'
+                              : 'bg-white dark:bg-[#07080c] border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                          }`}
+                        >
+                          <span>{isPdf ? '📕' : '📄'}</span>
+                          <span>{att}</span>
+                          {isPdf && (
+                            <span className="px-1.5 py-0.2 rounded bg-red-500/20 text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-300">
+                              View PDF
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
               </div>
@@ -756,6 +835,20 @@ export default function StepVerificationDashboard() {
                 <span>Employee has not submitted work evidence proof for this milestone step yet.</span>
               </div>
             )}
+
+            {/* Upload Your Task PDF Deliverable (Drag & Drop + Versioning) */}
+            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/80">
+              <TaskPdfUploader
+                taskId={inspectingStep.taskId}
+                stepId={inspectingStep.id}
+                stepNumber={inspectingStep.stepNumber}
+                stepTitle={inspectingStep.title}
+                canUpload={inspectingStep.status !== 'LOCKED'}
+                onUploadSuccess={() => {
+                  loadData();
+                }}
+              />
+            </div>
 
             {/* Team Leader Verification Actions */}
             {isTeamLeader && (inspectingStep.status === 'PENDING_APPROVAL' || inspectingStep.status === 'SUBMITTED_FOR_REVIEW') && (
@@ -810,6 +903,19 @@ export default function StepVerificationDashboard() {
         </div>,
         document.body
       )}
+
+      {/* Global Responsive Premium PDF Viewer Modal */}
+      <PremiumPdfViewerModal
+        isOpen={pdfViewerState.isOpen}
+        onClose={() => setPdfViewerState((prev) => ({ ...prev, isOpen: false }))}
+        pdfUrl={pdfViewerState.pdfUrl}
+        fileName={pdfViewerState.fileName}
+        fileSize={pdfViewerState.fileSize}
+        version={pdfViewerState.version}
+        uploadedBy={pdfViewerState.uploadedBy}
+        uploadedAt={pdfViewerState.uploadedAt}
+        isVerified={pdfViewerState.isVerified}
+      />
 
     </div>
   );

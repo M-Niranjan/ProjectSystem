@@ -1,8 +1,9 @@
 import { Response } from 'express';
-import { Task, Project, User, Comment, Notification, DirectMessage, Role } from '../models';
+import { Task, Project, User, Comment, Notification, DirectMessage, Role, Attachment } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { AIService } from '../services/aiService';
 import { Op } from 'sequelize';
+import { firebaseFirestore, FieldValue } from '../config/firebaseAdmin';
 
 export class TaskController {
   public static async getAllTasks(_req: AuthRequest, res: Response) {
@@ -465,4 +466,239 @@ export class TaskController {
       return res.status(500).json({ error: err.message });
     }
   }
+
+  public static async uploadTaskPdf(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required to submit task evidence.' });
+      }
+
+      const taskId = req.params.id;
+      const stepId = req.params.stepId;
+      const file = req.file;
+
+      if (!file) {
+        return res.status(400).json({ message: 'Please select a valid PDF file to upload.' });
+      }
+
+      // 1. Strict PDF validation
+      const isPdf = file.mimetype === 'application/pdf' || file.originalname.toLowerCase().endsWith('.pdf');
+      if (!isPdf) {
+        return res.status(400).json({ message: 'Please upload a valid PDF file. Only PDF documents are accepted.' });
+      }
+
+      // 2. Validate user assignment / role permissions
+      const task = await Task.findByPk(taskId, {
+        include: [{ model: User, as: 'assignee', attributes: { exclude: ['password'] } }],
+      });
+
+      const userRole = req.user.role;
+      const isPrivileged = userRole === Role.ROLE_ADMIN || userRole === Role.ROLE_MANAGER;
+
+      if (!isPrivileged && task && task.assigneeId) {
+        const isAssigned = task.assigneeId === req.user.id || (req.user.email && (task as any).assignee?.email?.toLowerCase() === req.user.email.toLowerCase());
+        if (!isAssigned) {
+          return res.status(403).json({ message: 'You are not authorized to submit evidence for this task.' });
+        }
+      }
+
+      // 3. Compute download URL
+      const host = req.get('host') || '192.168.29.230:8080';
+      const protocol = req.protocol || 'http';
+      const downloadUrl = `${protocol}://${host}/uploads/${file.filename}`;
+
+      // 4. Determine Versioning from Firestore or SQLite
+      let currentVersionNumber = 1;
+      let existingSubmissions: any[] = [];
+
+      if (firebaseFirestore) {
+        try {
+          const snapshot = await firebaseFirestore
+            .collection('taskSubmissions')
+            .where('taskId', '==', String(taskId))
+            .where('stepId', '==', String(stepId))
+            .get();
+
+          existingSubmissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          currentVersionNumber = existingSubmissions.length + 1;
+
+          // Mark previous submissions as not latest
+          if (!snapshot.empty) {
+            const batch = firebaseFirestore.batch();
+            snapshot.docs.forEach(doc => {
+              batch.update(doc.ref, { isLatest: false });
+            });
+            await batch.commit();
+          }
+        } catch (fsErr) {
+          console.warn('Firestore taskSubmissions query warning:', fsErr);
+        }
+      }
+
+      const versionLabel = `Version ${currentVersionNumber}`;
+      const submissionId = `sub_${taskId}_${stepId}_${Date.now()}`;
+
+      const submissionData: any = {
+        id: submissionId,
+        taskId: String(taskId),
+        stepId: String(stepId),
+        employeeId: req.user.uid || String(req.user.id),
+        employeeName: req.user.name || req.user.email?.split('@')[0] || 'Employee',
+        employeeEmail: req.user.email,
+        fileName: file.originalname,
+        storedFileName: file.filename,
+        fileSize: file.size,
+        contentType: 'application/pdf',
+        storagePath: `uploads/${file.filename}`,
+        downloadUrl,
+        uploadedAt: new Date().toISOString(),
+        status: 'submitted',
+        version: versionLabel,
+        versionNumber: currentVersionNumber,
+        isLatest: true,
+      };
+
+      // 5. Store in Firestore collection taskSubmissions
+      if (firebaseFirestore) {
+        try {
+          await firebaseFirestore
+            .collection('taskSubmissions')
+            .doc(submissionId)
+            .set({
+              ...submissionData,
+              serverTimestamp: FieldValue?.serverTimestamp ? FieldValue.serverTimestamp() : new Date().toISOString(),
+            });
+        } catch (fsWriteErr) {
+          console.error('Error writing taskSubmission to Firestore:', fsWriteErr);
+        }
+      }
+
+      // 6. Record in SQLite Attachment model as well
+      try {
+        await Attachment.create({
+          fileName: file.originalname,
+          fileUrl: downloadUrl,
+          fileType: 'application/pdf',
+          taskId: Number(taskId),
+          uploadedById: req.user.id,
+        });
+      } catch (attErr) {
+        console.warn('Error recording attachment in database:', attErr);
+      }
+
+      // 7. Dispatch Notification to Team Leader / Manager
+      try {
+        const tlUsers = await User.findAll({
+          where: {
+            role: { [Op.in]: [Role.ROLE_ADMIN, Role.ROLE_MANAGER] }
+          }
+        });
+        for (const tl of tlUsers) {
+          await Notification.create({
+            title: 'New Task PDF Evidence Submitted',
+            message: `${submissionData.employeeName} uploaded ${file.originalname} (${versionLabel}) for Step #${stepId} on Task #${taskId}.`,
+            type: 'TASK_SUBMITTED',
+            recipientId: tl.id,
+          });
+        }
+      } catch (notifErr) {
+        console.warn('Notification creation warning:', notifErr);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Task PDF evidence uploaded successfully.',
+        submission: submissionData,
+      });
+    } catch (err: any) {
+      console.error('Error in uploadTaskPdf:', err);
+      return res.status(500).json({ error: err.message || 'Unable to upload the document. Please try again.' });
+    }
+  }
+
+  public static async getStepSubmissions(req: AuthRequest, res: Response) {
+    try {
+      const taskId = req.params.id;
+      const stepId = req.params.stepId;
+
+      let submissions: any[] = [];
+      if (firebaseFirestore) {
+        try {
+          const snapshot = await firebaseFirestore
+            .collection('taskSubmissions')
+            .where('taskId', '==', String(taskId))
+            .where('stepId', '==', String(stepId))
+            .get();
+
+          submissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          submissions.sort((a, b) => (b.versionNumber || 0) - (a.versionNumber || 0));
+        } catch (fsErr) {
+          console.warn('Error fetching Firestore taskSubmissions:', fsErr);
+        }
+      }
+
+      return res.json(submissions);
+    } catch (err: any) {
+      console.error('Error in getStepSubmissions:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async reviewStepSubmission(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const userRole = req.user.role;
+      if (userRole !== Role.ROLE_ADMIN && userRole !== Role.ROLE_MANAGER) {
+        return res.status(403).json({ message: 'Only Team Leaders and Administrators can review task submissions.' });
+      }
+
+      const taskId = req.params.id;
+      const stepId = req.params.stepId;
+      const { action, notes, submissionId } = req.body;
+
+      const newStatus = action === 'APPROVE' ? 'approved' : action === 'REQUEST_CHANGES' ? 'changes_requested' : 'rejected';
+
+      if (firebaseFirestore && submissionId) {
+        try {
+          await firebaseFirestore.collection('taskSubmissions').doc(submissionId).update({
+            status: newStatus,
+            reviewerNotes: notes || '',
+            reviewedBy: { id: req.user.id, name: req.user.name || 'Team Leader' },
+            reviewedAt: new Date().toISOString(),
+          });
+        } catch (fsErr) {
+          console.warn('Firestore update submission status warning:', fsErr);
+        }
+      }
+
+      // Notify the employee
+      try {
+        const task = await Task.findByPk(taskId);
+        if (task && task.assigneeId) {
+          await Notification.create({
+            title: action === 'APPROVE' ? 'Task Step Approved!' : 'Changes Requested on Task Step',
+            message: `Your submitted PDF for Step #${stepId} on Task #${taskId} has been ${newStatus.replace('_', ' ')}.${notes ? ` Note: ${notes}` : ''}`,
+            type: action === 'APPROVE' ? 'STEP_APPROVED' : 'CHANGES_REQUESTED',
+            recipientId: task.assigneeId,
+          });
+        }
+      } catch (notifErr) {
+        console.warn('Review notification creation warning:', notifErr);
+      }
+
+      return res.json({
+        success: true,
+        action,
+        status: newStatus,
+        message: `Step submission has been ${newStatus.replace('_', ' ')}.`,
+      });
+    } catch (err: any) {
+      console.error('Error in reviewStepSubmission:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
 }
+
