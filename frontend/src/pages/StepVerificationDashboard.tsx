@@ -736,17 +736,17 @@ export default function StepVerificationDashboard() {
       {/* 5. STEP INSPECTION & SIGN-OFF MODAL (PORTALED TO DOCUMENT.BODY) */}
       {/* ========================================================================= */}
       {inspectingStep && createPortal(
-        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-950/60 dark:bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root">
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center bg-slate-900/20 dark:bg-slate-950/80 backdrop-blur-sm p-4 touch-none overscroll-contain modal-dialog-root">
           <div
             onClick={() => setInspectingStep(null)}
-            className="absolute inset-0 bg-slate-950/60 dark:bg-slate-950/70 backdrop-blur-sm cursor-pointer"
+            className="absolute inset-0 bg-slate-900/20 dark:bg-slate-950/70 backdrop-blur-sm cursor-pointer"
           />
 
           <div
             role="dialog"
             aria-modal="true"
             onClick={(e) => e.stopPropagation()}
-            className="relative pointer-events-auto select-text touch-auto w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-[#0e131f] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl space-y-5 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain"
+            className="relative pointer-events-auto select-text touch-auto w-full max-w-xl max-h-[88vh] overflow-y-auto p-6 bg-white dark:bg-[#0e131f] border border-slate-300 dark:border-slate-800 rounded-3xl shadow-[0_25px_50px_-12px_rgba(0,0,0,0.15)] dark:shadow-2xl space-y-5 text-slate-900 dark:text-white modal-dialog-contain overscroll-contain ring-1 ring-black/5 dark:ring-white/5"
           >
             {/* Modal Header */}
             <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
@@ -771,7 +771,7 @@ export default function StepVerificationDashboard() {
             </div>
 
             {/* Objective & Expected Output */}
-            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200 dark:border-slate-800/80 space-y-2">
+            <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200 dark:border-slate-800/80 space-y-2 shadow-sm">
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Milestone Objective</span>
               <p className="text-xs text-slate-700 dark:text-slate-300 leading-relaxed">{inspectingStep.objective}</p>
               <div className="pt-2 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between text-xs">
@@ -782,7 +782,7 @@ export default function StepVerificationDashboard() {
 
             {/* Submitted Evidence Box */}
             {inspectingStep.evidence ? (
-              <div className="p-4 bg-emerald-500/5 border border-emerald-500/20 rounded-2xl text-xs space-y-3">
+              <div className="p-4 bg-emerald-50/80 dark:bg-emerald-500/5 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl text-xs space-y-3 shadow-sm">
                 <div className="flex justify-between items-center font-bold text-[10px] text-emerald-600 dark:text-emerald-400 uppercase">
                   <span>Submitted Work Evidence</span>
                   <span>By {inspectingStep.evidence.submittedBy.name}</span>
@@ -810,16 +810,16 @@ export default function StepVerificationDashboard() {
                               );
                             }
                           }}
-                          className={`px-2.5 py-1 rounded-lg border text-[11px] font-mono shadow-xs transition-all flex items-center gap-1.5 ${
+                          className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono shadow-sm transition-all flex items-center gap-1.5 ${
                             isPdf
-                              ? 'bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-500/20 hover:border-red-500/50 cursor-pointer'
-                              : 'bg-white dark:bg-[#07080c] border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                              ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 hover:border-red-300 dark:hover:border-red-500/50 cursor-pointer'
+                              : 'bg-white dark:bg-[#07080c] border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
                           }`}
                         >
                           <span>{isPdf ? '📕' : '📄'}</span>
                           <span>{att}</span>
                           {isPdf && (
-                            <span className="px-1.5 py-0.2 rounded bg-red-500/20 text-[9px] font-bold uppercase tracking-wider text-red-600 dark:text-red-300">
+                            <span className="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-500/20 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
                               View PDF
                             </span>
                           )}
@@ -837,7 +837,7 @@ export default function StepVerificationDashboard() {
             )}
 
             {/* Upload Your Task PDF Deliverable (Drag & Drop + Versioning) */}
-            <div className="pt-2 border-t border-slate-200/50 dark:border-slate-800/80">
+            <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80">
               <TaskPdfUploader
                 taskId={inspectingStep.taskId}
                 stepId={inspectingStep.id}

@@ -257,13 +257,13 @@ export default function PremiumPdfViewerModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[999999] flex items-center justify-center p-2 sm:p-4 select-none touch-none overscroll-contain">
-      {/* Dark Blurred Backdrop */}
+      {/* Theme-Adaptive Blurred Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 bg-slate-950/80 backdrop-blur-md cursor-pointer"
+        className="fixed inset-0 bg-slate-900/30 dark:bg-slate-950/80 backdrop-blur-lg cursor-pointer"
         aria-hidden="true"
       />
 
@@ -275,15 +275,15 @@ export default function PremiumPdfViewerModal({
         exit={{ opacity: 0, scale: 0.96, y: 14 }}
         transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 w-full max-w-5xl h-[92vh] sm:h-[88vh] bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col my-auto text-slate-900 dark:text-white"
+        className="relative z-10 w-full max-w-5xl h-[92vh] sm:h-[88vh] bg-white dark:bg-[#0e131f] border border-slate-300 dark:border-slate-800 rounded-2xl sm:rounded-3xl shadow-[0_25px_60px_-12px_rgba(0,0,0,0.25)] dark:shadow-2xl overflow-hidden flex flex-col my-auto text-slate-900 dark:text-white ring-1 ring-black/5 dark:ring-white/5"
         role="dialog"
         aria-modal="true"
       >
         {/* Header Bar */}
-        <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md">
+        <div className="px-4 py-3 sm:px-6 sm:py-3.5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between gap-3 shrink-0 bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900/90 dark:via-slate-900/90 dark:to-slate-900/90 backdrop-blur-md">
           {/* File Title & Status */}
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-xl bg-red-500/15 border border-red-500/30 flex items-center justify-center text-red-500 shrink-0 shadow-xs">
+            <div className="w-9 h-9 rounded-xl bg-red-50 dark:bg-red-500/15 border border-red-200 dark:border-red-500/30 flex items-center justify-center text-red-600 dark:text-red-500 shrink-0 shadow-sm">
               <FileText className="w-4.5 h-4.5" />
             </div>
             <div className="min-w-0">
@@ -291,11 +291,11 @@ export default function PremiumPdfViewerModal({
                 <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white truncate">
                   {fileName}
                 </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 uppercase tracking-wider shrink-0 hidden sm:inline-block">
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-500/15 text-blue-700 dark:text-blue-400 border border-blue-200 dark:border-blue-500/30 uppercase tracking-wider shrink-0 hidden sm:inline-block">
                   {version}
                 </span>
                 {isVerified && (
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 flex items-center gap-1 shrink-0">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30 flex items-center gap-1 shrink-0">
                     <CheckCircle2 className="w-3 h-3" /> Approved
                   </span>
                 )}
@@ -356,7 +356,7 @@ export default function PremiumPdfViewerModal({
         </div>
 
         {/* Responsive Controls Toolbar */}
-        <div className="px-3 sm:px-6 py-2 border-b border-slate-200/70 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-slate-100/80 dark:bg-slate-900/50 text-xs">
+        <div className="px-3 sm:px-6 py-2 border-b border-slate-200 dark:border-slate-800 flex flex-wrap items-center justify-between gap-2 shrink-0 bg-slate-50 dark:bg-slate-900/50 text-xs">
           {/* Page Navigation Controls */}
           <div className="flex items-center gap-1.5 sm:gap-2">
             <button
@@ -438,7 +438,7 @@ export default function PremiumPdfViewerModal({
         {/* Document Content Viewport */}
         <div
           ref={containerRef}
-          className="flex-1 overflow-auto bg-slate-200/50 dark:bg-[#07090e] p-3 sm:p-6 flex items-start justify-center touch-pan-y overscroll-contain select-auto relative min-h-0"
+          className="flex-1 overflow-auto bg-gradient-to-b from-slate-100 to-slate-200 dark:from-[#07090e] dark:to-[#0a0d14] p-3 sm:p-6 flex items-start justify-center touch-pan-y overscroll-contain select-auto relative min-h-0"
         >
           {loading ? (
             /* Loading State */
@@ -449,7 +449,7 @@ export default function PremiumPdfViewerModal({
             </div>
           ) : viewMode === 'canvas' ? (
             /* Canvas PDF Page Display */
-            <div className="shadow-2xl rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700/80 bg-white transition-all my-auto">
+            <div className="shadow-[0_8px_40px_-8px_rgba(0,0,0,0.2)] dark:shadow-2xl rounded-lg overflow-hidden border border-slate-300 dark:border-slate-700/80 bg-white transition-all my-auto ring-1 ring-black/5 dark:ring-transparent">
               <canvas ref={canvasRef} className="block max-w-none" />
             </div>
           ) : (
@@ -491,7 +491,7 @@ export default function PremiumPdfViewerModal({
         </div>
 
         {/* Footer Info Strip */}
-        <div className="px-4 py-2.5 sm:px-6 sm:py-3 border-t border-slate-200/80 dark:border-slate-800 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-slate-50/90 dark:bg-slate-900/90 shrink-0">
+        <div className="px-4 py-2.5 sm:px-6 sm:py-3 border-t border-slate-200 dark:border-slate-800 flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400 bg-gradient-to-r from-slate-50 via-white to-slate-50 dark:from-slate-900/90 dark:via-slate-900/90 dark:to-slate-900/90 shrink-0">
           <span className="flex items-center gap-1.5 truncate">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
             <span className="truncate">End-to-End Enterprise PDF Verified</span>
