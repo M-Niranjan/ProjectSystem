@@ -105,9 +105,6 @@ export default function StepVerificationDashboard() {
   // Active Selected Parent Task for the Stepper Ribbon (or 'ALL')
   const [selectedTaskId, setSelectedTaskId] = useState<number | 'ALL'>(201);
 
-  // View Mode: 'table' (Luxury Balanced Table Grid) or 'bento' (Modular Bento Cards)
-  const [viewMode, setViewMode] = useState<'table' | 'bento'>('table');
-
   // Sample tasks list to render verification requests
   const sampleTaskIds = [201, 102];
   const [allTaskSteps, setAllTaskSteps] = useState<TaskStep[]>([]);
@@ -238,14 +235,14 @@ export default function StepVerificationDashboard() {
   const getDeliverableBadge = (step: TaskStep) => {
     if (step.evidence?.attachments && step.evidence.attachments.length > 0) {
       const att = step.evidence.attachments[0];
-      const isPdf = att.endsWith('.pdf');
-      const isFig = att.endsWith('.fig');
-      const isDoc = att.endsWith('.docx');
-      const isZip = att.endsWith('.zip');
+      const isPdf = att.toLowerCase().endsWith('.pdf');
+      const isFig = att.toLowerCase().endsWith('.fig');
+      const isDoc = att.toLowerCase().endsWith('.docx') || att.toLowerCase().endsWith('.doc');
+      const isZip = att.toLowerCase().endsWith('.zip');
       const fileSize = isPdf ? '2.4 MB' : isZip ? '12.1 MB' : isFig ? '45 MB' : isDoc ? '1.8 MB' : '3.2 MB';
 
       return (
-        <span 
+        <div
           onClick={(e) => {
             if (isPdf) {
               e.stopPropagation();
@@ -259,56 +256,64 @@ export default function StepVerificationDashboard() {
               );
             }
           }}
-          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-slate-50 border border-slate-200/90 dark:bg-[#07080c]/60 dark:border-slate-800/90 text-slate-700 dark:text-slate-200 transition-all ${
-            isPdf ? 'cursor-pointer hover:border-red-500/50 hover:bg-red-50/50 dark:hover:bg-red-500/10' : ''
+          className={`group/file inline-flex items-center gap-2.5 py-1 text-left ${
+            isPdf ? 'cursor-pointer' : ''
           }`}
-          title={isPdf ? `Click to view ${att}` : att}
+          title={isPdf ? `Click to inspect ${att}` : att}
         >
-          <span className={`px-1.5 py-0.5 rounded text-[9px] font-black uppercase ${
-            isPdf ? 'bg-rose-50 text-rose-700 border border-rose-200 dark:bg-rose-500/20 dark:text-rose-400' :
-            isFig ? 'bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-500/20 dark:text-purple-400' :
-            isDoc ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/20 dark:text-blue-400' :
-            isZip ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300'
+          <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-black shrink-0 transition-transform group-hover/file:scale-105 ${
+            isPdf ? 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' :
+            isFig ? 'bg-purple-500/10 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400' :
+            isDoc ? 'bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400' :
+            isZip ? 'bg-amber-500/10 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-slate-500/10 text-slate-600 dark:text-slate-400'
           }`}>
-            {isPdf ? 'PDF' : isFig ? 'FIG' : isDoc ? 'DOCX' : isZip ? 'ZIP' : 'FILE'}
+            {isPdf ? 'PDF' : isFig ? 'FIG' : isDoc ? 'DOC' : isZip ? 'ZIP' : 'FILE'}
           </span>
-          <div className="flex flex-col min-w-0 text-left">
-            <span className="truncate max-w-[150px] font-bold text-slate-800 dark:text-slate-200 text-xs leading-tight">{att}</span>
-            <span className="text-[10px] text-slate-400 font-mono leading-tight">{fileSize}</span>
+          <div className="flex flex-col min-w-0">
+            <span className={`truncate max-w-[155px] text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors ${
+              isPdf ? 'group-hover/file:text-blue-600 dark:group-hover/file:text-blue-400 group-hover/file:underline' : ''
+            }`}>
+              {att}
+            </span>
+            <span className="text-[10px] text-slate-400 font-mono tracking-tight">{fileSize}</span>
           </div>
-        </span>
+        </div>
       );
     }
 
     if (step.status === 'APPROVED_COMPLETED') {
       return (
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/90 dark:bg-emerald-500/10 dark:border-emerald-500/20 dark:text-emerald-400">
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-emerald-100 text-emerald-800 dark:bg-emerald-500/20 dark:text-emerald-300">DOCS</span>
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-xs leading-tight">Verified Blueprint</span>
-            <span className="text-[10px] text-emerald-600/80 dark:text-emerald-400/80 font-mono leading-tight">Signed-off</span>
+        <div className="inline-flex items-center gap-2.5 py-1 text-left">
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-black shrink-0 bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+            DOC
+          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">Verified Blueprint</span>
+            <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-mono">Signed-off</span>
           </div>
-        </span>
+        </div>
       );
     }
 
     if (step.status === 'PENDING_APPROVAL') {
       return (
-        <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200/90 dark:bg-blue-500/10 dark:border-blue-500/20 dark:text-blue-400">
-          <span className="px-1.5 py-0.5 rounded text-[9px] font-black uppercase bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300">CODE</span>
-          <div className="flex flex-col text-left">
-            <span className="font-bold text-xs leading-tight">PR #42 & Specs</span>
-            <span className="text-[10px] text-blue-600/80 dark:text-blue-400/80 font-mono leading-tight">Review Ready</span>
+        <div className="inline-flex items-center gap-2.5 py-1 text-left">
+          <span className="w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-black shrink-0 bg-blue-500/10 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+            PR
+          </span>
+          <div className="flex flex-col min-w-0">
+            <span className="text-xs font-semibold text-slate-800 dark:text-slate-200">PR #42 & Specs</span>
+            <span className="text-[10px] text-blue-600 dark:text-blue-400 font-mono">Ready for Review</span>
           </div>
-        </span>
+        </div>
       );
     }
 
     return (
-      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-medium text-slate-400 bg-slate-50 border border-slate-200/80 dark:bg-[#07080c]/40 dark:border-slate-800/80">
-        <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-        <span className="italic text-[11px]">Pending Submission</span>
-      </span>
+      <div className="inline-flex items-center gap-2 py-1 text-slate-400 dark:text-slate-500 text-xs">
+        <Lock className="w-3.5 h-3.5 shrink-0 opacity-60" />
+        <span className="italic text-[11px]">Pending submission</span>
+      </div>
     );
   };
 
@@ -330,13 +335,13 @@ export default function StepVerificationDashboard() {
         : Math.min(85, Math.round(((approvedCount + (activeCount > 0 ? 0.45 : 0)) / task.milestones.length) * 100));
 
     return (
-      <div className="pt-2 pb-2 overflow-x-auto custom-scrollbar">
-        <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-4 min-w-[520px] sm:min-w-0">
-          {/* Background connecting rail */}
-          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800/80 z-0">
+      <div className="py-2 overflow-x-auto custom-scrollbar">
+        <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-6 min-w-[500px] sm:min-w-0">
+          {/* Featherlight 2px connecting rail */}
+          <div className="absolute left-10 right-10 top-4 h-[2px] bg-slate-200/80 dark:bg-slate-800 z-0">
             {/* Active progressive glowing bar */}
             <div
-              className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-all duration-500 shadow-sm"
+              className="h-full bg-gradient-to-r from-blue-500 via-cyan-400 to-emerald-400 transition-all duration-500 shadow-[0_0_8px_rgba(59,130,246,0.6)]"
               style={{ width: `${progressPct}%` }}
             />
           </div>
@@ -349,40 +354,40 @@ export default function StepVerificationDashboard() {
 
             return (
               <div key={m.step} className="relative z-10 flex flex-col items-center group">
-                {/* Circle Node */}
+                {/* Node Dot (compact w-8 h-8) */}
                 <div
-                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+                  className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs transition-all duration-300 ${
                     isApproved
-                      ? 'bg-white dark:bg-[#0e131f] border-2 border-emerald-500 text-emerald-600 dark:text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                      ? 'bg-white dark:bg-[#07080c] border-2 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.3)]'
                       : isActive
-                      ? 'bg-white dark:bg-[#0e131f] border-2 border-blue-600 dark:border-cyan-400 text-blue-600 dark:text-cyan-300 shadow-[0_0_20px_rgba(37,99,235,0.25)] scale-110'
-                      : 'bg-slate-100 dark:bg-[#0e131f] border-2 border-slate-300 dark:border-slate-700 text-slate-400 opacity-70'
+                      ? 'bg-white dark:bg-[#07080c] border-2 border-blue-600 text-blue-600 dark:border-cyan-400 dark:text-cyan-400 shadow-[0_0_14px_rgba(37,99,235,0.4)] scale-110 font-bold'
+                      : 'bg-slate-50 dark:bg-[#07080c] border border-slate-300 dark:border-slate-800 text-slate-400'
                   }`}
                 >
                   {isApproved ? (
-                    <Check className="w-5 h-5 stroke-[2.5]" />
+                    <Check className="w-4 h-4 stroke-[2.5]" />
                   ) : isLocked ? (
-                    <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
                   ) : (
-                    <span className="font-mono text-xs font-black">{m.step}</span>
+                    <span>{m.step}</span>
                   )}
                 </div>
 
                 {/* Node Label Below */}
-                <div className="mt-2.5 text-center max-w-[125px]">
+                <div className="mt-2 text-center max-w-[120px]">
                   <span
-                    className={`block text-xs font-bold tracking-tight truncate ${
-                      isActive ? 'text-slate-900 dark:text-white font-extrabold' : isApproved ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400'
+                    className={`block text-xs font-semibold tracking-tight truncate ${
+                      isActive ? 'text-slate-900 dark:text-white font-bold' : isApproved ? 'text-slate-700 dark:text-slate-300' : 'text-slate-400'
                     }`}
                   >
                     {m.name}
                   </span>
                   <span
-                    className={`block text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
-                      isApproved ? 'text-emerald-600 dark:text-emerald-400' : isActive ? 'text-blue-600 dark:text-cyan-400 animate-pulse' : 'text-slate-400'
+                    className={`block text-[10px] font-mono mt-0.5 ${
+                      isApproved ? 'text-emerald-600 dark:text-emerald-400 font-semibold' : isActive ? 'text-blue-600 dark:text-cyan-400 font-semibold' : 'text-slate-400 dark:text-slate-600'
                     }`}
                   >
-                    {isApproved ? 'Verified ✓' : isActive ? 'In Progress' : 'Locked'}
+                    {isApproved ? 'Verified' : isActive ? 'Active' : 'Locked'}
                   </span>
                 </div>
               </div>
@@ -394,38 +399,28 @@ export default function StepVerificationDashboard() {
   };
 
   const renderTaskSwitcherPills = () => (
-    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 self-start md:self-auto shrink-0">
-      <button
-        onClick={() => setSelectedTaskId(201)}
-        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-          selectedTaskId === 201
-            ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-        }`}
-      >
-        Task #201
-      </button>
-      <button
-        onClick={() => setSelectedTaskId(102)}
-        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-          selectedTaskId === 102
-            ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-        }`}
-      >
-        Task #102
-      </button>
-      <button
-        onClick={() => setSelectedTaskId('ALL')}
-        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-          selectedTaskId === 'ALL'
-            ? 'bg-white dark:bg-[#1c2438] text-blue-600 dark:text-blue-400 border border-slate-200/80 dark:border-white/10 shadow-xs font-extrabold'
-            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-        }`}
-      >
-        <Layers className="w-3.5 h-3.5" />
-        <span>All Pipelines</span>
-      </button>
+    <div className="flex items-center gap-1 shrink-0">
+      {[
+        { id: 201 as const, label: 'Task #201' },
+        { id: 102 as const, label: 'Task #102' },
+        { id: 'ALL' as const, label: 'All Pipelines', icon: Layers },
+      ].map((tab) => {
+        const isSelected = selectedTaskId === tab.id;
+        return (
+          <button
+            key={String(tab.id)}
+            onClick={() => setSelectedTaskId(tab.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+              isSelected
+                ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
+                : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+            }`}
+          >
+            {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
     </div>
   );
 
@@ -433,180 +428,145 @@ export default function StepVerificationDashboard() {
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       
       {/* ========================================================================= */}
-      {/* TOP COMMAND HEADER WITH TELEMETRY (CONCEPT 2 EXECUTIVE LUMINOUS) */}
+      {/* TOP COMMAND HEADER */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white flex items-center gap-3 font-heading">
-            <div className="w-9 h-9 rounded-2xl bg-blue-50 border border-blue-200/80 text-blue-600 dark:bg-[#0e131f] dark:border-blue-500/40 dark:text-blue-400 flex items-center justify-center shadow-xs dark:shadow-lg dark:shadow-blue-500/20 shrink-0">
-              <ShieldCheck className="w-5 h-5" />
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white flex items-center gap-2.5 font-heading">
+            <div className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <ShieldCheck className="w-4 h-4" />
             </div>
-            TASK STEP VERIFICATION AND APPROVAL
+            Task Step Verification & Approval
           </h1>
-          <p className="text-xs font-normal text-slate-500 dark:text-slate-400 mt-1 pl-12">
+          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 pl-10">
             Sequential milestone gating: Employees submit work proof; Team Leaders inspect & sign-off; unlocks next step automatically.
           </p>
         </div>
 
-        {/* Telemetry Capsule (Digital Clock & Active Pipeline) */}
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
-            <span>03:25 PM • Active</span>
+        {/* Telemetry Indicator */}
+        <div className="flex items-center gap-2 shrink-0 self-start sm:self-auto">
+          <div className="px-3 py-1 rounded-lg bg-slate-100 dark:bg-white/[0.03] text-xs font-mono text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+            <Clock className="w-3.5 h-3.5 opacity-60" />
+            <span>03:25 PM</span>
           </div>
 
-          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-            <span>Pipeline Enforced</span>
+          <div className="px-3 py-1 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-xs font-semibold flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sequential Gating Active</span>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER RIBBON */}
+      {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER */}
       {/* ========================================================================= */}
       {selectedTaskId === 'ALL' ? (
-        <div className="space-y-4">
-          {/* Enterprise Hub Header & Telemetry Summary */}
-          <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-xl space-y-4">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <Layers className="w-4 h-4" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                        All Active Pipelines Overview
-                      </h2>
-                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        2 Active Tracks
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                      Multi-track sequential verification. Each milestone requires Team Leader sign-off before unlocking subsequent stages.
-                    </p>
-                  </div>
-                </div>
+        <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-5 bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md space-y-6">
+          {/* Top Row: Title, Summary & Switcher */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                  All Active Pipelines
+                </h2>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                  2 Active Tracks
+                </span>
               </div>
-
-              {/* Quick Task Switcher Pills */}
-              {renderTaskSwitcherPills()}
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Multi-track sequential verification. Each milestone requires Team Leader sign-off before unlocking subsequent stages.
+              </p>
             </div>
 
-            {/* Enterprise Aggregate KPI Strip */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Active Pipelines</span>
-                <span className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5 block">2 Projects</span>
-                <span className="text-[10px] text-slate-500">Prologue & Core Track</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
-                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Total Milestones</span>
-                <span className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5 block">8 Gated Stages</span>
-                <span className="text-[10px] text-slate-500">4 stages per pipeline</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
-                <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider block">Verified Stages</span>
-                <span className="text-base font-extrabold text-emerald-700 dark:text-emerald-300 mt-0.5 block">2 Completed</span>
-                <span className="text-[10px] text-emerald-600 dark:text-emerald-400">25% Enterprise Progress</span>
-              </div>
-              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
-                <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 tracking-wider block">Pending Review</span>
-                <span className="text-base font-extrabold text-amber-700 dark:text-amber-300 mt-0.5 block">1 Deliverable</span>
-                <span className="text-[10px] text-amber-600 dark:text-amber-400">PR #42 Awaiting Sign-off</span>
-              </div>
+            {/* Quick Task Switcher Pills */}
+            {renderTaskSwitcherPills()}
+          </div>
+
+          {/* Clean Aggregate Stats Strip */}
+          <div className="flex flex-wrap items-center gap-6 sm:gap-10 py-1 text-xs">
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Active Tracks</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">2 Projects</span>
+            </div>
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Milestones</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">8 Gated Stages</span>
+            </div>
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">Verified</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">2 Completed</span>
+            </div>
+            <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
+            <div>
+              <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 dark:text-amber-400 block">Review Ready</span>
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">1 Deliverable</span>
             </div>
           </div>
 
-          {/* Multi-Pipeline Cards: Render Both Task 201 & Task 102 */}
-          <div className="space-y-4">
+          {/* Both Pipelines rendered cleanly with featherlight stepper */}
+          <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60 pt-1">
             {Object.values(PARENT_TASKS).map((task) => (
-              <div
-                key={task.id}
-                className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-xl relative overflow-hidden transition-all duration-300 hover:border-blue-400/50 dark:hover:border-blue-500/30 group"
-              >
-                {/* Card Top Strip */}
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3.5">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                        task.id === 201
-                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
-                          : 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
-                      }`}>
-                        TASK #{task.id}
-                      </span>
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                        {task.title}
-                      </h3>
-                      <span className="text-xs text-slate-400">
-                        ({task.shortProject || task.project})
-                      </span>
-                    </div>
-                    <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2.5 pt-0.5">
-                      <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{task.owner}</strong></span>
-                      <span>•</span>
-                      <span>Timeline: <strong className="text-slate-800 dark:text-slate-200">{task.startDate} → {task.dueDate}</strong></span>
-                      <span>•</span>
-                      <span className="text-blue-600 dark:text-cyan-400 font-semibold">{task.currentStageText || 'Stage 2 In Progress'}</span>
-                    </div>
+              <div key={task.id} className="py-4 first:pt-0 last:pb-0 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                      #{task.id}
+                    </span>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                      {task.title}
+                    </h3>
+                    <span className="text-xs text-slate-400">
+                      ({task.shortProject || task.project})
+                    </span>
+                    <span className="text-xs text-slate-500">• Owner: {task.owner}</span>
                   </div>
 
-                  {/* Quick Action: Focus Pipeline */}
                   <button
                     onClick={() => setSelectedTaskId(task.id)}
-                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800/80 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shrink-0 self-start sm:self-auto shadow-xs"
+                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto"
                   >
-                    <span>Focus Pipeline</span>
-                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    <span>Focus Track</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {/* Stepper Ribbon for this task */}
-                <div className="pt-2">
-                  {renderMilestoneStepperRail(task)}
-                </div>
+                {renderMilestoneStepperRail(task)}
               </div>
             ))}
           </div>
         </div>
       ) : (
         /* Single Focused Pipeline View (Task #201 or Task #102) */
-        <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xs dark:shadow-xl relative overflow-hidden space-y-6">
+        <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-5 bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md space-y-5">
           {/* Parent Task Metadata Bar */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
             <div className="space-y-1">
               <button
                 onClick={() => setSelectedTaskId('ALL')}
-                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mb-1 transition-all"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mb-1 transition-all"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
+                <RotateCcw className="w-3 h-3" />
                 <span>View All Pipelines</span>
               </button>
               <div className="flex flex-wrap items-center gap-2.5">
-                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                  currentTaskMeta.id === 201
-                    ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
-                    : 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
-                }`}>
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400">
                   TASK #{currentTaskMeta.id}
                 </span>
                 <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
                   {currentTaskMeta.title}
                 </h2>
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
-                  {currentTaskMeta.project}
+                <span className="text-xs text-slate-400">
+                  ({currentTaskMeta.project})
                 </span>
               </div>
               <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
-                <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.owner}</strong></span>
+                <span>Owner: <strong className="text-slate-700 dark:text-slate-300 font-medium">{currentTaskMeta.owner}</strong></span>
                 <span>•</span>
-                <span>Start Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.startDate}</strong></span>
+                <span>Timeline: <strong className="text-slate-700 dark:text-slate-300 font-medium">{currentTaskMeta.startDate} → {currentTaskMeta.dueDate}</strong></span>
                 <span>•</span>
-                <span>Due Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.dueDate}</strong></span>
+                <span className="text-blue-600 dark:text-cyan-400 font-medium">{currentTaskMeta.currentStageText || 'Stage 2 In Progress'}</span>
               </div>
             </div>
 
@@ -620,11 +580,11 @@ export default function StepVerificationDashboard() {
       )}
 
       {/* ========================================================================= */}
-      {/* 2. COMMAND TOOLBAR: SEGMENTED FILTER PILLS & SEARCH */}
+      {/* 2. COMMAND TOOLBAR: FILTER TABS & SEARCH */}
       {/* ========================================================================= */}
-      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs dark:shadow-lg">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         {/* Segmented Filter Pills */}
-        <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1.5 rounded-xl border border-slate-200/80 dark:border-slate-800/80 overflow-x-auto custom-scrollbar">
+        <div className="flex items-center gap-1 overflow-x-auto custom-scrollbar">
           {[
             { id: 'all', label: 'All Steps', count: totalStepsCount },
             { id: 'pending', label: 'Needs Review', count: pendingStepsCount },
@@ -637,21 +597,21 @@ export default function StepVerificationDashboard() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-3.5 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+                    ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
+                    : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
                 }`}
               >
                 <span>{tab.label}</span>
                 {tab.count > 0 && (
                   <span
-                    className={`px-1.5 py-0.2 text-[9px] font-black rounded-full ${
+                    className={`px-1.5 py-0.2 text-[9px] font-bold rounded-full ${
                       isActive
-                        ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/30 dark:text-blue-300'
+                        ? 'bg-white/20 text-white dark:bg-slate-900/20 dark:text-slate-900'
                         : tab.id === 'pending'
-                        ? 'bg-amber-100 text-amber-800 dark:bg-amber-500/20 dark:text-amber-400'
-                        : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                        ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                        : 'bg-slate-200/80 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
                     }`}
                   >
                     {tab.count}
@@ -662,412 +622,221 @@ export default function StepVerificationDashboard() {
           })}
         </div>
 
-        {/* Inset Search Field */}
-        <div className="relative w-full md:w-80">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        {/* Minimalist Search Field */}
+        <div className="relative w-full sm:w-72">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             placeholder="Search step title, deliverable, or submitter..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-50 dark:bg-[#07080c]/80 border border-slate-200/90 dark:border-slate-800/80 rounded-xl text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none focus:border-blue-500 transition-all"
+            className="w-full pl-9 pr-3 py-1.5 bg-slate-100/70 dark:bg-white/[0.04] border border-transparent focus:border-slate-300 dark:focus:border-slate-700 focus:bg-transparent rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 outline-none transition-all"
           />
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. STEP VERIFICATION & APPROVAL MATRIX TABLE / BENTO VIEW */}
+      {/* 3. STEP VERIFICATION & APPROVAL MATRIX TABLE */}
       {/* ========================================================================= */}
       {activeTab !== 'audit' && (
-        <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl overflow-hidden shadow-xs dark:shadow-2xl">
-          {/* Card Table Subheader */}
-          <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 rounded-full bg-blue-600 shadow-[0_0_8px_rgba(37,99,235,0.6)]" />
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight uppercase">
-                Step Verification and Approval
+        <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl overflow-hidden bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md">
+          {/* Header Row summary */}
+          <div className="px-5 py-3.5 border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-blue-500 shadow-[0_0_6px_rgba(59,130,246,0.6)]" />
+              <h3 className="text-xs font-bold text-slate-900 dark:text-white uppercase tracking-wider">
+                Step Verification Matrix
               </h3>
             </div>
-
-            <div className="flex items-center gap-3">
-              <span className="text-xs font-mono text-slate-500 dark:text-slate-400">
-                {filteredSteps.length} of {totalStepsCount} Steps Filtered
-              </span>
-
-              {/* View Switcher: Table vs Bento Grid */}
-              <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#07080c]/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80">
-                <button
-                  onClick={() => setViewMode('table')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === 'table'
-                      ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                  }`}
-                  title="Luxury Balanced Table View"
-                >
-                  <SlidersHorizontal className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Table View</span>
-                </button>
-                <button
-                  onClick={() => setViewMode('bento')}
-                  className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
-                    viewMode === 'bento'
-                      ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                      : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-                  }`}
-                  title="Bento Cards Grid View"
-                >
-                  <Layers className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Bento Cards</span>
-                </button>
-              </div>
-            </div>
+            <span className="text-xs font-mono text-slate-400">
+              {filteredSteps.length} of {totalStepsCount} Steps
+            </span>
           </div>
 
-          {/* VIEW MODE 1: LUXURY BALANCED TABLE GRID (CONCEPT 5) */}
-          {viewMode === 'table' ? (
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-200/90 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/50 text-[10px] font-bold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                    <th className="py-3.5 px-5 w-28">Step No.</th>
-                    <th className="py-3.5 px-4 min-w-[240px]">Task Name & Objective</th>
-                    <th className="py-3.5 px-4 min-w-[190px]">Deliverables</th>
-                    <th className="py-3.5 px-4 min-w-[170px]">Assigned Engineer</th>
-                    <th className="py-3.5 px-4 w-36 text-center">Progress</th>
-                    <th className="py-3.5 px-4 text-center w-36">Status</th>
-                    <th className="py-3.5 px-5 text-right w-32">Action</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
-                  {filteredSteps.map((step) => {
-                    const isApproved = step.status === 'APPROVED_COMPLETED';
-                    const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
-                    const isChanges = step.status === 'CHANGES_REQUESTED';
-                    const isLocked = step.status === 'LOCKED';
-                    const progressPct = isApproved ? 100 : isPending ? 65 : isChanges ? 40 : 0;
+          <div className="overflow-x-auto custom-scrollbar">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200/50 dark:border-slate-800/50 text-[10px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50/50 dark:bg-white/[0.01]">
+                  <th className="py-3 px-5 w-24">Step</th>
+                  <th className="py-3 px-4 min-w-[240px]">Task Objective</th>
+                  <th className="py-3 px-4 min-w-[190px]">Deliverable</th>
+                  <th className="py-3 px-4 min-w-[170px]">Assigned Engineer</th>
+                  <th className="py-3 px-4 w-32 text-center">Progress</th>
+                  <th className="py-3 px-4 text-center w-32">Status</th>
+                  <th className="py-3 px-5 text-right w-28">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
+                {filteredSteps.map((step) => {
+                  const isApproved = step.status === 'APPROVED_COMPLETED';
+                  const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
+                  const isChanges = step.status === 'CHANGES_REQUESTED';
+                  const isLocked = step.status === 'LOCKED';
+                  const progressPct = isApproved ? 100 : isPending ? 65 : isChanges ? 40 : 0;
 
-                    return (
-                      <tr
-                        key={step.id}
-                        className={`hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group ${
-                          isPending ? 'bg-blue-500/[0.02] dark:bg-blue-500/[0.04]' : ''
-                        }`}
-                      >
-                        {/* 1. Step No. Anchor Badge */}
-                        <td className="py-4 px-5">
-                          <div className="flex items-center gap-2.5">
-                            <div
-                              className={`w-8 h-8 rounded-full flex items-center justify-center font-mono text-xs font-extrabold shrink-0 border transition-all ${
-                                isApproved
-                                  ? 'bg-emerald-500/10 text-emerald-600 border-emerald-500/30 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/40 shadow-[0_0_8px_rgba(16,185,129,0.25)]'
-                                  : isPending
-                                  ? 'bg-blue-500/10 text-blue-600 border-blue-500/40 dark:bg-cyan-500/20 dark:text-cyan-300 dark:border-cyan-500/50 shadow-[0_0_12px_rgba(6,182,212,0.35)] scale-105'
-                                  : 'bg-slate-100 text-slate-400 border-slate-200 dark:bg-slate-800/80 dark:text-slate-500 dark:border-slate-700/80'
-                              }`}
-                            >
-                              {isApproved ? (
-                                <Check className="w-4 h-4 stroke-[2.5]" />
-                              ) : isLocked ? (
-                                <Lock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
-                              ) : (
-                                <span>{`0${step.stepNumber}`}</span>
-                              )}
-                            </div>
-                            <span className="font-mono text-xs font-bold text-slate-700 dark:text-slate-300">
-                              {getStepNumberBadge(step)}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* 2. Task Name & Objective */}
-                        <td className="py-4 px-4">
-                          <div className="space-y-1">
-                            {selectedTaskId === 'ALL' && (
-                              <div className="flex items-center gap-1.5">
-                                <span
-                                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-mono font-extrabold uppercase tracking-wide ${
-                                    step.taskId === 201
-                                      ? 'bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
-                                      : 'bg-teal-50 text-teal-700 border border-teal-200/80 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
-                                  }`}
-                                >
-                                  {step.taskId === 201 ? 'Task #201 • Prologue SaaS' : 'Task #102 • Core Platform'}
-                                </span>
-                              </div>
-                            )}
-                            <h4 className="font-bold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                              {step.title}
-                            </h4>
-                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
-                              {step.objective}
-                            </p>
-                          </div>
-                        </td>
-
-                        {/* 3. Deliverable Output with File Size */}
-                        <td className="py-4 px-4">
-                          {getDeliverableBadge(step)}
-                        </td>
-
-                        {/* 4. Assigned Engineer Capsule */}
-                        <td className="py-4 px-4">
-                          {step.evidence ? (
-                            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/80 dark:border-slate-800/80">
-                              <img
-                                src={getAvatarByName(step.evidence.submittedBy.name)}
-                                alt={step.evidence.submittedBy.name}
-                                onError={(e) => {
-                                  (e.target as HTMLElement).style.display = 'none';
-                                }}
-                                className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
-                              />
-                              <div className="min-w-0 text-left">
-                                <span className="font-bold text-slate-900 dark:text-white text-xs block truncate leading-tight">
-                                  {step.evidence.submittedBy.name}
-                                </span>
-                                <span className="text-[10px] text-slate-400 font-medium block leading-tight">
-                                  {step.evidence.submittedBy.name === 'Ram'
-                                    ? 'Lead Architect'
-                                    : step.evidence.submittedBy.name === 'Mallu'
-                                    ? 'Senior Engineer'
-                                    : 'Engineer'}
-                                </span>
-                              </div>
-                            </div>
-                          ) : (
-                            <div className="inline-flex items-center gap-2.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-[#07080c]/40 border border-slate-200/60 dark:border-slate-800/60 text-slate-400">
-                              <div className="w-7 h-7 rounded-full bg-slate-200/80 dark:bg-slate-800 flex items-center justify-center text-xs font-bold text-slate-500">
-                                ?
-                              </div>
-                              <div className="min-w-0 text-left">
-                                <span className="text-xs font-medium text-slate-500 dark:text-slate-400 block leading-tight">Unassigned</span>
-                                <span className="text-[10px] text-slate-400 block leading-tight">Pending Stage</span>
-                              </div>
-                            </div>
-                          )}
-                        </td>
-
-                        {/* 5. Progress Micro Bar with Inline Percentage */}
-                        <td className="py-4 px-4 text-center">
-                          <div className="inline-flex items-center justify-center gap-2.5">
-                            <div className="w-20 sm:w-24 h-2 bg-slate-100 dark:bg-slate-800/80 rounded-full overflow-hidden shrink-0 border border-slate-200/50 dark:border-slate-700/50">
-                              <div
-                                className={`h-full rounded-full transition-all duration-500 ${
-                                  isApproved
-                                    ? 'bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.5)]'
-                                    : isPending
-                                    ? 'bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_10px_rgba(6,182,212,0.5)]'
-                                    : isChanges
-                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500'
-                                    : 'bg-slate-300 dark:bg-slate-700'
-                                }`}
-                                style={{ width: `${progressPct}%` }}
-                              />
-                            </div>
-                            <span className="text-xs font-mono font-bold text-slate-700 dark:text-slate-300 w-8 text-right shrink-0">
-                              {progressPct}%
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* 6. Status Badge */}
-                        <td className="py-4 px-4 text-center">
-                          {isApproved ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30 shadow-[0_0_10px_rgba(16,185,129,0.15)]">
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                              <span>VERIFIED</span>
-                            </span>
-                          ) : isPending ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30 shadow-[0_0_12px_rgba(245,158,11,0.25)] animate-pulse">
-                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
-                              <span>NEEDS REVIEW</span>
-                            </span>
-                          ) : isChanges ? (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30">
-                              <AlertTriangle className="w-3.5 h-3.5" />
-                              <span>REVISION ACTIVE</span>
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 border border-slate-200 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700">
-                              <Lock className="w-3 h-3 text-slate-400" />
-                              <span>LOCKED STEP</span>
-                            </span>
-                          )}
-                        </td>
-
-                        {/* 7. Action Button */}
-                        <td className="py-4 px-5 text-right">
-                          {isPending ? (
-                            <button
-                              onClick={() => setInspectingStep(step)}
-                              style={{
-                                backgroundColor: '#2563eb',
-                                boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)'
-                              }}
-                              className="px-4 py-1.5 hover:brightness-110 text-white rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 inline-flex items-center gap-1.5 shadow"
-                            >
-                              <span>Review Step</span>
-                              <ArrowRight className="w-3.5 h-3.5" />
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => setInspectingStep(step)}
-                              className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80 text-xs font-semibold cursor-pointer transition-all"
-                            >
-                              View Details
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            /* VIEW MODE 2: MODULAR BENTO CARDS GRID (CONCEPT 3) */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
-              {filteredSteps.map((step) => {
-                const isApproved = step.status === 'APPROVED_COMPLETED';
-                const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
-                const isChanges = step.status === 'CHANGES_REQUESTED';
-                const isLocked = step.status === 'LOCKED';
-                const progressPct = isApproved ? 100 : isPending ? 65 : isChanges ? 40 : 0;
-
-                return (
-                  <div
-                    key={step.id}
-                    className={`bg-slate-50/80 dark:bg-[#07080c]/60 border rounded-2xl p-5 flex flex-col justify-between transition-all duration-300 hover:border-blue-500/50 group ${
-                      isPending
-                        ? 'border-blue-500/40 dark:border-cyan-500/40 shadow-[0_0_20px_rgba(6,182,212,0.15)] ring-1 ring-cyan-500/20'
-                        : 'border-slate-200/90 dark:border-slate-800/80 shadow-xs'
-                    }`}
-                  >
-                    {/* Bento Top Header */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800/60 pb-3">
+                  return (
+                    <tr
+                      key={step.id}
+                      className={`hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group ${
+                        isPending ? 'bg-blue-500/[0.02] dark:bg-blue-500/[0.04]' : ''
+                      }`}
+                    >
+                      {/* 1. Step No. */}
+                      <td className="py-3.5 px-5">
                         <div className="flex items-center gap-2">
                           <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-black shrink-0 ${
+                            className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 transition-all ${
                               isApproved
-                                ? 'bg-emerald-500 text-white'
+                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
                                 : isPending
-                                ? 'bg-blue-600 text-white animate-pulse'
-                                : 'bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400'
+                                ? 'bg-blue-500/10 text-blue-600 dark:text-cyan-400 font-extrabold'
+                                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400'
                             }`}
                           >
-                            {isApproved ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : isLocked ? <Lock className="w-3 h-3" /> : step.stepNumber}
+                            {isApproved ? (
+                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                            ) : isLocked ? (
+                              <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                            ) : (
+                              <span>{`0${step.stepNumber}`}</span>
+                            )}
                           </div>
-                          <span className="font-mono text-xs font-extrabold text-slate-800 dark:text-slate-200">
+                          <span className="font-mono text-xs text-slate-400">
                             {getStepNumberBadge(step)}
                           </span>
                         </div>
+                      </td>
 
-                        {/* Status Chip */}
-                        {isApproved ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
-                            ✓ VERIFIED
-                          </span>
-                        ) : isPending ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-400 dark:border-amber-500/30 animate-pulse">
-                            NEEDS REVIEW
-                          </span>
-                        ) : isChanges ? (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-500/15 dark:text-orange-400 dark:border-orange-500/30">
-                            REVISION
-                          </span>
-                        ) : (
-                          <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                            LOCKED
-                          </span>
-                        )}
-                      </div>
+                      {/* 2. Task Name & Objective */}
+                      <td className="py-3.5 px-4">
+                        <div className="space-y-0.5">
+                          {selectedTaskId === 'ALL' && (
+                            <span className="text-[10px] font-mono text-blue-600 dark:text-cyan-400 block">
+                              {step.taskId === 201 ? 'Task #201 • Prologue SaaS' : 'Task #102 • Core Platform'}
+                            </span>
+                          )}
+                          <h4 className="font-semibold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                            {step.title}
+                          </h4>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
+                            {step.objective}
+                          </p>
+                        </div>
+                      </td>
 
-                      {/* Step Title & Objective */}
-                      <div className="space-y-1">
-                        {selectedTaskId === 'ALL' && (
-                          <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-cyan-400 block uppercase">
-                            {step.taskId === 201 ? 'Task #201 • Prologue' : 'Task #102 • Core'}
-                          </span>
-                        )}
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white leading-snug group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                          {step.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-2 leading-relaxed">
-                          {step.objective}
-                        </p>
-                      </div>
-
-                      {/* Deliverable Capsule */}
-                      <div className="pt-1">
+                      {/* 3. Deliverables (Unboxed file link) */}
+                      <td className="py-3.5 px-4">
                         {getDeliverableBadge(step)}
-                      </div>
-                    </div>
+                      </td>
 
-                    {/* Bento Bottom Footer */}
-                    <div className="pt-4 border-t border-slate-200/60 dark:border-slate-800/60 space-y-3 mt-4">
-                      {/* Assignee & Progress */}
-                      <div className="flex items-center justify-between gap-3">
+                      {/* 4. Assigned Engineer (Unboxed avatar + text) */}
+                      <td className="py-3.5 px-4">
                         {step.evidence ? (
-                          <div className="flex items-center gap-2 min-w-0">
+                          <div className="flex items-center gap-2.5">
                             <img
                               src={getAvatarByName(step.evidence.submittedBy.name)}
                               alt={step.evidence.submittedBy.name}
-                              className="w-6 h-6 rounded-full object-cover shrink-0"
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = 'none';
+                              }}
+                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
                             />
-                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
-                              {step.evidence.submittedBy.name}
-                            </span>
+                            <div className="min-w-0 text-left">
+                              <span className="font-semibold text-slate-900 dark:text-white text-xs block truncate leading-tight">
+                                {step.evidence.submittedBy.name}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-medium block leading-tight">
+                                {step.evidence.submittedBy.name === 'Ram'
+                                  ? 'Lead Architect'
+                                  : step.evidence.submittedBy.name === 'Mallu'
+                                  ? 'Senior Engineer'
+                                  : 'Engineer'}
+                              </span>
+                            </div>
                           </div>
                         ) : (
-                          <span className="text-xs text-slate-400 italic">Unassigned</span>
+                          <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold">
+                              ?
+                            </div>
+                            <span className="text-xs italic">Unassigned</span>
+                          </div>
                         )}
+                      </td>
 
-                        <span className="text-xs font-mono font-black text-slate-700 dark:text-slate-300">
-                          {progressPct}%
-                        </span>
-                      </div>
+                      {/* 5. Progress Micro Bar */}
+                      <td className="py-3.5 px-4 text-center">
+                        <div className="inline-flex items-center justify-center gap-2.5">
+                          <div className="w-16 sm:w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                isApproved
+                                  ? 'bg-emerald-500'
+                                  : isPending
+                                  ? 'bg-blue-500'
+                                  : isChanges
+                                  ? 'bg-amber-500'
+                                  : 'bg-slate-300 dark:bg-slate-700'
+                              }`}
+                              style={{ width: `${progressPct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-mono font-medium text-slate-600 dark:text-slate-400 w-7 text-right shrink-0">
+                            {progressPct}%
+                          </span>
+                        </div>
+                      </td>
 
-                      {/* Progress Bar */}
-                      <div className="w-full h-1.5 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all duration-500 ${
-                            isApproved
-                              ? 'bg-emerald-500'
-                              : isPending
-                              ? 'bg-gradient-to-r from-cyan-500 to-blue-600'
-                              : 'bg-slate-400 dark:bg-slate-600'
-                          }`}
-                          style={{ width: `${progressPct}%` }}
-                        />
-                      </div>
+                      {/* 6. Status (Glowing Dot + Text, Unboxed) */}
+                      <td className="py-3.5 px-4 text-center">
+                        {isApproved ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                            <span>Verified</span>
+                          </span>
+                        ) : isPending ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                            <span>Needs Review</span>
+                          </span>
+                        ) : isChanges ? (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                            <span>Revisions</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-500">
+                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+                            <span>Locked</span>
+                          </span>
+                        )}
+                      </td>
 
-                      {/* Action Button */}
-                      <div className="pt-1">
+                      {/* 7. Action Button */}
+                      <td className="py-3.5 px-5 text-right">
                         {isPending ? (
                           <button
                             onClick={() => setInspectingStep(step)}
-                            className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 shadow-[0_4px_14px_0_rgba(37,99,235,0.4)] cursor-pointer"
+                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-[0_0_12px_rgba(37,99,235,0.35)] transition-all cursor-pointer inline-flex items-center gap-1.5"
                           >
-                            <span>Review & Verify Step</span>
+                            <span>Review</span>
                             <ArrowRight className="w-3.5 h-3.5" />
                           </button>
                         ) : (
                           <button
                             onClick={() => setInspectingStep(step)}
-                            className="w-full py-2 bg-white dark:bg-[#1c2438] hover:bg-slate-100 dark:hover:bg-[#25314d] text-slate-700 dark:text-slate-200 border border-slate-200/90 dark:border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer"
+                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
                           >
-                            View Details
+                            Details
                           </button>
                         )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
