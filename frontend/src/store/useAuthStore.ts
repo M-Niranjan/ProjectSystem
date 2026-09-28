@@ -44,192 +44,252 @@ interface AuthState {
   clearError: () => void;
 }
 
+const getInitialUser = (): User | null => {
+  if (typeof window === 'undefined') return null;
+  try {
+    const raw = localStorage.getItem('auth_user') || localStorage.getItem('mock_user');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getInitialToken = (): string | null => {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem('token') || sessionStorage.getItem('token') || null;
+};
+
 export const useAuthStore = create<AuthState>((set, get) => {
   // Listen for the custom logout event from the API interceptor
   if (typeof window !== 'undefined') {
     window.addEventListener('auth-logout', () => {
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('token');
+      sessionStorage.removeItem('token');
       set({ user: null, token: null });
     });
   }
 
+  const initialUser = getInitialUser();
+  const initialToken = getInitialToken();
+
   return {
-    user: null,
-    token: null,
-    loading: false,
+    user: initialUser,
+    token: initialToken,
+    loading: false, // Instant hydration: Render immediately with cached session!
     error: null,
 
     clearError: () => set({ error: null }),
 
     initAuth: async () => {
-      set({ loading: true });
+      // 1. Instant re-check from cache if store is not populated
+      let activeUser = get().user;
+      let activeToken = get().token;
+
+      if (!activeUser || !activeToken) {
+        const cachedUser = getInitialUser();
+        const savedToken = getInitialToken();
+        if (cachedUser && savedToken) {
+          activeUser = cachedUser;
+          activeToken = savedToken;
+          set({ user: cachedUser, token: savedToken, loading: false });
+        }
+      }
+
+      // If we don't even have a cached user, show initial loading state while contacting auth
+      if (!activeUser) {
+        set({ loading: true });
+      }
 
       try {
-        {
-          // Wait for Firebase Auth to initialize asynchronously from IndexedDB/localStorage
-          const firebaseUser = await new Promise<any>((resolve) => {
-            if (firebaseAuth.currentUser) {
-              resolve(firebaseAuth.currentUser);
-              return;
-            }
-            const unsubscribe = firebaseAuth.onAuthStateChanged((u) => {
-              unsubscribe();
-              resolve(u);
-            });
-            // 2.5s safety timeout
-            setTimeout(() => {
-              resolve(firebaseAuth.currentUser);
-            }, 2500);
+        // Wait for Firebase Auth to initialize asynchronously with a 2000ms safety timeout
+        const firebaseUser = await new Promise<any>((resolve) => {
+          if (firebaseAuth.currentUser) {
+            resolve(firebaseAuth.currentUser);
+            return;
+          }
+          const unsubscribe = firebaseAuth.onAuthStateChanged((u) => {
+            unsubscribe();
+            resolve(u);
           });
+          setTimeout(() => {
+            resolve(firebaseAuth.currentUser);
+          }, 2000);
+        });
 
-          if (!firebaseUser) {
-            const savedToken = (typeof window !== 'undefined')
-              ? (localStorage.getItem('token') || sessionStorage.getItem('token'))
-              : null;
+        if (!firebaseUser) {
+          const savedToken = getInitialToken();
 
-            if (savedToken) {
-              try {
-                const meRes = await api.get('/api/auth/me');
-                if (meRes.data && (meRes.data.id || meRes.data.email)) {
-                  const roleEnum = normalizeRole(meRes.data.role);
-                  if (roleEnum) {
-                    const activeUser: User = {
-                      id: meRes.data.id,
-                      email: meRes.data.email,
-                      name: meRes.data.name || (meRes.data.email ? meRes.data.email.split('@')[0] : 'User'),
-                      role: roleEnum,
-                      designation: meRes.data.designation || (roleEnum === 'ROLE_ADMIN' ? 'System Administrator' : roleEnum === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
-                      department: meRes.data.department || (roleEnum === 'ROLE_ADMIN' ? 'Executive' : roleEnum === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
-                      experience: meRes.data.experience || 5,
-                      skills: meRes.data.skills || '',
-                      gender: meRes.data.gender || 'Male',
-                      profilePhoto: meRes.data.profilePhoto,
-                      phone: meRes.data.phone,
-                      githubUrl: meRes.data.githubUrl,
-                      portfolioUrl: meRes.data.portfolioUrl,
-                      bio: meRes.data.bio,
-                      education: meRes.data.education,
-                      createdAt: meRes.data.createdAt || new Date().toISOString(),
-                    };
-
-                    set({
-                      user: activeUser,
-                      token: savedToken,
-                      loading: false,
-                      error: null,
-                    });
-                    return;
-                  }
-                }
-              } catch (meErr) {
-                console.warn('[Auth] Backend session restore failed:', meErr);
-              }
-            }
-
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('token');
-              localStorage.removeItem('token');
-              localStorage.removeItem('mock_user');
-            }
-            set({
-              user: null,
-              token: null,
-              loading: false,
-              error: null,
-            });
-            return;
-          }
-
-          let userData = await fetchFirestoreUserDoc(firebaseUser.uid);
-
-          if (!userData) {
-            // Fallback: check if the backend /api/auth/me recognizes the user
+          if (savedToken) {
             try {
-              const meRes = await api.get('/api/auth/me');
+              const meRes = await api.get('/api/auth/me', { timeout: 3500 });
               if (meRes.data && (meRes.data.id || meRes.data.email)) {
-                userData = meRes.data;
+                const roleEnum = normalizeRole(meRes.data.role);
+                if (roleEnum) {
+                  const verifiedUser: User = {
+                    id: meRes.data.id,
+                    email: meRes.data.email,
+                    name: meRes.data.name || (meRes.data.email ? meRes.data.email.split('@')[0] : 'User'),
+                    role: roleEnum,
+                    designation: meRes.data.designation || (roleEnum === 'ROLE_ADMIN' ? 'System Administrator' : roleEnum === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
+                    department: meRes.data.department || (roleEnum === 'ROLE_ADMIN' ? 'Executive' : roleEnum === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
+                    experience: meRes.data.experience || 5,
+                    skills: meRes.data.skills || '',
+                    gender: meRes.data.gender || 'Male',
+                    profilePhoto: meRes.data.profilePhoto,
+                    phone: meRes.data.phone,
+                    githubUrl: meRes.data.githubUrl,
+                    portfolioUrl: meRes.data.portfolioUrl,
+                    bio: meRes.data.bio,
+                    education: meRes.data.education,
+                    createdAt: meRes.data.createdAt || new Date().toISOString(),
+                  };
+
+                  localStorage.setItem('auth_user', JSON.stringify(verifiedUser));
+                  set({
+                    user: verifiedUser,
+                    token: savedToken,
+                    loading: false,
+                    error: null,
+                  });
+                  return;
+                }
               }
-            } catch (_fallbackErr) {}
+            } catch (meErr: any) {
+              console.warn('[Auth] Backend session restore failed (offline/unreachable):', meErr?.message);
+              // CRITICAL: If cached session is present, KEEP IT! Do not wipe on network glitch/offline
+              if (get().user && get().token) {
+                set({ loading: false });
+                return;
+              }
+            }
           }
 
-          if (!userData) {
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('token');
-              localStorage.removeItem('token');
-              localStorage.removeItem('mock_user');
-            }
-            set({
-              user: null,
-              token: null,
-              loading: false,
-              error: null,
-            });
+          // If we have a cached user in memory, preserve it!
+          if (get().user && get().token) {
+            set({ loading: false });
             return;
           }
 
-          const rawRole = (userData as any).role ?? (userData as any).roleCode;
-          const roleEnum = normalizeRole(rawRole);
-          if (!roleEnum) {
-            if (typeof window !== 'undefined') {
-              sessionStorage.removeItem('token');
-              localStorage.removeItem('token');
-            }
-            set({
-              user: null,
-              token: null,
-              loading: false,
-              error: 'Invalid user role. Please contact your administrator.',
-            });
-            return;
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('mock_user');
           }
-
-          const activeUser: User = {
-            id: firebaseUser.uid as any,
-            email: firebaseUser.email || '',
-            name:
-              (userData as any).name ||
-              (userData as any).displayName ||
-              firebaseUser.displayName ||
-              (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User'),
-            role: roleEnum,
-            designation:
-              (userData as any).designation ||
-              (roleEnum === 'ROLE_ADMIN'
-                ? 'System Administrator'
-                : roleEnum === 'ROLE_MANAGER'
-                  ? 'Project Lead'
-                  : 'Software Engineer'),
-            department:
-              (userData as any).department ||
-              (roleEnum === 'ROLE_ADMIN'
-                ? 'Executive'
-                : roleEnum === 'ROLE_MANAGER'
-                  ? 'Management'
-                  : 'Engineering'),
-            experience: (userData as any).experience || 5,
-            skills: (userData as any).skills || '',
-            gender: (userData as any).gender || 'Male',
-            profilePhoto: (firebaseUser.photoURL && !firebaseUser.photoURL.includes('unsplash.com')) ? firebaseUser.photoURL : ((userData as any).profilePhoto && !(userData as any).profilePhoto.includes('unsplash.com')) ? (userData as any).profilePhoto : undefined,
-            createdAt: (userData as any).createdAt || new Date().toISOString(),
-          };
-
-          console.log('[Auth] Restored Firebase UID:', firebaseUser.uid);
-          console.log('[Auth] Firestore role:', rawRole);
-          console.log('[Auth] Normalized role:', roleEnum);
-
           set({
-            user: activeUser,
-            token: await firebaseUser.getIdToken(),
+            user: null,
+            token: null,
             loading: false,
             error: null,
           });
           return;
         }
+
+        // Firebase user authenticated
+        let userData = await fetchFirestoreUserDoc(firebaseUser.uid);
+
+        if (!userData) {
+          try {
+            const meRes = await api.get('/api/auth/me', { timeout: 3500 });
+            if (meRes.data && (meRes.data.id || meRes.data.email)) {
+              userData = meRes.data;
+            }
+          } catch (_fallbackErr) {}
+        }
+
+        if (!userData) {
+          // If we had a cached user, preserve it!
+          if (get().user && get().token) {
+            set({ loading: false });
+            return;
+          }
+
+          if (typeof window !== 'undefined') {
+            sessionStorage.removeItem('token');
+            localStorage.removeItem('token');
+            localStorage.removeItem('auth_user');
+            localStorage.removeItem('mock_user');
+          }
+          set({
+            user: null,
+            token: null,
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+
+        const rawRole = (userData as any).role ?? (userData as any).roleCode;
+        const roleEnum = normalizeRole(rawRole);
+        if (!roleEnum) {
+          if (get().user && get().token) {
+            set({ loading: false });
+            return;
+          }
+          set({
+            user: null,
+            token: null,
+            loading: false,
+            error: 'Invalid user role. Please contact your administrator.',
+          });
+          return;
+        }
+
+        const activeUser: User = {
+          id: firebaseUser.uid as any,
+          email: firebaseUser.email || '',
+          name:
+            (userData as any).name ||
+            (userData as any).displayName ||
+            firebaseUser.displayName ||
+            (firebaseUser.email ? firebaseUser.email.split('@')[0] : 'User'),
+          role: roleEnum,
+          designation:
+            (userData as any).designation ||
+            (roleEnum === 'ROLE_ADMIN'
+              ? 'System Administrator'
+              : roleEnum === 'ROLE_MANAGER'
+                ? 'Project Lead'
+                : 'Software Engineer'),
+          department:
+            (userData as any).department ||
+            (roleEnum === 'ROLE_ADMIN'
+              ? 'Executive'
+              : roleEnum === 'ROLE_MANAGER'
+                ? 'Management'
+                : 'Engineering'),
+          experience: (userData as any).experience || 5,
+          skills: (userData as any).skills || '',
+          gender: (userData as any).gender || 'Male',
+          profilePhoto: (firebaseUser.photoURL && !firebaseUser.photoURL.includes('unsplash.com')) ? firebaseUser.photoURL : ((userData as any).profilePhoto && !(userData as any).profilePhoto.includes('unsplash.com')) ? (userData as any).profilePhoto : undefined,
+          createdAt: (userData as any).createdAt || new Date().toISOString(),
+        };
+
+        const fbToken = await firebaseUser.getIdToken();
+        localStorage.setItem('auth_user', JSON.stringify(activeUser));
+        localStorage.setItem('token', fbToken);
+
+        set({
+          user: activeUser,
+          token: fbToken,
+          loading: false,
+          error: null,
+        });
+        return;
       } catch (err: any) {
-        console.error('[Auth] Session restore failed:', err);
+        console.warn('[Auth] Session background check error:', err?.message);
+
+        // Retain session if already cached
+        if (get().user && get().token) {
+          set({ loading: false });
+          return;
+        }
 
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('token');
           localStorage.removeItem('token');
+          localStorage.removeItem('auth_user');
           localStorage.removeItem('mock_user');
         }
 
@@ -252,6 +312,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         if (rememberMe) {
           localStorage.setItem('token', accessToken);
         }
+        localStorage.setItem('auth_user', JSON.stringify(user));
 
         set({ token: accessToken, user, loading: false });
         return true;
@@ -314,6 +375,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('token', token);
+        localStorage.setItem('auth_user', JSON.stringify(user));
         set({ token, user, loading: false, error: null });
         return true;
       } catch (err) {
@@ -331,6 +393,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
     logout: () => {
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
+      localStorage.removeItem('auth_user');
+      localStorage.removeItem('mock_user');
       void firebaseAuth.signOut();
       set({ user: null, token: null, error: null });
     },
@@ -340,12 +404,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
       try {
         const response = await api.put('/api/users/profile', profileData);
         const updatedUser = response.data;
+        localStorage.setItem('auth_user', JSON.stringify(updatedUser));
         set({ user: updatedUser });
         return true;
       } catch (err: any) {
         const currentUser = get().user;
         if (currentUser) {
           const updatedUser = { ...currentUser, ...profileData };
+          localStorage.setItem('auth_user', JSON.stringify(updatedUser));
           set({ user: updatedUser });
           return true;
         }

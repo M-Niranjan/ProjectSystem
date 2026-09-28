@@ -118,7 +118,11 @@ const applyAccentStyles = (accent: AccentColor) => {
 
 const getInitialView = (): string => {
   if (typeof window !== 'undefined') {
-    const path = window.location.pathname;
+    let path = window.location.pathname;
+    if (window.location.hash && window.location.hash.startsWith('#/')) {
+      path = window.location.hash.substring(1); // e.g. "/step-verification"
+    }
+    const cleanPath = path.split('?')[0];
     const pathMap: Record<string, string> = {
       '/dashboard': 'dashboard',
       '/admin/dashboard': 'dashboard',
@@ -148,7 +152,7 @@ const getInitialView = (): string => {
       '/reviews': 'reviews',
       '/performance': 'performance',
     };
-    return pathMap[path] || 'dashboard';
+    return pathMap[cleanPath] || 'dashboard';
   }
   return 'dashboard';
 };

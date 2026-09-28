@@ -92,7 +92,7 @@ export default function StepVerificationDashboard() {
   const { showToast } = useUIStore();
   const { activeTab, setActiveTab } = useStepVerificationStore();
 
-  const isTeamLeader = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
+  const isTeamLeader = !user || user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
 
   // Active Selected Parent Task for the Stepper Ribbon (or 'ALL')
   const [selectedTaskId, setSelectedTaskId] = useState<number | 'ALL'>(201);
@@ -118,7 +118,7 @@ export default function StepVerificationDashboard() {
     });
 
     // Role-based scoping: Employees see only their assigned steps; TL sees all steps
-    if (!isTeamLeader) {
+    if (user && !isTeamLeader) {
       combinedSteps = combinedSteps.filter(
         (s) => s.evidence?.submittedBy?.id === user?.id || s.evidence?.submittedBy?.name === user?.name
       );
@@ -131,7 +131,7 @@ export default function StepVerificationDashboard() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [user?.id, user?.role, isTeamLeader]);
 
   // Filtered Task Steps
   const filteredSteps = allTaskSteps.filter((s) => {

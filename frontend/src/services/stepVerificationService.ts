@@ -11,11 +11,49 @@ import {
 export type { TaskStep };
 
 // Persistent Mock Steps Database
-let MOCK_STEPS: Record<number, TaskStep[]> = {};
+const loadSavedSteps = (): Record<number, TaskStep[]> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem('mock_verification_steps');
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+};
 
-let MOCK_AUDIT_LOGS: StepAuditLog[] = [];
+const loadSavedAudits = (): StepAuditLog[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('mock_verification_audits');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
 
-let MOCK_NOTIFICATIONS: StepNotification[] = [];
+const loadSavedNotifications = (): StepNotification[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const raw = localStorage.getItem('mock_verification_notifications');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
+let MOCK_STEPS: Record<number, TaskStep[]> = loadSavedSteps();
+let MOCK_AUDIT_LOGS: StepAuditLog[] = loadSavedAudits();
+let MOCK_NOTIFICATIONS: StepNotification[] = loadSavedNotifications();
+
+const syncVerificationStorage = () => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('mock_verification_steps', JSON.stringify(MOCK_STEPS));
+      localStorage.setItem('mock_verification_audits', JSON.stringify(MOCK_AUDIT_LOGS));
+      localStorage.setItem('mock_verification_notifications', JSON.stringify(MOCK_NOTIFICATIONS));
+    } catch {}
+  }
+};
 
 /**
  * Get or initialize steps for a task
@@ -119,6 +157,7 @@ export function getTaskSteps(taskId: number): TaskStep[] {
         }
       ];
     }
+    syncVerificationStorage();
   }
   return MOCK_STEPS[taskId];
 }
@@ -206,6 +245,7 @@ export async function submitStepWork(
     read: false
   });
 
+  syncVerificationStorage();
   return { step: foundStep, auditLog };
 }
 
@@ -351,6 +391,7 @@ export async function verifyStepWork(
   };
   MOCK_AUDIT_LOGS.unshift(auditLog);
 
+  syncVerificationStorage();
   return { step: currentStep, auditLog, unlockedStep };
 }
 

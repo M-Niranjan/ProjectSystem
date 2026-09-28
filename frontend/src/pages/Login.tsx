@@ -117,6 +117,8 @@ export default function Login() {
             const token = await user.getIdToken();
             const storage = rememberMe ? localStorage : sessionStorage;
             storage.setItem('token', token);
+            localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
+            localStorage.setItem('mock_user', JSON.stringify(loggedInUser));
             if (rememberMe) {
               sessionStorage.setItem('token', token);
             } else {

@@ -62,7 +62,7 @@ const mockAdapter = async (config: any) => {
 
   // Emulated REST Controller mappings
   if (url.includes('/api/auth/me')) {
-    const storedUser = localStorage.getItem('mock_user');
+    const storedUser = localStorage.getItem('auth_user') || localStorage.getItem('mock_user');
     resData = storedUser ? JSON.parse(storedUser) : null;
   } else if (url.includes('/api/auth/login') || url.includes('/api/auth/register')) {
     const inputEmail = (data?.email || '').trim().toLowerCase();
@@ -571,6 +571,7 @@ export const getApiBaseUrl = (): string => {
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
+  timeout: 5000,
 });
 
 // Interceptor to append JWT token and ensure dynamic baseURL
@@ -588,18 +589,40 @@ api.interceptors.request.use(
   }
 );
 
-// Interceptor to handle JWT expiration logout
+// Interceptor to handle JWT expiration logout and offline mock fallback
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
+  async (error) => {
     const url = error.config?.url || '';
     const isAuthCheck = url.includes('/api/auth/login') || url.includes('/api/auth/firebase-login') || url.includes('/api/auth/me');
 
+    // Only clear session on verified HTTP 401 Unauthorized from a responsive server
     if (error.response && error.response.status === 401 && !isAuthCheck) {
       localStorage.removeItem('token');
       sessionStorage.removeItem('token');
+      localStorage.removeItem('auth_user');
       window.dispatchEvent(new Event('auth-logout'));
+      return Promise.reject(error);
     }
+
+    // Graceful offline fallback: If server is unreachable, connection refused, or timed out (common on mobile phone)
+    const isNetworkOrServerDown =
+      !error.response ||
+      error.code === 'ECONNABORTED' ||
+      error.code === 'ERR_NETWORK' ||
+      error.message?.includes('Network Error') ||
+      error.message?.includes('timeout') ||
+      (error.response?.status >= 500 && error.response?.status <= 504);
+
+    if (isNetworkOrServerDown && typeof mockAdapter === 'function') {
+      try {
+        console.warn(`[API] Remote host unreachable (${error.message || 'offline'}). Serving locally for:`, url);
+        return await mockAdapter(error.config);
+      } catch (mockErr) {
+        return Promise.reject(mockErr);
+      }
+    }
+
     return Promise.reject(error);
   }
 );
