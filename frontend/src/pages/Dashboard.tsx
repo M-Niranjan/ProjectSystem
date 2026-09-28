@@ -541,54 +541,120 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             {/* Left Panel: Team Workload & Allocation (7 cols) */}
             <div className="lg:col-span-7 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Team Workload & Allocation</h3>
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/15 border border-blue-200/70 dark:border-blue-500/30 flex items-center justify-center text-blue-600 dark:text-blue-400 shrink-0">
+                    <Users className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">Team Workload & Allocation</h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Sprint capacity & member bandwidth</p>
+                  </div>
+                </div>
                 <button
                   type="button"
                   onClick={() => setIsInviteModalOpen(true)}
-                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 dark:bg-[#151c2c] dark:hover:bg-[#1c263c] dark:border-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95"
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 dark:bg-[#151c2c] dark:hover:bg-[#1c263c] dark:border-slate-700/80 text-slate-700 dark:text-slate-200 text-xs font-semibold rounded-xl cursor-pointer transition-all active:scale-95 shrink-0"
                 >
-                  <Plus className="w-3.5 h-3.5" /> Invite Teammate
+                  <Plus className="w-3.5 h-3.5" /> <span className="hidden sm:inline">Invite Teammate</span><span className="sm:hidden">Invite</span>
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
-                {displayTeammates.map(emp => (
-                  <div key={emp.id || emp.uid} className="py-3 flex items-center justify-between gap-3 text-xs">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <img
-                        src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)}
-                        alt={emp.name}
-                        className="w-9 h-9 rounded-full object-cover border border-slate-200 dark:border-slate-700/80 shrink-0"
-                      />
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <span className="font-bold text-slate-900 dark:text-white truncate">{emp.name}</span>
-                        <span className="text-[10px] font-medium px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 shrink-0">
-                          {getRoleBadge(emp)}
-                        </span>
-                      </div>
-                    </div>
+              <div className="space-y-3">
+                {displayTeammates.map((emp, idx) => {
+                  const workloadPct = idx === 0 ? 65 : idx === 1 ? 45 : idx === 2 ? 80 : 50;
+                  const workloadGradient = workloadPct >= 80 
+                    ? 'from-amber-500 to-rose-500' 
+                    : workloadPct >= 60 
+                    ? 'from-blue-500 to-indigo-500' 
+                    : 'from-emerald-500 to-teal-400';
+                  const workloadStatus = workloadPct >= 80 ? 'Heavy Load' : workloadPct >= 60 ? 'Optimal' : 'Available';
+                  const workloadBadge = workloadPct >= 80 
+                    ? 'bg-amber-50 text-amber-700 border-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30' 
+                    : workloadPct >= 60 
+                    ? 'bg-blue-50 text-blue-700 border-blue-200/80 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30' 
+                    : 'bg-emerald-50 text-emerald-700 border-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30';
+                  const isSelectedForAssign = newTaskAssigneeId === (emp.id || emp.uid).toString();
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-medium hidden sm:inline-block">
-                        Capacity progress
-                      </span>
-                      <div className="w-24 sm:w-32 h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-1/2"></div>
+                  return (
+                    <div
+                      key={emp.id || emp.uid}
+                      className={`p-3.5 rounded-2xl border transition-all duration-200 space-y-2.5 ${
+                        isSelectedForAssign
+                          ? 'bg-blue-50/70 dark:bg-blue-500/10 border-blue-500/50 shadow-xs ring-1 ring-blue-500/20'
+                          : 'bg-slate-50/60 hover:bg-slate-100/70 dark:bg-white/[0.02] dark:hover:bg-white/[0.05] border-slate-200/80 dark:border-white/5'
+                      }`}
+                    >
+                      {/* Top Row: Full Name, Role Chip, Designation, and Assign Button */}
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="relative shrink-0">
+                            <img
+                              src={resolveAvatar(emp.profilePhoto, emp.name, (emp as any).gender)}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = getAvatarByName(emp.name, (emp as any).gender);
+                              }}
+                              alt={emp.name}
+                              className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500/20 shadow-xs"
+                            />
+                            <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-900" />
+                          </div>
+
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-sm text-slate-900 dark:text-white tracking-tight">
+                                {emp.name}
+                              </span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 border border-slate-200/80 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700/60 shrink-0">
+                                {getRoleBadge(emp)}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium truncate mt-0.5">
+                              {emp.designation || (emp as any).department || 'Engineering Member'}
+                            </p>
+                          </div>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setNewTaskAssigneeId((emp.id || emp.uid).toString());
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 ${
+                            isSelectedForAssign
+                              ? 'bg-blue-600 text-white shadow-blue-500/30'
+                              : 'bg-white hover:bg-blue-600 hover:text-white text-slate-700 border border-slate-200/90 dark:bg-[#151c2c] dark:hover:bg-blue-600 dark:border-slate-700/80 dark:text-slate-300'
+                          }`}
+                        >
+                          <Plus className="w-3.5 h-3.5" /> <span>{isSelectedForAssign ? 'Selected' : 'Assign'}</span>
+                        </button>
                       </div>
-                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 w-8 text-right">
-                        50%
-                      </span>
-                      <button
-                        onClick={() => {
-                          setNewTaskAssigneeId((emp.id || emp.uid).toString());
-                        }}
-                        className="px-3 py-1 bg-slate-50 hover:bg-blue-600 hover:text-white border border-slate-200 dark:bg-[#151c2c] dark:hover:bg-blue-600 dark:border-slate-700/80 text-slate-700 dark:text-slate-300 text-xs font-semibold rounded-xl transition-all cursor-pointer flex items-center gap-1 active:scale-95"
-                      >
-                        <Plus className="w-3 h-3" /> Assign
-                      </button>
+
+                      {/* Bottom Row: Capacity allocation progress bar & percentage */}
+                      <div className="flex items-center justify-between gap-3 pt-2 border-t border-slate-200/60 dark:border-white/5 text-xs">
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            Capacity:
+                          </span>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${workloadBadge}`}>
+                            {workloadStatus}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-2.5 flex-1 max-w-[180px] sm:max-w-xs justify-end">
+                          <div className="w-full h-2 bg-slate-200/80 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full bg-gradient-to-r ${workloadGradient} rounded-full transition-all duration-500`}
+                              style={{ width: `${workloadPct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-black text-slate-800 dark:text-slate-200 w-8 text-right font-mono">
+                            {workloadPct}%
+                          </span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
