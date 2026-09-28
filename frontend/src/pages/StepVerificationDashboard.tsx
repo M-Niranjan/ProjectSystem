@@ -52,9 +52,11 @@ interface ParentTaskMeta {
   id: number;
   title: string;
   project: string;
+  shortProject?: string;
   owner: string;
   startDate: string;
   dueDate: string;
+  currentStageText?: string;
   milestones: { step: string; name: string; status: 'APPROVED' | 'ACTIVE' | 'LOCKED' }[];
 }
 
@@ -63,9 +65,11 @@ const PARENT_TASKS: Record<number, ParentTaskMeta> = {
     id: 201,
     title: 'Q3 Platform Architecture & Launch',
     project: 'Prologue SaaS (Task ID: #201)',
+    shortProject: 'Prologue SaaS',
     owner: 'Niranjan (Admin)',
     startDate: '2026-08-20',
     dueDate: '2026-09-05',
+    currentStageText: 'Stage 2 of 4: Component Integration',
     milestones: [
       { step: '01', name: 'Planning & Specs', status: 'APPROVED' },
       { step: '02', name: 'Component Integration', status: 'ACTIVE' },
@@ -77,9 +81,11 @@ const PARENT_TASKS: Record<number, ParentTaskMeta> = {
     id: 102,
     title: 'Mobile Viewport & Auth Session Sync',
     project: 'Core Platform (Task ID: #102)',
+    shortProject: 'Core Platform',
     owner: 'Vinay (Team Lead)',
     startDate: '2026-08-22',
     dueDate: '2026-09-08',
+    currentStageText: 'Stage 2 of 4: Auth Middleware',
     milestones: [
       { step: '01', name: 'UI Wireframes', status: 'APPROVED' },
       { step: '02', name: 'Auth Middleware', status: 'ACTIVE' },
@@ -298,6 +304,118 @@ export default function StepVerificationDashboard() {
     return `[${taskPrefix}.${step.stepNumber}]`;
   };
 
+  const renderMilestoneStepperRail = (task: ParentTaskMeta) => {
+    const approvedCount = task.milestones.filter((m) => m.status === 'APPROVED').length;
+    const activeCount = task.milestones.filter((m) => m.status === 'ACTIVE').length;
+    const progressPct =
+      approvedCount === task.milestones.length
+        ? 100
+        : approvedCount === 0
+        ? activeCount > 0
+          ? 18
+          : 0
+        : Math.min(85, Math.round(((approvedCount + (activeCount > 0 ? 0.45 : 0)) / task.milestones.length) * 100));
+
+    return (
+      <div className="pt-2 pb-2 overflow-x-auto custom-scrollbar">
+        <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-4 min-w-[520px] sm:min-w-0">
+          {/* Background connecting rail */}
+          <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800/80 z-0">
+            {/* Active progressive glowing bar */}
+            <div
+              className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-all duration-500 shadow-sm"
+              style={{ width: `${progressPct}%` }}
+            />
+          </div>
+
+          {/* Stepper Nodes */}
+          {task.milestones.map((m) => {
+            const isApproved = m.status === 'APPROVED';
+            const isActive = m.status === 'ACTIVE';
+            const isLocked = m.status === 'LOCKED';
+
+            return (
+              <div key={m.step} className="relative z-10 flex flex-col items-center group">
+                {/* Circle Node */}
+                <div
+                  className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
+                    isApproved
+                      ? 'bg-white dark:bg-[#0e131f] border-2 border-emerald-500 text-emerald-600 dark:text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
+                      : isActive
+                      ? 'bg-white dark:bg-[#0e131f] border-2 border-blue-600 dark:border-cyan-400 text-blue-600 dark:text-cyan-300 shadow-[0_0_20px_rgba(37,99,235,0.25)] scale-110'
+                      : 'bg-slate-100 dark:bg-[#0e131f] border-2 border-slate-300 dark:border-slate-700 text-slate-400 opacity-70'
+                  }`}
+                >
+                  {isApproved ? (
+                    <Check className="w-5 h-5 stroke-[2.5]" />
+                  ) : isLocked ? (
+                    <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                  ) : (
+                    <span className="font-mono text-xs font-black">{m.step}</span>
+                  )}
+                </div>
+
+                {/* Node Label Below */}
+                <div className="mt-2.5 text-center max-w-[125px]">
+                  <span
+                    className={`block text-xs font-bold tracking-tight truncate ${
+                      isActive ? 'text-slate-900 dark:text-white font-extrabold' : isApproved ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400'
+                    }`}
+                  >
+                    {m.name}
+                  </span>
+                  <span
+                    className={`block text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
+                      isApproved ? 'text-emerald-600 dark:text-emerald-400' : isActive ? 'text-blue-600 dark:text-cyan-400 animate-pulse' : 'text-slate-400'
+                    }`}
+                  >
+                    {isApproved ? 'Verified ✓' : isActive ? 'In Progress' : 'Locked'}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTaskSwitcherPills = () => (
+    <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 self-start md:self-auto shrink-0">
+      <button
+        onClick={() => setSelectedTaskId(201)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          selectedTaskId === 201
+            ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+        }`}
+      >
+        Task #201
+      </button>
+      <button
+        onClick={() => setSelectedTaskId(102)}
+        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+          selectedTaskId === 102
+            ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+        }`}
+      >
+        Task #102
+      </button>
+      <button
+        onClick={() => setSelectedTaskId('ALL')}
+        className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+          selectedTaskId === 'ALL'
+            ? 'bg-white dark:bg-[#1c2438] text-blue-600 dark:text-blue-400 border border-slate-200/80 dark:border-white/10 shadow-xs font-extrabold'
+            : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
+        }`}
+      >
+        <Layers className="w-3.5 h-3.5" />
+        <span>All Pipelines</span>
+      </button>
+    </div>
+  );
+
   return (
     <div className="space-y-6 select-none pb-12 w-full min-w-0">
       
@@ -334,121 +452,159 @@ export default function StepVerificationDashboard() {
       {/* ========================================================================= */}
       {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER RIBBON */}
       {/* ========================================================================= */}
-      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xs dark:shadow-xl relative overflow-hidden space-y-6">
-        {/* Parent Task Metadata Bar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                {currentTaskMeta.title}
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20">
-                {currentTaskMeta.project}
-              </span>
-            </div>
-            <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
-              <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.owner}</strong></span>
-              <span>•</span>
-              <span>Start Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.startDate}</strong></span>
-              <span>•</span>
-              <span>Due Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.dueDate}</strong></span>
-            </div>
-          </div>
-
-          {/* Quick Task Switcher Pills */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-[#07080c]/80 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800/80 self-start md:self-auto shrink-0">
-            <button
-              onClick={() => setSelectedTaskId(201)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedTaskId === 201
-                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Task #201
-            </button>
-            <button
-              onClick={() => setSelectedTaskId(102)}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedTaskId === 102
-                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              Task #102
-            </button>
-            <button
-              onClick={() => setSelectedTaskId('ALL')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                selectedTaskId === 'ALL'
-                  ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-200/80 dark:border-white/10 shadow-xs'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-              }`}
-            >
-              All Pipelines
-            </button>
-          </div>
-        </div>
-
-        {/* Sequential Stepper Nodes with Illuminated Connecting Lines (Horizontally scrollable on mobile to prevent squishing) */}
-        <div className="pt-2 pb-2 overflow-x-auto custom-scrollbar">
-          <div className="relative flex items-center justify-between w-full max-w-4xl mx-auto px-4 min-w-[520px] sm:min-w-0">
-            
-            {/* Background connecting rail */}
-            <div className="absolute left-8 right-8 top-1/2 -translate-y-1/2 h-1 bg-slate-200 dark:bg-slate-800/80 z-0">
-              {/* Active progressive glowing blue/cyan bar */}
-              <div
-                className="h-full bg-gradient-to-r from-blue-600 via-cyan-500 to-emerald-500 transition-all duration-500 shadow-sm"
-                style={{ width: selectedTaskId === 201 ? '45%' : selectedTaskId === 102 ? '45%' : '60%' }}
-              />
-            </div>
-
-            {/* Stepper Nodes */}
-            {currentTaskMeta.milestones.map((m) => {
-              const isApproved = m.status === 'APPROVED';
-              const isActive = m.status === 'ACTIVE';
-              const isLocked = m.status === 'LOCKED';
-
-              return (
-                <div key={m.step} className="relative z-10 flex flex-col items-center group">
-                  {/* Circle Node */}
-                  <div
-                    className={`w-11 h-11 rounded-full flex items-center justify-center font-bold text-xs transition-all duration-300 ${
-                      isApproved
-                        ? 'bg-white dark:bg-[#0e131f] border-2 border-emerald-500 text-emerald-600 dark:text-emerald-300 shadow-[0_0_15px_rgba(16,185,129,0.25)]'
-                        : isActive
-                        ? 'bg-white dark:bg-[#0e131f] border-2 border-blue-600 dark:border-cyan-400 text-blue-600 dark:text-cyan-300 shadow-[0_0_20px_rgba(37,99,235,0.25)] scale-110'
-                        : 'bg-slate-100 dark:bg-[#0e131f] border-2 border-slate-300 dark:border-slate-700 text-slate-400 opacity-70'
-                    }`}
-                  >
-                    {isApproved ? (
-                      <Check className="w-5 h-5 stroke-[2.5]" />
-                    ) : isLocked ? (
-                      <Lock className="w-4 h-4 text-slate-400 dark:text-slate-500" />
-                    ) : (
-                      <span className="font-mono text-xs font-black">{m.step}</span>
-                    )}
+      {selectedTaskId === 'ALL' ? (
+        <div className="space-y-4">
+          {/* Enterprise Hub Header & Telemetry Summary */}
+          <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-xl space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+              <div className="space-y-1">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                    <Layers className="w-4 h-4" />
                   </div>
-
-                  {/* Node Label Below */}
-                  <div className="mt-2.5 text-center">
-                    <span className={`block text-xs font-bold tracking-tight whitespace-nowrap ${
-                      isActive ? 'text-slate-900 dark:text-white' : isApproved ? 'text-slate-800 dark:text-slate-200' : 'text-slate-400'
-                    }`}>
-                      {m.name}
-                    </span>
-                    <span className={`block text-[10px] uppercase font-bold tracking-wider mt-0.5 ${
-                      isApproved ? 'text-emerald-600 dark:text-emerald-400' : isActive ? 'text-blue-600 dark:text-cyan-400 animate-pulse' : 'text-slate-400'
-                    }`}>
-                      {isApproved ? 'Verified ✓' : isActive ? 'In Progress' : 'Locked'}
-                    </span>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                        All Active Pipelines Overview
+                      </h2>
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/10 dark:text-emerald-400 dark:border-emerald-500/20">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        2 Active Tracks
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      Multi-track sequential verification. Each milestone requires Team Leader sign-off before unlocking subsequent stages.
+                    </p>
                   </div>
                 </div>
-              );
-            })}
+              </div>
+
+              {/* Quick Task Switcher Pills */}
+              {renderTaskSwitcherPills()}
+            </div>
+
+            {/* Enterprise Aggregate KPI Strip */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Active Pipelines</span>
+                <span className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5 block">2 Projects</span>
+                <span className="text-[10px] text-slate-500">Prologue & Core Track</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Total Milestones</span>
+                <span className="text-base font-extrabold text-slate-900 dark:text-white mt-0.5 block">8 Gated Stages</span>
+                <span className="text-[10px] text-slate-500">4 stages per pipeline</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[10px] uppercase font-bold text-emerald-600 dark:text-emerald-400 tracking-wider block">Verified Stages</span>
+                <span className="text-base font-extrabold text-emerald-700 dark:text-emerald-300 mt-0.5 block">2 Completed</span>
+                <span className="text-[10px] text-emerald-600 dark:text-emerald-400">25% Enterprise Progress</span>
+              </div>
+              <div className="p-3 rounded-xl bg-slate-50 dark:bg-[#07080c]/60 border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 tracking-wider block">Pending Review</span>
+                <span className="text-base font-extrabold text-amber-700 dark:text-amber-300 mt-0.5 block">1 Deliverable</span>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400">PR #42 Awaiting Sign-off</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Multi-Pipeline Cards: Render Both Task 201 & Task 102 */}
+          <div className="space-y-4">
+            {Object.values(PARENT_TASKS).map((task) => (
+              <div
+                key={task.id}
+                className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-xl relative overflow-hidden transition-all duration-300 hover:border-blue-400/50 dark:hover:border-blue-500/30 group"
+              >
+                {/* Card Top Strip */}
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800/80 pb-3.5">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                        task.id === 201
+                          ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                          : 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
+                      }`}>
+                        TASK #{task.id}
+                      </span>
+                      <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                        {task.title}
+                      </h3>
+                      <span className="text-xs text-slate-400">
+                        ({task.shortProject || task.project})
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-2.5 pt-0.5">
+                      <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{task.owner}</strong></span>
+                      <span>•</span>
+                      <span>Timeline: <strong className="text-slate-800 dark:text-slate-200">{task.startDate} → {task.dueDate}</strong></span>
+                      <span>•</span>
+                      <span className="text-blue-600 dark:text-cyan-400 font-semibold">{task.currentStageText || 'Stage 2 In Progress'}</span>
+                    </div>
+                  </div>
+
+                  {/* Quick Action: Focus Pipeline */}
+                  <button
+                    onClick={() => setSelectedTaskId(task.id)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-blue-600 hover:text-white dark:bg-slate-800/80 dark:hover:bg-blue-600 text-slate-700 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shrink-0 self-start sm:self-auto shadow-xs"
+                  >
+                    <span>Focus Pipeline</span>
+                    <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                  </button>
+                </div>
+
+                {/* Stepper Ribbon for this task */}
+                <div className="pt-2">
+                  {renderMilestoneStepperRail(task)}
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      </div>
+      ) : (
+        /* Single Focused Pipeline View (Task #201 or Task #102) */
+        <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-4 sm:p-6 shadow-xs dark:shadow-xl relative overflow-hidden space-y-6">
+          {/* Parent Task Metadata Bar */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800/80 pb-4">
+            <div className="space-y-1">
+              <button
+                onClick={() => setSelectedTaskId('ALL')}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer mb-1 transition-all"
+              >
+                <RotateCcw className="w-3.5 h-3.5" />
+                <span>View All Pipelines</span>
+              </button>
+              <div className="flex flex-wrap items-center gap-2.5">
+                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                  currentTaskMeta.id === 201
+                    ? 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                    : 'bg-teal-50 text-teal-700 border border-teal-200 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
+                }`}>
+                  TASK #{currentTaskMeta.id}
+                </span>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                  {currentTaskMeta.title}
+                </h2>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700">
+                  {currentTaskMeta.project}
+                </span>
+              </div>
+              <div className="text-xs text-slate-500 dark:text-slate-400 flex flex-wrap items-center gap-3 pt-0.5">
+                <span>Owner: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.owner}</strong></span>
+                <span>•</span>
+                <span>Start Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.startDate}</strong></span>
+                <span>•</span>
+                <span>Due Date: <strong className="text-slate-800 dark:text-slate-200">{currentTaskMeta.dueDate}</strong></span>
+              </div>
+            </div>
+
+            {/* Quick Task Switcher Pills */}
+            {renderTaskSwitcherPills()}
+          </div>
+
+          {/* Focused Stepper Nodes */}
+          {renderMilestoneStepperRail(currentTaskMeta)}
+        </div>
+      )}
 
       {/* ========================================================================= */}
       {/* 2. COMMAND TOOLBAR: SEGMENTED FILTER PILLS & SEARCH */}
@@ -568,7 +724,18 @@ export default function StepVerificationDashboard() {
 
                       {/* 2. Task Name & Objective */}
                       <td className="py-4 px-4">
-                        <div className="space-y-0.5">
+                        <div className="space-y-1">
+                          {selectedTaskId === 'ALL' && (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[9px] font-mono font-extrabold uppercase tracking-wide ${
+                                step.taskId === 201
+                                  ? 'bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20'
+                                  : 'bg-teal-50 text-teal-700 border border-teal-200/80 dark:bg-teal-500/10 dark:text-teal-400 dark:border-teal-500/20'
+                              }`}>
+                                {step.taskId === 201 ? 'Task #201 • Prologue SaaS' : 'Task #102 • Core Platform'}
+                              </span>
+                            </div>
+                          )}
                           <h4 className="font-bold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
                             {step.title}
                           </h4>
