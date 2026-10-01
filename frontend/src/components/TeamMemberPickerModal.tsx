@@ -38,35 +38,20 @@ export default function TeamMemberPickerModal({
   const [selectedRoleFilter, setSelectedRoleFilter] = useState('ALL');
   const [selectedEmails, setSelectedEmails] = useState<Set<string>>(new Set());
 
-  // Default fallback team if API returns empty
-  const defaultFallbackMembers: DirectoryMember[] = [
-    { id: 1, name: 'Niranjan M', email: 'niranjan@company.com', role: 'ROLE_ADMIN', designation: 'System Architect', department: 'Executive' },
-    { id: 2, name: 'Ramesh Kumar', email: 'ramesh@company.com', role: 'ROLE_EMPLOYEE', designation: 'Full Stack Engineer', department: 'Engineering' },
-    { id: 3, name: 'Rahul Sharma', email: 'rahul@company.com', role: 'ROLE_EMPLOYEE', designation: 'Frontend Developer', department: 'Engineering' },
-    { id: 4, name: 'Manju Nathan', email: 'manju@company.com', role: 'ROLE_EMPLOYEE', designation: 'Backend Go/Java Developer', department: 'Engineering' },
-    { id: 5, name: 'Vinay Patel', email: 'vinay@company.com', role: 'ROLE_EMPLOYEE', designation: 'QA Automation Lead', department: 'Quality Assurance' }
-  ];
-
-  // Load team members when opened
   useEffect(() => {
     if (!isOpen) return;
-
-    // Sync already selected emails
-    setSelectedEmails(new Set(alreadySelectedEmails));
-    setSearchQuery('');
-    setSelectedRoleFilter('ALL');
 
     const loadDirectory = async () => {
       setLoading(true);
       try {
         const res = await api.get('/api/teams');
-        if (res.data && Array.isArray(res.data) && res.data.length > 0) {
+        if (res.data && Array.isArray(res.data)) {
           setMembers(res.data);
         } else {
-          setMembers(defaultFallbackMembers);
+          setMembers([]);
         }
       } catch (err) {
-        setMembers(defaultFallbackMembers);
+        setMembers([]);
       } finally {
         setLoading(false);
       }

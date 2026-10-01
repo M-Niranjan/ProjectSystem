@@ -85,25 +85,57 @@ export default function PremiumPdfViewerModal({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, totalPages, isFullscreen, onClose]);
 
-  // Load PDF.js library dynamically from reliable CDN
+  // Load PDF.js library dynamically from reliable CDN with timeout & interval detection
   const ensurePdfJsLoaded = useCallback(async (): Promise<any> => {
     if (window.pdfjsLib) {
       return window.pdfjsLib;
     }
 
     return new Promise((resolve, reject) => {
-      const existingScript = document.getElementById('pdfjs-cdn-script');
-      if (existingScript) {
-        existingScript.addEventListener('load', () => {
-          if (window.pdfjsLib) {
+      let settled = false;
+      const timeoutId = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          reject(new Error('PDF.js loading timed out, using native mode'));
+        }
+      }, 2500);
+
+      // Fast check if already loaded
+      const checkInterval = setInterval(() => {
+        if (window.pdfjsLib && !settled) {
+          settled = true;
+          clearInterval(checkInterval);
+          clearTimeout(timeoutId);
+          try {
             window.pdfjsLib.GlobalWorkerOptions.workerSrc =
               'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          } catch {}
+          resolve(window.pdfjsLib);
+        }
+      }, 50);
+
+      const existingScript = document.getElementById('pdfjs-cdn-script') as HTMLScriptElement | null;
+      if (existingScript) {
+        existingScript.addEventListener('load', () => {
+          if (!settled && window.pdfjsLib) {
+            settled = true;
+            clearInterval(checkInterval);
+            clearTimeout(timeoutId);
+            try {
+              window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            } catch {}
             resolve(window.pdfjsLib);
-          } else {
-            reject(new Error('PDF.js failed to initialize'));
           }
         });
-        existingScript.addEventListener('error', () => reject(new Error('Failed to load PDF engine')));
+        existingScript.addEventListener('error', () => {
+          if (!settled) {
+            settled = true;
+            clearInterval(checkInterval);
+            clearTimeout(timeoutId);
+            reject(new Error('Failed to load PDF engine'));
+          }
+        });
         return;
       }
 
@@ -112,15 +144,25 @@ export default function PremiumPdfViewerModal({
       script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
       script.async = true;
       script.onload = () => {
-        if (window.pdfjsLib) {
-          window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+        if (!settled && window.pdfjsLib) {
+          settled = true;
+          clearInterval(checkInterval);
+          clearTimeout(timeoutId);
+          try {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+              'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+          } catch {}
           resolve(window.pdfjsLib);
-        } else {
-          reject(new Error('PDF.js initialized without window.pdfjsLib'));
         }
       };
-      script.onerror = () => reject(new Error('Network error loading PDF viewer library'));
+      script.onerror = () => {
+        if (!settled) {
+          settled = true;
+          clearInterval(checkInterval);
+          clearTimeout(timeoutId);
+          reject(new Error('Network error loading PDF viewer library'));
+        }
+      };
       document.head.appendChild(script);
     });
   }, []);
@@ -136,24 +178,32 @@ export default function PremiumPdfViewerModal({
 
     const loadDocument = async () => {
       try {
-        const pdfjs = await ensurePdfJsLoaded();
+        const pdfjs = await Promise.race([
+          ensurePdfJsLoaded(),
+          new Promise((_, rej) => setTimeout(() => rej(new Error('PDF.js engine timeout')), 2500))
+        ]);
+
         const loadingTask = pdfjs.getDocument({
           url: pdfUrl,
           cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
           cMapPacked: true,
         });
 
-        const doc = await loadingTask.promise;
+        const doc = await Promise.race([
+          loadingTask.promise,
+          new Promise((_, rej) => setTimeout(() => rej(new Error('Document stream timeout')), 3500))
+        ]);
         if (!isMounted) return;
 
         setPdfDoc(doc);
         setTotalPages(doc.numPages || 1);
+        setViewMode('canvas');
         setLoading(false);
       } catch (err: any) {
-        console.warn('PDF.js canvas rendering notice, falling back to native responsive view:', err);
+        console.warn('PDF.js canvas rendering notice, using high-performance native browser PDF viewer:', err);
         if (!isMounted) return;
         setLoading(false);
-        // Fallback gracefully to native browser/webview viewMode
+        // Fallback gracefully and immediately to native browser/webview viewMode
         setViewMode('native');
       }
     };
@@ -432,6 +482,21 @@ export default function PremiumPdfViewerModal({
             >
               <RotateCw className="w-3.5 h-3.5" />
             </button>
+
+            {/* View Mode Switcher */}
+            <button
+              type="button"
+              onClick={() => setViewMode(m => m === 'canvas' ? 'native' : 'canvas')}
+              className={`px-2.5 py-1 rounded-lg border font-bold text-[10px] transition-all cursor-pointer flex items-center gap-1.5 ${
+                viewMode === 'native'
+                  ? 'bg-blue-600 text-white border-blue-500 shadow-sm'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50'
+              }`}
+              title="Toggle between Canvas Render and Native Browser Viewer"
+            >
+              <Eye className="w-3.5 h-3.5" />
+              <span>{viewMode === 'canvas' ? 'Browser View' : 'Canvas View'}</span>
+            </button>
           </div>
         </div>
 
@@ -453,13 +518,19 @@ export default function PremiumPdfViewerModal({
               <canvas ref={canvasRef} className="block max-w-none" />
             </div>
           ) : (
-            /* Native Embedded PDF View (Fallback) */
-            <div className="w-full h-full rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-white">
-              <iframe
-                src={`${pdfUrl}#page=${currentPage}&zoom=${Math.round(scale * 100)}`}
-                title={fileName}
-                className="w-full h-full border-none"
-              />
+            /* Native Embedded PDF View (Robust object + iframe) */
+            <div className="w-full h-full min-h-[520px] rounded-xl overflow-hidden border border-slate-300 dark:border-slate-700 bg-white flex flex-col">
+              <object
+                data={pdfUrl}
+                type="application/pdf"
+                className="w-full h-full flex-1 min-h-[520px]"
+              >
+                <iframe
+                  src={`${pdfUrl}#page=${currentPage}&zoom=${Math.round(scale * 100)}`}
+                  title={fileName}
+                  className="w-full h-full border-none min-h-[520px]"
+                />
+              </object>
             </div>
           )}
 

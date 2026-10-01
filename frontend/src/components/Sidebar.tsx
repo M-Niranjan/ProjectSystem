@@ -1,5 +1,5 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
-import { formatRoleName } from '../services/authRoles';
+import { formatRoleName, getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -28,6 +28,7 @@ import {
   Network,
   ScrollText,
   Settings2,
+  UserPlus,
   X
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -39,6 +40,7 @@ interface SidebarItem {
   name: string;
   view: string;
   icon: React.ComponentType<{ className?: string }>;
+  section?: string;
 }
 
 const VIEW_TO_PATH: Record<string, string> = {
@@ -70,43 +72,54 @@ const VIEW_TO_PATH: Record<string, string> = {
 };
 
 const getDashboardPath = (role?: string | null) => {
-  const r = String(role || '').toLowerCase();
-  if (r.includes('admin')) return '/admin/dashboard';
-  if (r.includes('manager') || r.includes('lead')) return '/team-lead/dashboard';
-  return '/employee/dashboard';
+  const normalized = normalizeRole(role);
+  if (!normalized) return '/dashboard';
+  return getDashboardPathForRole(normalized) || '/dashboard';
 };
 
 export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuthStore();
-  const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+  const { user } = useAuthStore();
+  const { sidebarExpanded, toggleSidebar, activeView, setView, setSignOutModalOpen } = useUIStore();
+  const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
 
   useEffect(() => {
-    const checkMobile = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
+    const checkScreen = () => {
+      const mobileOrTablet = window.innerWidth < 1024;
+      setIsMobileOrTablet(mobileOrTablet);
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    checkScreen();
+    window.addEventListener('resize', checkScreen);
+    return () => window.removeEventListener('resize', checkScreen);
   }, []);
 
-  // Lock background dashboard scroll when mobile sidebar drawer is open to keep background 100% constant
-  useScrollLock(isMobile && sidebarExpanded);
+  // Lock background dashboard scroll when mobile/tablet sidebar drawer is open to keep background 100% constant
+  useScrollLock(isMobileOrTablet && sidebarExpanded);
 
   const adminMenuItems: SidebarItem[] = [
-    { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
-    { name: 'User Directory', view: 'users', icon: Users },
+    // Dashboard section
+    { name: 'Overview', view: 'dashboard', icon: LayoutDashboard, section: 'Dashboard' },
+    { name: 'Analytics', view: 'reports', icon: BarChart3 },
+
+    // Projects & Tasks section
+    { name: 'Projects', view: 'projects', icon: FolderGit2, section: 'Projects & Tasks' },
+    { name: 'Tasks', view: 'tasks', icon: CheckSquare },
+
+    // Team section
+    { name: 'Team Leaders', view: 'teams', icon: Users, section: 'Team' },
+    { name: 'Employees', view: 'users', icon: Network },
+    { name: 'Invitations', view: 'teams', icon: UserPlus },
+
+    // Organization section
+    { name: 'Organization', view: 'organization', icon: Building2, section: 'Organization' },
+    { name: 'Documents', view: 'documents', icon: FileText },
+    { name: 'Activity', view: 'workspace-activity', icon: Clock },
+
+    // Settings section
+    { name: 'Organization Settings', view: 'organization', icon: Building2, section: 'Settings' },
     { name: 'Roles & Permissions', view: 'roles', icon: KeyRound },
-    { name: 'Org Settings', view: 'organization', icon: Building2 },
-    { name: 'Team Config', view: 'teams', icon: Network },
-    { name: 'Task Reviews', view: 'reviews', icon: Award },
-    { name: 'Audit Logs', view: 'audit-logs', icon: ScrollText },
-    { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
-    { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: Settings2 },
+    { name: 'Security', view: 'settings', icon: Shield },
   ];
 
   const teamLeadMenuItems: SidebarItem[] = [
@@ -148,16 +161,14 @@ export default function Sidebar() {
     : employeeMenuItems;
 
   const handleLogout = () => {
-    if (confirm('Are you sure you want to log out?')) {
-      logout();
-    }
+    setSignOutModalOpen(true);
   };
 
-  const showExpanded = isMobile || sidebarExpanded;
+  const isExpandedOrDrawer = sidebarExpanded;
 
   return (
     <>
-      {isMobile && sidebarExpanded && (
+      {isMobileOrTablet && sidebarExpanded && (
         <div 
           onClick={toggleSidebar} 
           onTouchMove={(e) => {
@@ -169,8 +180,8 @@ export default function Sidebar() {
 
       <motion.aside
         animate={
-          isMobile
-            ? { x: sidebarExpanded ? 0 : -280, width: 280 }
+          isMobileOrTablet
+            ? { x: sidebarExpanded ? 0 : -290, width: 280 }
             : { x: 0, width: sidebarExpanded ? 270 : 76 }
         }
         onWheel={(e) => e.stopPropagation()}
@@ -181,12 +192,12 @@ export default function Sidebar() {
           }
         }}
         className={`fixed top-0 bottom-0 left-0 flex flex-col justify-between pt-3.5 glass-panel rounded-none border-t-0 border-l-0 border-b-0 print:hidden overscroll-contain select-none h-[100dvh] max-h-[100dvh] overflow-hidden ${
-          isMobile ? 'z-50' : 'z-30'
+          isMobileOrTablet ? 'z-50 shadow-2xl' : 'z-30'
         }`}
       >
         {/* Brand Header */}
         <div className="shrink-0 px-4 pt-1 mb-3">
-          {showExpanded ? (
+          {isExpandedOrDrawer ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 overflow-hidden">
                 <div className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-xs">
@@ -206,7 +217,7 @@ export default function Sidebar() {
                 </motion.div>
               </div>
 
-              {isMobile ? (
+              {isMobileOrTablet ? (
                 <button
                   onClick={toggleSidebar}
                   title="Close Menu"
@@ -260,16 +271,21 @@ export default function Sidebar() {
               : (location.pathname === targetPath || location.pathname.startsWith(targetPath + '/'));
 
             return (
-              <button
-                key={item.view}
-                onClick={() => {
+              <React.Fragment key={`${item.name}-${item.view}`}>
+                {isExpandedOrDrawer && item.section && (
+                  <div className="pt-3 pb-1 px-3 text-[10px] font-mono uppercase tracking-wider font-bold text-slate-400 dark:text-zinc-500 select-none">
+                    {item.section}
+                  </div>
+                )}
+                <button
+                  onClick={() => {
                   if (location.pathname !== targetPath) {
                     navigate(targetPath);
                   }
-                  if (isMobile) toggleSidebar();
+                  if (isMobileOrTablet) toggleSidebar();
                 }}
                 className={`w-full flex items-center ${
-                  showExpanded ? 'gap-3 px-3 py-2 justify-start' : 'justify-center py-2'
+                  isExpandedOrDrawer ? 'gap-3 px-3 py-2 justify-start' : 'justify-center py-2'
                 } rounded-xl text-[14px] font-semibold border transition-all duration-200 ease-out cursor-pointer group relative ${
                   isActive
                     ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border-slate-200/80 dark:border-white/15 shadow-sm dark:shadow-black/30'
@@ -278,33 +294,34 @@ export default function Sidebar() {
               >
                 <Icon className={`w-4.5 h-4.5 flex-shrink-0 transition-colors duration-200 ${isActive ? 'text-slate-900 dark:text-white' : 'text-slate-500 dark:text-zinc-400 group-hover:text-slate-900 dark:group-hover:text-white'}`} />
 
-                {showExpanded && (
+                {isExpandedOrDrawer && (
                   <span className="truncate tracking-normal">
                     {item.name}
                   </span>
                 )}
 
-                {!showExpanded && !isMobile && (
+                {!isExpandedOrDrawer && !isMobileOrTablet && (
                   <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs font-medium rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
                     {item.name}
                   </div>
                 )}
               </button>
-            );
-          })}
+            </React.Fragment>
+          );
+        })}
         </nav>
 
         {/* Footer: User Profile & Logout - Strictly pinned and always visible above safe-area */}
         <div className="shrink-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
           {user && (
-            showExpanded ? (
+            isExpandedOrDrawer ? (
               <button
                 type="button"
                 onClick={() => {
                   if (location.pathname !== '/profile') {
                     navigate('/profile');
                   }
-                  if (isMobile) toggleSidebar();
+                  if (isMobileOrTablet) toggleSidebar();
                 }}
                 className={`w-full p-2 rounded-xl flex items-center gap-3 overflow-hidden border transition-all duration-200 ease-out text-left cursor-pointer group ${
                   location.pathname === '/profile'
@@ -328,7 +345,7 @@ export default function Sidebar() {
                 type="button"
                 onClick={() => {
                   setView('profile');
-                  if (isMobile) toggleSidebar();
+                  if (isMobileOrTablet) toggleSidebar();
                 }}
                 className="w-full flex justify-center group relative cursor-pointer"
                 title={`View Profile: ${user.name}`}
@@ -349,11 +366,11 @@ export default function Sidebar() {
             onClick={handleLogout}
             title="Sign Out"
             className={`w-full flex items-center ${
-              showExpanded ? 'gap-2.5 px-3 py-2 justify-start' : 'justify-center py-2'
+              isExpandedOrDrawer ? 'gap-2.5 px-3 py-2 justify-start' : 'justify-center py-2'
             } rounded-xl text-rose-500 hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 text-[13px] font-bold transition-all cursor-pointer group relative shadow-xs`}
           >
             <LogOut className="w-4 h-4 text-rose-500 flex-shrink-0" />
-            {showExpanded && (
+            {isExpandedOrDrawer && (
               <span>Sign Out</span>
             )}
           </button>

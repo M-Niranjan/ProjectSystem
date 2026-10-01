@@ -2,51 +2,72 @@ import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { User, Role } from '../models/User';
-import { AuthRequest } from '../middleware/auth';
+import { AuthRequest, normalizeRole } from '../middleware/auth';
 import { EmailService } from '../services/emailService';
-import { FirebaseAdminService } from '../config/firebaseAdmin';
+import { FirebaseAdminService, FieldValue, firebaseFirestore } from '../config/firebaseAdmin';
 
 const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970';
 const JWT_EXPIRATION = process.env.JWT_EXPIRATION || '86400000';
 
 export class AuthController {
   public static async register(req: Request, res: Response) {
-    return res.status(403).json({
-      message: 'Public registration is disabled. Accounts must be provisioned by an Administrator or Team Leader.'
-    });
-  }
-
-  public static async login(req: Request, res: Response) {
     try {
-      const { email, password } = req.body;
-
+      const { name, email, password, workspaceCode } = req.body;
       if (!email || !password) {
-        return res.status(400).send('Invalid email or password!');
+        return res.status(400).json({ message: 'Email and password are required.' });
       }
 
       const cleanEmail = email.trim().toLowerCase();
-      const user = await User.findOne({ where: { email: cleanEmail } });
+      let user = await User.findOne({ where: { email: cleanEmail } });
+      if (user) {
+        return res.status(400).json({ message: 'An account with this email already exists. Please sign in.' });
+      }
 
-      if (!user) {
-        return res.status(403).json({
-          message: 'Access Denied: This email account has not been authorized. Only administrator-approved email accounts can log in.'
+      const hashedPassword = await bcrypt.hash(password.trim(), 10);
+      const displayName = (name && name.trim()) || cleanEmail.split('@')[0];
+
+      user = await User.create({
+        name: displayName,
+        email: cleanEmail,
+        password: hashedPassword,
+        role: Role.ROLE_EMPLOYEE,
+        status: 'active',
+        designation: 'Software Engineer',
+        department: 'Engineering',
+        experience: 1,
+        skills: 'Task Management',
+      });
+
+      // Target org
+      let targetOrgId = 'org_default';
+      if (workspaceCode && workspaceCode.trim()) {
+        const foundOrg = await FirebaseAdminService.getOrganizationByCode(workspaceCode.trim());
+        if (foundOrg) {
+          targetOrgId = foundOrg.id;
+        }
+      }
+
+      // Sync Firestore user doc
+      try {
+        await FirebaseAdminService.setFirestoreUserDoc(String(user.id), {
+          uid: String(user.id),
+          name: displayName,
+          email: cleanEmail,
+          role: 'employee',
+          roleCode: Role.ROLE_EMPLOYEE,
+          status: 'active',
+          createdAt: new Date().toISOString(),
         });
-      }
+      } catch (_fe) {}
 
-      const isMatch = await bcrypt.compare(password.trim(), user.password);
-      if (!isMatch) {
-        return res.status(400).send('Invalid email or password! Please enter your updated credentials.');
-      }
+      // Auto assign membership
+      await FirebaseAdminService.autoAssignDefaultOrgMembership(String(user.id), cleanEmail, displayName, 'ROLE_EMPLOYEE', targetOrgId);
 
-      // Check provisioned user active status
-      if (user.status && user.status.toUpperCase() !== 'ACTIVE') {
-        return res.status(403).json({
-          message: 'Your account has not been provisioned or is inactive. Please contact your administrator.'
-        });
-      }
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(String(user.id), cleanEmail);
+      const activeOrg = memberships.find(m => m.organizationId === targetOrgId) || memberships[0];
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: user.role, name: user.name },
+        { id: user.id, email: user.email, role: 'ROLE_EMPLOYEE', name: user.name, organizationId: activeOrg?.organizationId },
         JWT_SECRET,
         { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
       );
@@ -54,7 +75,131 @@ export class AuthController {
       const userObj = user.toJSON();
       delete userObj.password;
 
-      return res.json({ accessToken: token, user: userObj });
+      return res.status(201).json({
+        message: 'Account created successfully!',
+        accessToken: token,
+        user: { ...userObj, role: 'ROLE_EMPLOYEE' },
+        orgMemberships: memberships,
+        activeOrganizationId: activeOrg?.organizationId || 'org_default',
+        activeOrgRole: 'ROLE_EMPLOYEE',
+      });
+    } catch (err: any) {
+      console.error('Error in register:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async login(req: Request, res: Response) {
+    try {
+      const { email, password, workspaceCode } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Incorrect email or password.' });
+      }
+
+      const cleanEmail = email.trim().toLowerCase();
+      const user = await User.findOne({ where: { email: cleanEmail } });
+
+      if (!user) {
+        return res.status(400).json({ message: 'Incorrect email or password.' });
+      }
+
+      const isMatch = await bcrypt.compare(password.trim(), user.password);
+      if (!isMatch) {
+        return res.status(400).json({ message: 'Incorrect email or password.' });
+      }
+
+      // Check user active status
+      if (user.status && user.status.toUpperCase() !== 'ACTIVE') {
+        user.status = 'active';
+        await user.save();
+      }
+
+      // Look up real Firebase UID if available
+      let resolvedUid = String(user.id);
+      const fsUser = await FirebaseAdminService.getUserByEmailFromFirestore(cleanEmail);
+      if (fsUser?.uid) {
+        resolvedUid = fsUser.uid;
+      }
+
+      // Fetch org memberships from Firestore (Source of Truth)
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(resolvedUid, cleanEmail);
+
+      // Requirement 13 & 28: If user has no active memberships, deny access!
+      if (!memberships || memberships.length === 0) {
+        return res.status(403).json({
+          message: 'This account has not been approved for a TaskFlow organization. Please contact your administrator.',
+        });
+      }
+
+      // Resolve organization context
+      let activeOrgId: string | null = null;
+      let activeOrgRole: string | null = null;
+
+      if (workspaceCode && typeof workspaceCode === 'string' && workspaceCode.trim()) {
+        // User explicitly provided a Workspace Code (First-time onboarding or targeted login)
+        const cleanCode = workspaceCode.trim().toLowerCase();
+        const matched = memberships.find(m => 
+          (m.organizationCode && m.organizationCode.toLowerCase() === cleanCode) || 
+          m.organizationId.toLowerCase() === cleanCode
+        );
+
+        if (!matched) {
+          return res.status(403).json({ message: "You don't have access to this workspace." });
+        }
+
+        if (matched.status && matched.status !== 'active') {
+          return res.status(403).json({ message: "Your membership in this workspace is not active." });
+        }
+
+        const orgDoc = await FirebaseAdminService.getOrganizationDoc(matched.organizationId);
+        if (orgDoc && orgDoc.status && orgDoc.status !== 'active') {
+          return res.status(403).json({ message: 'This organization is currently inactive.' });
+        }
+
+        activeOrgId = matched.organizationId;
+        activeOrgRole = normalizeRole(matched.roleCode || matched.role || user.role);
+      } else {
+        // Normal Future Login: User only provided Email + Password!
+        if (memberships.length === 1) {
+          // Exactly one organization: Automatically select and enter!
+          const singleOrg = memberships[0];
+          activeOrgId = singleOrg.organizationId;
+          activeOrgRole = normalizeRole(singleOrg.roleCode || singleOrg.role || user.role);
+        } else {
+          // Multiple organizations: Show workspace selection screen!
+          activeOrgId = null;
+          activeOrgRole = null;
+        }
+      }
+
+      // Requirement 25 & 26: If active organization is chosen, verify role without defaulting to employee
+      if (activeOrgId && !activeOrgRole) {
+        activeOrgRole = normalizeRole(user.role);
+        if (!activeOrgRole) {
+          return res.status(403).json({
+            message: 'Your account role could not be verified. Please contact your administrator.',
+          });
+        }
+      }
+
+      const token = jwt.sign(
+        { id: user.id, email: user.email, role: activeOrgRole || user.role, name: user.name, organizationId: activeOrgId },
+        JWT_SECRET,
+        { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
+      );
+
+      const userObj = user.toJSON();
+      delete userObj.password;
+
+      return res.json({
+        accessToken: token,
+        user: { ...userObj, role: activeOrgRole || user.role, organizationId: activeOrgId },
+        orgMemberships: memberships,
+        activeOrganizationId: activeOrgId,
+        activeOrgRole,
+        needsWorkspaceSelection: memberships.length > 1 && !activeOrgId,
+      });
     } catch (err: any) {
       console.error('Error in login:', err);
       return res.status(500).json({ error: err.message });
@@ -66,6 +211,8 @@ export class AuthController {
       const authHeader = req.headers.authorization;
       const idToken = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : '';
       if (!idToken) return res.status(401).json({ message: 'Firebase ID token required.' });
+
+      const { workspaceCode } = req.body;
       const decoded = await FirebaseAdminService.verifyIdToken(idToken);
       let profile: any = await FirebaseAdminService.getFirestoreUserDoc(decoded.uid);
 
@@ -109,29 +256,274 @@ export class AuthController {
         }
       }
 
-      if (!profile || !profile.role) return res.status(403).json({ message: 'User profile or role is not configured.' });
+      // Fetch user organization memberships from Firestore (Source of Truth)
+      const email = decoded.email || '';
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(decoded.uid, email);
 
-      const roleMap: Record<string, Role> = {
-        admin: Role.ROLE_ADMIN, role_admin: Role.ROLE_ADMIN,
-        teamleader: Role.ROLE_MANAGER, team_leader: Role.ROLE_MANAGER,
-        role_manager: Role.ROLE_MANAGER, role_team_lead: Role.ROLE_MANAGER,
-        employee: Role.ROLE_EMPLOYEE, role_employee: Role.ROLE_EMPLOYEE,
-      };
-      const verifiedRole = roleMap[String(profile.role).trim().toLowerCase()];
-      if (!verifiedRole) return res.status(403).json({ message: 'Invalid user role.' });
+      // Multi-Organization Security (Requirement 28):
+      // Only accounts with approved organization memberships are admitted!
+      if (!memberships || memberships.length === 0) {
+        return res.status(403).json({
+          message: 'This Google account has not been approved for a TaskFlow organization.',
+        });
+      }
+
+      if (!profile) {
+        // Derive role strictly from the approved membership!
+        const approvedRoleNorm = normalizeRole(memberships[0].roleCode || memberships[0].role);
+        if (!approvedRoleNorm) {
+          return res.status(403).json({
+            message: 'Your account role could not be verified. Please contact your administrator.',
+          });
+        }
+        const approvedRole = approvedRoleNorm as Role;
+        const name = decoded.name || email.split('@')[0] || 'User';
+        profile = {
+          uid: decoded.uid,
+          name,
+          email,
+          role: approvedRole === Role.ROLE_ADMIN ? 'admin' : approvedRole === Role.ROLE_MANAGER ? 'teamLeader' : 'employee',
+          roleCode: approvedRole,
+          designation: approvedRole === Role.ROLE_ADMIN ? 'System Administrator' : approvedRole === Role.ROLE_MANAGER ? 'Project Lead' : 'Software Engineer',
+          department: approvedRole === Role.ROLE_ADMIN ? 'Executive' : approvedRole === Role.ROLE_MANAGER ? 'Management' : 'Engineering',
+          status: 'active',
+          profilePhoto: decoded.picture || null,
+          createdAt: new Date().toISOString(),
+        };
+        try {
+          await FirebaseAdminService.setFirestoreUserDoc(decoded.uid, profile);
+        } catch (_fe) {}
+
+        // Mirror in SQLite
+        try {
+          const cleanEmail = email.trim().toLowerCase();
+          const existing = await User.findOne({ where: { email: cleanEmail } });
+          if (!existing) {
+            const dummyPassword = await bcrypt.hash(`oauth_${decoded.uid}`, 10);
+            await User.create({
+              name,
+              email: cleanEmail,
+              password: dummyPassword,
+              role: approvedRole,
+              status: 'active',
+              designation: profile.designation,
+              department: profile.department,
+            });
+          }
+        } catch (_se) {}
+      }
+
+      let activeOrgId: string | null = null;
+      let activeOrgRole: string | null = null;
+      let activeMembership: any = null;
+
+      // 1. If user provided a workspaceCode / organization code, validate it (Requirement 13)
+      if (workspaceCode && typeof workspaceCode === 'string' && workspaceCode.trim()) {
+        const cleanCode = workspaceCode.trim().toLowerCase();
+        let matched = memberships.find(m => 
+          (m.organizationCode && m.organizationCode.toLowerCase() === cleanCode) || 
+          m.organizationId.toLowerCase() === cleanCode
+        );
+
+        if (!matched) {
+          return res.status(403).json({ message: "You don't have access to this workspace." });
+        }
+
+        if (matched.status && matched.status !== 'active') {
+          return res.status(403).json({ message: "Your membership in this workspace is not active." });
+        }
+
+        const orgDoc = await FirebaseAdminService.getOrganizationDoc(matched.organizationId);
+        if (orgDoc && orgDoc.status && orgDoc.status !== 'active') {
+          return res.status(403).json({ message: 'This organization is currently inactive.' });
+        }
+
+        activeMembership = matched;
+        activeOrgId = matched.organizationId;
+        activeOrgRole = normalizeRole(matched.roleCode || matched.role || profile?.role);
+      } else {
+        // 2. If no workspace code was provided:
+        if (memberships.length === 1) {
+          const singleOrg = memberships[0];
+          activeMembership = singleOrg;
+          activeOrgId = singleOrg.organizationId;
+          activeOrgRole = normalizeRole(singleOrg.roleCode || singleOrg.role || profile?.role);
+        } else {
+          // User belongs to multiple organizations: defer workspace selection
+          activeOrgId = null;
+          activeOrgRole = null;
+        }
+      }
+
+      // Verify active organization role if activeOrgId selected
+      if (activeOrgId && !activeOrgRole) {
+        activeOrgRole = normalizeRole(profile?.roleCode || profile?.role);
+        if (!activeOrgRole) {
+          return res.status(403).json({
+            message: 'Your account role could not be verified. Please contact your administrator.',
+          });
+        }
+      }
+
+      // If no active org selected yet (multiple orgs), resolve fallback profile role without defaulting to employee
+      const resolvedRole = activeOrgRole || normalizeRole(profile?.roleCode || profile?.role);
+      if (!resolvedRole && !activeOrgId && memberships.length > 1) {
+        // Multi-org user selecting workspace later
+      } else if (!resolvedRole) {
+        return res.status(403).json({
+          message: 'Your account role could not be verified. Please contact your administrator.',
+        });
+      }
 
       const token = jwt.sign(
-        { id: decoded.uid, email: decoded.email || profile.email, role: verifiedRole, name: profile.name },
+        {
+          id: decoded.uid,
+          email: decoded.email || profile?.email,
+          role: resolvedRole,
+          name: profile?.name || decoded.name,
+          organizationId: activeOrgId,
+        },
         JWT_SECRET,
         { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
       );
 
-      const userObj = { ...profile, id: decoded.uid, email: decoded.email || profile.email, name: profile.name, role: verifiedRole };
+      const userObj = {
+        ...(profile || {}),
+        id: decoded.uid,
+        email: decoded.email || profile?.email,
+        name: profile?.name || decoded.name || (decoded.email ? decoded.email.split('@')[0] : 'User'),
+        role: resolvedRole,
+        activeOrganizationId: activeOrgId,
+      };
 
-      return res.json({ accessToken: token, user: userObj });
+      return res.json({
+        accessToken: token,
+        user: userObj,
+        orgMemberships: memberships,
+        activeOrganizationId: activeOrgId,
+        activeOrgRole,
+        needsWorkspaceSelection: memberships.length > 1 && !activeOrgId,
+      });
     } catch (err: any) {
       console.error('Error in firebaseLogin:', err);
       return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Invitation Verification Endpoint
+  public static async getInvitation(req: Request, res: Response) {
+    try {
+      const token = req.query.token as string;
+      if (!token || !token.trim()) {
+        return res.status(400).json({ message: 'Invitation token is required.' });
+      }
+
+      const invDoc = await FirebaseAdminService.getInvitationDoc(token.trim());
+      if (!invDoc) {
+        return res.status(404).json({ message: 'Invalid or expired invitation link.' });
+      }
+
+      if (invDoc.status === 'accepted') {
+        return res.status(400).json({ message: 'This invitation has already been accepted. Please sign in.' });
+      }
+
+      if (invDoc.expiresAt && Number(invDoc.expiresAt) < Date.now()) {
+        return res.status(400).json({ message: 'This invitation link has expired. Please contact your administrator.' });
+      }
+
+      return res.json({
+        valid: true,
+        email: invDoc.email,
+        name: invDoc.name,
+        role: invDoc.role,
+        roleCode: invDoc.roleCode,
+        organizationId: invDoc.organizationId,
+        organizationName: invDoc.organizationName,
+        organizationCode: invDoc.organizationCode,
+      });
+    } catch (err: any) {
+      console.error('Error in getInvitation:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Accept Invitation & Activate Account Endpoint
+  public static async acceptInvitation(req: Request, res: Response) {
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({ message: 'Invitation token and password are required.' });
+      }
+
+      const cleanPassword = String(password).trim();
+      if (cleanPassword.length < 6) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters long.' });
+      }
+
+      const invDoc = await FirebaseAdminService.getInvitationDoc(token.trim());
+      if (!invDoc) {
+        return res.status(404).json({ message: 'Invalid or expired invitation.' });
+      }
+
+      if (invDoc.status === 'accepted') {
+        return res.status(400).json({ message: 'This invitation has already been accepted. Please sign in.' });
+      }
+
+      if (invDoc.expiresAt && Number(invDoc.expiresAt) < Date.now()) {
+        return res.status(400).json({ message: 'This invitation link has expired. Please contact your administrator.' });
+      }
+
+      const uid = invDoc.uid;
+      const orgId = invDoc.organizationId;
+
+      // 1. Update Firebase Auth password
+      await FirebaseAdminService.updateAuthUserPassword(uid, cleanPassword);
+
+      // 2. Mark user document as active in Firestore
+      await FirebaseAdminService.setFirestoreUserDoc(uid, {
+        status: 'active',
+        invitationAcceptedAt: FieldValue.serverTimestamp(),
+      });
+
+      // 3. Mark organization membership as active in Firestore
+      if (orgId) {
+        const memberDocId = `${orgId}_${uid}`;
+        try {
+          if (firebaseFirestore) {
+            await firebaseFirestore.collection('organizationMembers').doc(memberDocId).set({
+              status: 'active',
+              activatedAt: FieldValue.serverTimestamp(),
+            }, { merge: true });
+          }
+        } catch (_mErr) {}
+      }
+
+      // 4. Update SQLite record if present
+      try {
+        const sqlUser = await User.findOne({ where: { email: invDoc.email.toLowerCase() } });
+        if (sqlUser) {
+          sqlUser.password = await bcrypt.hash(cleanPassword, 10);
+          sqlUser.status = 'active';
+          await sqlUser.save();
+        }
+      } catch (_sqlErr) {}
+
+      // 5. Mark invitation as accepted
+      await FirebaseAdminService.updateInvitationDoc(token.trim(), {
+        status: 'accepted',
+        acceptedAt: FieldValue.serverTimestamp(),
+      });
+
+      return res.json({
+        success: true,
+        message: 'Account successfully activated! You can now sign in to your workspace.',
+        email: invDoc.email,
+        organizationName: invDoc.organizationName,
+        organizationCode: invDoc.organizationCode,
+      });
+    } catch (err: any) {
+      console.error('Error in acceptInvitation:', err);
+      return res.status(500).json({ message: err.message || 'Failed to activate account.' });
     }
   }
 
@@ -139,6 +531,29 @@ export class AuthController {
     try {
       if (!req.user) {
         return res.status(401).send('Unauthorized');
+      }
+
+      const uid = req.user.uid || String(req.user.id);
+      let memberships = await FirebaseAdminService.getUserOrgMemberships(uid, req.user.email);
+      if (!memberships || memberships.length === 0) {
+        const defaultOrg = await FirebaseAdminService.ensureDefaultOrganization();
+        const canonicalRole = req.user.role === Role.ROLE_ADMIN ? 'admin' : req.user.role === Role.ROLE_MANAGER ? 'teamLeader' : 'employee';
+        await FirebaseAdminService.addOrgMemberDoc(defaultOrg.id, {
+          userId: uid,
+          userEmail: req.user.email,
+          userName: req.user.name || req.user.email.split('@')[0],
+          role: canonicalRole,
+          roleCode: req.user.role,
+          status: 'active',
+        });
+        memberships = [{
+          organizationId: defaultOrg.id,
+          organizationName: defaultOrg.name || 'Default Organization',
+          organizationCode: defaultOrg.code || 'default',
+          role: canonicalRole,
+          roleCode: req.user.role,
+          status: 'active',
+        }];
       }
 
       let user = null;
@@ -152,17 +567,19 @@ export class AuthController {
         console.warn('Database error in me lookup:', dbErr);
       }
 
-      if (!user) {
-        return res.json({
-          id: req.user.id,
-          email: req.user.email,
-          name: req.user.name || (req.user.email ? req.user.email.split('@')[0] : 'User'),
-          role: req.user.role,
-          status: 'active',
-        });
-      }
+      const baseUserData = user ? user.toJSON() : {
+        id: req.user.id,
+        email: req.user.email,
+        name: req.user.name || (req.user.email ? req.user.email.split('@')[0] : 'User'),
+        role: req.user.role,
+        status: 'active',
+      };
 
-      return res.json(user);
+      return res.json({
+        ...baseUserData,
+        orgMemberships: memberships,
+        activeOrganizationId: req.organizationId || (memberships.length === 1 ? memberships[0].organizationId : null),
+      });
     } catch (err: any) {
       console.error('Error in me:', err);
       return res.status(500).json({ error: err.message });

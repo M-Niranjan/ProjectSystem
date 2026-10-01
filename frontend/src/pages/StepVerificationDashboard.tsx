@@ -32,6 +32,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { formatRoleName } from '../services/authRoles';
 import { useScrollLock } from '../hooks/useScrollLock';
+import api from '../services/api';
 import {
   useStepVerificationStore,
   TaskStep,
@@ -60,41 +61,6 @@ interface ParentTaskMeta {
   milestones: { step: string; name: string; status: 'APPROVED' | 'ACTIVE' | 'LOCKED' }[];
 }
 
-const PARENT_TASKS: Record<number, ParentTaskMeta> = {
-  201: {
-    id: 201,
-    title: 'Q3 Platform Architecture & Launch',
-    project: 'Prologue SaaS (Task ID: #201)',
-    shortProject: 'Prologue SaaS',
-    owner: 'Niranjan (Admin)',
-    startDate: '2026-08-20',
-    dueDate: '2026-09-05',
-    currentStageText: 'Stage 2 of 4: Component Integration',
-    milestones: [
-      { step: '01', name: 'Planning & Specs', status: 'APPROVED' },
-      { step: '02', name: 'Component Integration', status: 'ACTIVE' },
-      { step: '03', name: 'Asset & QA Review', status: 'LOCKED' },
-      { step: '04', name: 'Final Launch', status: 'LOCKED' },
-    ]
-  },
-  102: {
-    id: 102,
-    title: 'Mobile Viewport & Auth Session Sync',
-    project: 'Core Platform (Task ID: #102)',
-    shortProject: 'Core Platform',
-    owner: 'Vinay (Team Lead)',
-    startDate: '2026-08-22',
-    dueDate: '2026-09-08',
-    currentStageText: 'Stage 2 of 4: Auth Middleware',
-    milestones: [
-      { step: '01', name: 'UI Wireframes', status: 'APPROVED' },
-      { step: '02', name: 'Auth Middleware', status: 'ACTIVE' },
-      { step: '03', name: 'Smoke Testing', status: 'LOCKED' },
-      { step: '04', name: 'Staging Release', status: 'LOCKED' },
-    ]
-  }
-};
-
 export default function StepVerificationDashboard() {
   const { user } = useAuthStore();
   const { showToast } = useUIStore();
@@ -103,10 +69,10 @@ export default function StepVerificationDashboard() {
   const isTeamLeader = !user || user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_MANAGER';
 
   // Active Selected Parent Task for the Stepper Ribbon (or 'ALL')
-  const [selectedTaskId, setSelectedTaskId] = useState<number | 'ALL'>(201);
+  const [selectedTaskId, setSelectedTaskId] = useState<number | 'ALL'>('ALL');
 
-  // Sample tasks list to render verification requests
-  const sampleTaskIds = [201, 102];
+  // Real tasks from API
+  const [tasks, setTasks] = useState<any[]>([]);
   const [allTaskSteps, setAllTaskSteps] = useState<TaskStep[]>([]);
   const [auditLogs, setAuditLogs] = useState<StepAuditLog[]>([]);
   const [notifications, setNotifications] = useState<StepNotification[]>([]);
@@ -143,7 +109,7 @@ export default function StepVerificationDashboard() {
       fileName: name,
       fileSize: opts?.fileSize || '2.4 MB',
       version: opts?.version || 'Version 1',
-      uploadedBy: opts?.uploadedBy || 'Ram',
+      uploadedBy: opts?.uploadedBy || 'Member',
       uploadedAt: opts?.uploadedAt || new Date().toISOString(),
       isVerified: opts?.isVerified ?? true,
     });
@@ -152,22 +118,33 @@ export default function StepVerificationDashboard() {
   // Freeze background completely when step inspection modal is open
   useScrollLock(!!inspectingStep || pdfViewerState.isOpen);
 
-  const loadData = () => {
-    let combinedSteps: TaskStep[] = [];
-    sampleTaskIds.forEach((id) => {
-      combinedSteps = [...combinedSteps, ...getTaskSteps(id)];
-    });
+  const loadData = async () => {
+    try {
+      const res = await api.get('/api/tasks');
+      const taskList = res.data || [];
+      setTasks(taskList);
 
-    // Role-based scoping: Employees see only their assigned steps; TL sees all steps
-    if (user && !isTeamLeader) {
-      combinedSteps = combinedSteps.filter(
-        (s) => s.evidence?.submittedBy?.id === user?.id || s.evidence?.submittedBy?.name === user?.name
-      );
+      let combinedSteps: TaskStep[] = [];
+      taskList.forEach((t: any) => {
+        combinedSteps = [...combinedSteps, ...getTaskSteps(t.id)];
+      });
+
+      // Role-based scoping: Employees see only their assigned steps; TL sees all steps
+      if (user && !isTeamLeader) {
+        combinedSteps = combinedSteps.filter(
+          (s) => s.evidence?.submittedBy?.id === user?.id || s.evidence?.submittedBy?.name === user?.name
+        );
+      }
+
+      setAllTaskSteps(combinedSteps);
+      setAuditLogs(getStepAuditLogs());
+      setNotifications(getStepNotifications(user?.role));
+    } catch (err) {
+      setTasks([]);
+      setAllTaskSteps([]);
+      setAuditLogs(getStepAuditLogs());
+      setNotifications(getStepNotifications(user?.role));
     }
-
-    setAllTaskSteps(combinedSteps);
-    setAuditLogs(getStepAuditLogs());
-    setNotifications(getStepNotifications(user?.role));
   };
 
   useEffect(() => {
@@ -197,7 +174,42 @@ export default function StepVerificationDashboard() {
   const pendingStepsCount = allTaskSteps.filter((s) => s.status === 'PENDING_APPROVAL' || s.status === 'SUBMITTED_FOR_REVIEW').length;
   const changesRequestedCount = allTaskSteps.filter((s) => s.status === 'CHANGES_REQUESTED').length;
 
-  const currentTaskMeta = selectedTaskId !== 'ALL' ? PARENT_TASKS[selectedTaskId] : PARENT_TASKS[201];
+  const getParentTaskMeta = (task: any): ParentTaskMeta => {
+    const steps = getTaskSteps(task.id);
+    const approvedCount = steps.filter((s) => s.status === 'APPROVED_COMPLETED').length;
+    
+    const milestones = steps.length > 0 
+      ? steps.map((s) => ({
+          step: s.stepNumber < 10 ? `0${s.stepNumber}` : `${s.stepNumber}`,
+          name: s.title,
+          status: s.status === 'APPROVED_COMPLETED' ? ('APPROVED' as const) : s.status === 'LOCKED' ? ('LOCKED' as const) : ('ACTIVE' as const),
+        }))
+      : [
+          { step: '01', name: 'Planning & Setup', status: 'ACTIVE' as const },
+          { step: '02', name: 'Execution', status: 'LOCKED' as const },
+          { step: '03', name: 'Review & QA', status: 'LOCKED' as const },
+          { step: '04', name: 'Final Sign-off', status: 'LOCKED' as const },
+        ];
+
+    const currentStageText = steps.length > 0 
+      ? `Stage ${Math.min(approvedCount + 1, steps.length)} of ${steps.length}: ${steps.find((s) => s.status !== 'APPROVED_COMPLETED')?.title || 'Completed'}`
+      : 'Sequential Milestones Active';
+
+    return {
+      id: task.id,
+      title: task.title,
+      project: task.project?.name || 'Workspace Project',
+      shortProject: task.project?.name || 'Project',
+      owner: task.assignee?.name || 'Unassigned',
+      startDate: task.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : '—',
+      dueDate: task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '—',
+      currentStageText,
+      milestones,
+    };
+  };
+
+  const selectedTaskObj = tasks.find((t) => t.id === selectedTaskId);
+  const currentTaskMeta = selectedTaskObj ? getParentTaskMeta(selectedTaskObj) : tasks.length > 0 ? getParentTaskMeta(tasks[0]) : null;
 
   // Handle Team Leader Verification Action
   const handleVerifyAction = async (action: 'APPROVE' | 'REQUEST_CHANGES' | 'REJECT') => {
@@ -232,6 +244,34 @@ export default function StepVerificationDashboard() {
     }
   };
 
+  const resolveAttachmentUrl = (attName: string, step?: TaskStep) => {
+    if (!attName) return '';
+    if (attName.startsWith('http://') || attName.startsWith('https://') || attName.startsWith('blob:') || attName.startsWith('data:')) {
+      return attName;
+    }
+
+    // 1. Check if step has stored evidence downloadUrl or if taskSubmissions has it in localStorage
+    if (step) {
+      try {
+        const localKey = `task_pdf_sub_${step.taskId}_${step.id}`;
+        const cached = localStorage.getItem(localKey);
+        if (cached) {
+          const subs = JSON.parse(cached);
+          const match = subs.find((s: any) => s.fileName === attName || s.storedFileName === attName);
+          if (match?.downloadUrl) return match.downloadUrl;
+        }
+      } catch {}
+    }
+
+    // 2. Direct public file match for Architecture_v1.2.pdf
+    if (attName === 'Architecture_v1.2.pdf') {
+      return '/Architecture_v1.2.pdf';
+    }
+
+    const clean = attName.replace(/^\/uploads\//, '').replace(/^\//, '');
+    return `/uploads/${clean}`;
+  };
+
   const getDeliverableBadge = (step: TaskStep) => {
     if (step.evidence?.attachments && step.evidence.attachments.length > 0) {
       const att = step.evidence.attachments[0];
@@ -244,22 +284,23 @@ export default function StepVerificationDashboard() {
       return (
         <div
           onClick={(e) => {
+            e.stopPropagation();
+            const fileUrl = resolveAttachmentUrl(att, step);
             if (isPdf) {
-              e.stopPropagation();
               openPdfViewer(
-                att === 'Architecture_v1.2.pdf' ? '/Architecture_v1.2.pdf' : `/uploads/${att}`,
+                fileUrl,
                 att,
                 {
                   uploadedBy: step.evidence?.submittedBy?.name || 'Ram',
                   isVerified: step.status === 'APPROVED_COMPLETED',
                 }
               );
+            } else {
+              window.open(fileUrl, '_blank', 'noopener,noreferrer');
             }
           }}
-          className={`group/file inline-flex items-center gap-2.5 py-1 text-left ${
-            isPdf ? 'cursor-pointer' : ''
-          }`}
-          title={isPdf ? `Click to inspect ${att}` : att}
+          className="group/file inline-flex items-center gap-2.5 py-1 text-left cursor-pointer"
+          title={`Click to view ${att}`}
         >
           <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-[10px] font-mono font-black shrink-0 transition-transform group-hover/file:scale-105 ${
             isPdf ? 'bg-rose-500/10 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400' :
@@ -270,9 +311,7 @@ export default function StepVerificationDashboard() {
             {isPdf ? 'PDF' : isFig ? 'FIG' : isDoc ? 'DOC' : isZip ? 'ZIP' : 'FILE'}
           </span>
           <div className="flex flex-col min-w-0">
-            <span className={`truncate max-w-[155px] text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors ${
-              isPdf ? 'group-hover/file:text-blue-600 dark:group-hover/file:text-blue-400 group-hover/file:underline' : ''
-            }`}>
+            <span className="truncate max-w-[155px] text-xs font-semibold text-slate-800 dark:text-slate-200 transition-colors group-hover/file:text-blue-600 dark:group-hover/file:text-blue-400 group-hover/file:underline">
               {att}
             </span>
             <span className="text-[10px] text-slate-400 font-mono tracking-tight">{fileSize}</span>
@@ -399,25 +438,31 @@ export default function StepVerificationDashboard() {
   };
 
   const renderTaskSwitcherPills = () => (
-    <div className="flex items-center gap-1 shrink-0">
-      {[
-        { id: 201 as const, label: 'Task #201' },
-        { id: 102 as const, label: 'Task #102' },
-        { id: 'ALL' as const, label: 'All Pipelines', icon: Layers },
-      ].map((tab) => {
-        const isSelected = selectedTaskId === tab.id;
+    <div className="flex items-center gap-1 shrink-0 overflow-x-auto max-w-full">
+      <button
+        onClick={() => setSelectedTaskId('ALL')}
+        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
+          selectedTaskId === 'ALL'
+            ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
+            : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
+        }`}
+      >
+        <Layers className="w-3.5 h-3.5" />
+        <span>All Pipelines</span>
+      </button>
+      {tasks.map((task) => {
+        const isSelected = selectedTaskId === task.id;
         return (
           <button
-            key={String(tab.id)}
-            onClick={() => setSelectedTaskId(tab.id)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+            key={String(task.id)}
+            onClick={() => setSelectedTaskId(task.id)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer flex items-center gap-1.5 whitespace-nowrap ${
               isSelected
                 ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm font-bold'
                 : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5'
             }`}
           >
-            {tab.icon && <tab.icon className="w-3.5 h-3.5" />}
-            <span>{tab.label}</span>
+            <span>Task #{task.id}</span>
           </button>
         );
       })}
@@ -425,7 +470,7 @@ export default function StepVerificationDashboard() {
   );
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       
       {/* ========================================================================= */}
       {/* TOP COMMAND HEADER */}
@@ -460,7 +505,19 @@ export default function StepVerificationDashboard() {
       {/* ========================================================================= */}
       {/* 1. TOP PARENT TASK & SEQUENTIAL MILESTONE STEPPER */}
       {/* ========================================================================= */}
-      {selectedTaskId === 'ALL' ? (
+      {tasks.length === 0 ? (
+        <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-8 sm:p-12 text-center bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md space-y-4">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
+            <ShieldCheck className="w-7 h-7" />
+          </div>
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+            No Step Verification Pipelines Yet
+          </h3>
+          <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            Sequential milestone tracking will appear here once tasks are created. Team members submit proof of work for each step, and Team Leaders sign off to unlock subsequent stages.
+          </p>
+        </div>
+      ) : selectedTaskId === 'ALL' ? (
         <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-5 bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md space-y-6">
           {/* Top Row: Title, Summary & Switcher */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
@@ -470,7 +527,7 @@ export default function StepVerificationDashboard() {
                   All Active Pipelines
                 </h2>
                 <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">
-                  2 Active Tracks
+                  {tasks.length} Active {tasks.length === 1 ? 'Track' : 'Tracks'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 dark:text-slate-400">
@@ -486,59 +543,61 @@ export default function StepVerificationDashboard() {
           <div className="flex flex-wrap items-center gap-6 sm:gap-10 py-1 text-xs">
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Active Tracks</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">2 Projects</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">{tasks.length} Tasks</span>
             </div>
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 block">Milestones</span>
-              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">8 Gated Stages</span>
+              <span className="text-sm font-bold text-slate-900 dark:text-white mt-0.5 block">{allTaskSteps.length} Gated Stages</span>
             </div>
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 dark:text-emerald-400 block">Verified</span>
-              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">2 Completed</span>
+              <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-0.5 block">{approvedStepsCount} Completed</span>
             </div>
             <div className="h-6 w-[1px] bg-slate-200 dark:bg-slate-800 hidden sm:block" />
             <div>
               <span className="text-[10px] uppercase font-bold tracking-wider text-amber-500 dark:text-amber-400 block">Review Ready</span>
-              <span className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">1 Deliverable</span>
+              <span className="text-sm font-bold text-amber-600 dark:text-amber-400 mt-0.5 block">{pendingStepsCount} Deliverables</span>
             </div>
           </div>
 
-          {/* Both Pipelines rendered cleanly with featherlight stepper */}
+          {/* Pipelines rendered cleanly with featherlight stepper */}
           <div className="divide-y divide-slate-200/60 dark:divide-slate-800/60 pt-1">
-            {Object.values(PARENT_TASKS).map((task) => (
-              <div key={task.id} className="py-4 first:pt-0 last:pb-0 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
-                      #{task.id}
-                    </span>
-                    <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                      {task.title}
-                    </h3>
-                    <span className="text-xs text-slate-400">
-                      ({task.shortProject || task.project})
-                    </span>
-                    <span className="text-xs text-slate-500">• Owner: {task.owner}</span>
+            {tasks.map((task) => {
+              const meta = getParentTaskMeta(task);
+              return (
+                <div key={task.id} className="py-4 first:pt-0 last:pb-0 space-y-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                        #{meta.id}
+                      </span>
+                      <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                        {meta.title}
+                      </h3>
+                      <span className="text-xs text-slate-400">
+                        ({meta.shortProject || meta.project})
+                      </span>
+                      <span className="text-xs text-slate-500">• Owner: {meta.owner}</span>
+                    </div>
+
+                    <button
+                      onClick={() => setSelectedTaskId(task.id)}
+                      className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto"
+                    >
+                      <span>Focus Track</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
                   </div>
 
-                  <button
-                    onClick={() => setSelectedTaskId(task.id)}
-                    className="inline-flex items-center gap-1 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer self-start sm:self-auto"
-                  >
-                    <span>Focus Track</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
+                  {renderMilestoneStepperRail(meta)}
                 </div>
-
-                {renderMilestoneStepperRail(task)}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      ) : (
-        /* Single Focused Pipeline View (Task #201 or Task #102) */
+      ) : currentTaskMeta ? (
         <div className="border border-slate-200/60 dark:border-slate-800/50 rounded-2xl p-5 bg-white/40 dark:bg-[#07080c]/30 backdrop-blur-md space-y-5">
           {/* Parent Task Metadata Bar */}
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-200/50 dark:border-slate-800/50 pb-4">
@@ -566,7 +625,7 @@ export default function StepVerificationDashboard() {
                 <span>•</span>
                 <span>Timeline: <strong className="text-slate-700 dark:text-slate-300 font-medium">{currentTaskMeta.startDate} → {currentTaskMeta.dueDate}</strong></span>
                 <span>•</span>
-                <span className="text-blue-600 dark:text-cyan-400 font-medium">{currentTaskMeta.currentStageText || 'Stage 2 In Progress'}</span>
+                <span className="text-blue-600 dark:text-cyan-400 font-medium">{currentTaskMeta.currentStageText || 'In Progress'}</span>
               </div>
             </div>
 
@@ -577,7 +636,7 @@ export default function StepVerificationDashboard() {
           {/* Focused Stepper Nodes */}
           {renderMilestoneStepperRail(currentTaskMeta)}
         </div>
-      )}
+      ) : null}
 
       {/* ========================================================================= */}
       {/* 2. COMMAND TOOLBAR: FILTER TABS & SEARCH */}
@@ -667,173 +726,179 @@ export default function StepVerificationDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/40 text-slate-700 dark:text-slate-300">
-                {filteredSteps.map((step) => {
-                  const isApproved = step.status === 'APPROVED_COMPLETED';
-                  const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
-                  const isChanges = step.status === 'CHANGES_REQUESTED';
-                  const isLocked = step.status === 'LOCKED';
-                  const progressPct = isApproved ? 100 : isPending ? 65 : isChanges ? 40 : 0;
+                {filteredSteps.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-12 text-center text-slate-400 dark:text-slate-500">
+                      <ShieldCheck className="w-8 h-8 mx-auto mb-2 opacity-30 text-blue-500" />
+                      <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No verification steps found</p>
+                      <p className="text-[11px] text-slate-400 mt-0.5">Steps will appear as tasks progress through their verification stages.</p>
+                    </td>
+                  </tr>
+                ) : (
+                  filteredSteps.map((step) => {
+                    const isApproved = step.status === 'APPROVED_COMPLETED';
+                    const isPending = step.status === 'PENDING_APPROVAL' || step.status === 'SUBMITTED_FOR_REVIEW';
+                    const isChanges = step.status === 'CHANGES_REQUESTED';
+                    const isLocked = step.status === 'LOCKED';
+                    const progressPct = isApproved ? 100 : isPending ? 65 : isChanges ? 40 : 0;
 
-                  return (
-                    <tr
-                      key={step.id}
-                      className={`hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group ${
-                        isPending ? 'bg-blue-500/[0.02] dark:bg-blue-500/[0.04]' : ''
-                      }`}
-                    >
-                      {/* 1. Step No. */}
-                      <td className="py-3.5 px-5">
-                        <div className="flex items-center gap-2">
-                          <div
-                            className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 transition-all ${
-                              isApproved
-                                ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
-                                : isPending
-                                ? 'bg-blue-500/10 text-blue-600 dark:text-cyan-400 font-extrabold'
-                                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400'
-                            }`}
-                          >
-                            {isApproved ? (
-                              <Check className="w-3.5 h-3.5 stroke-[2.5]" />
-                            ) : isLocked ? (
-                              <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
-                            ) : (
-                              <span>{`0${step.stepNumber}`}</span>
-                            )}
+                    return (
+                      <tr
+                        key={step.id}
+                        className={`hover:bg-slate-50/70 dark:hover:bg-white/[0.02] transition-colors group ${
+                          isPending ? 'bg-blue-500/[0.02] dark:bg-blue-500/[0.04]' : ''
+                        }`}
+                      >
+                        {/* 1. Step No. */}
+                        <td className="py-3.5 px-5">
+                          <div className="flex items-center gap-2">
+                            <div
+                              className={`w-7 h-7 rounded-full flex items-center justify-center font-mono text-xs font-bold shrink-0 transition-all ${
+                                isApproved
+                                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+                                  : isPending
+                                  ? 'bg-blue-500/10 text-blue-600 dark:text-cyan-400 font-extrabold'
+                                  : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400'
+                              }`}
+                            >
+                              {isApproved ? (
+                                <Check className="w-3.5 h-3.5 stroke-[2.5]" />
+                              ) : isLocked ? (
+                                <Lock className="w-3 h-3 text-slate-400 dark:text-slate-500" />
+                              ) : (
+                                <span>{`0${step.stepNumber}`}</span>
+                              )}
+                            </div>
+                            <span className="font-mono text-xs text-slate-400">
+                              {getStepNumberBadge(step)}
+                            </span>
                           </div>
-                          <span className="font-mono text-xs text-slate-400">
-                            {getStepNumberBadge(step)}
-                          </span>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* 2. Task Name & Objective */}
-                      <td className="py-3.5 px-4">
-                        <div className="space-y-0.5">
-                          {selectedTaskId === 'ALL' && (
-                            <span className="text-[10px] font-mono text-blue-600 dark:text-cyan-400 block">
-                              {step.taskId === 201 ? 'Task #201 • Prologue SaaS' : 'Task #102 • Core Platform'}
+                        {/* 2. Task Name & Objective */}
+                        <td className="py-3.5 px-4">
+                          <div className="space-y-0.5">
+                            {selectedTaskId === 'ALL' && (
+                              <span className="text-[10px] font-mono text-blue-600 dark:text-cyan-400 block">
+                                Task #{step.taskId} {tasks.find(t => t.id === step.taskId)?.title ? `• ${tasks.find(t => t.id === step.taskId)?.title}` : ''}
+                              </span>
+                            )}
+                            <h4 className="font-semibold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                              {step.title}
+                            </h4>
+                            <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
+                              {step.objective}
+                            </p>
+                          </div>
+                        </td>
+
+                        {/* 3. Deliverables (Unboxed file link) */}
+                        <td className="py-3.5 px-4">
+                          {getDeliverableBadge(step)}
+                        </td>
+
+                        {/* 4. Assigned Engineer (Unboxed avatar + text) */}
+                        <td className="py-3.5 px-4">
+                          {step.evidence ? (
+                            <div className="flex items-center gap-2.5">
+                              <img
+                                src={getAvatarByName(step.evidence.submittedBy.name)}
+                                alt={step.evidence.submittedBy.name}
+                                onError={(e) => {
+                                  (e.target as HTMLElement).style.display = 'none';
+                                }}
+                                className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
+                              />
+                              <div className="min-w-0 text-left">
+                                <span className="font-semibold text-slate-900 dark:text-white text-xs block truncate leading-tight">
+                                  {step.evidence.submittedBy.name}
+                                </span>
+                                <span className="text-[10px] text-slate-400 font-medium block leading-tight">
+                                  {formatRoleName(step.evidence.submittedBy.role, 'title') || 'Engineer'}
+                                </span>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
+                              <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold">
+                                ?
+                              </div>
+                              <span className="text-xs italic">Unassigned</span>
+                            </div>
+                          )}
+                        </td>
+
+                        {/* 5. Progress Micro Bar */}
+                        <td className="py-3.5 px-4 text-center">
+                          <div className="inline-flex items-center justify-center gap-2.5">
+                            <div className="w-16 sm:w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
+                              <div
+                                className={`h-full rounded-full transition-all duration-500 ${
+                                  isApproved
+                                    ? 'bg-emerald-500'
+                                    : isPending
+                                    ? 'bg-blue-500'
+                                    : isChanges
+                                    ? 'bg-amber-500'
+                                    : 'bg-slate-300 dark:bg-slate-700'
+                                }`}
+                                style={{ width: `${progressPct}%` }}
+                              />
+                            </div>
+                            <span className="text-xs font-mono font-medium text-slate-600 dark:text-slate-400 w-7 text-right shrink-0">
+                              {progressPct}%
+                            </span>
+                          </div>
+                        </td>
+
+                        {/* 6. Status (Glowing Dot + Text, Unboxed) */}
+                        <td className="py-3.5 px-4 text-center">
+                          {isApproved ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
+                              <span>Verified</span>
+                            </span>
+                          ) : isPending ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
+                              <span>Needs Review</span>
+                            </span>
+                          ) : isChanges ? (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
+                              <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
+                              <span>Revisions</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-500">
+                              <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
+                              <span>Locked</span>
                             </span>
                           )}
-                          <h4 className="font-semibold text-slate-900 dark:text-white text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                            {step.title}
-                          </h4>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 line-clamp-1 leading-snug">
-                            {step.objective}
-                          </p>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* 3. Deliverables (Unboxed file link) */}
-                      <td className="py-3.5 px-4">
-                        {getDeliverableBadge(step)}
-                      </td>
-
-                      {/* 4. Assigned Engineer (Unboxed avatar + text) */}
-                      <td className="py-3.5 px-4">
-                        {step.evidence ? (
-                          <div className="flex items-center gap-2.5">
-                            <img
-                              src={getAvatarByName(step.evidence.submittedBy.name)}
-                              alt={step.evidence.submittedBy.name}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = 'none';
-                              }}
-                              className="w-7 h-7 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
-                            />
-                            <div className="min-w-0 text-left">
-                              <span className="font-semibold text-slate-900 dark:text-white text-xs block truncate leading-tight">
-                                {step.evidence.submittedBy.name}
-                              </span>
-                              <span className="text-[10px] text-slate-400 font-medium block leading-tight">
-                                {step.evidence.submittedBy.name === 'Ram'
-                                  ? 'Lead Architect'
-                                  : step.evidence.submittedBy.name === 'Mallu'
-                                  ? 'Senior Engineer'
-                                  : 'Engineer'}
-                              </span>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex items-center gap-2 text-slate-400 dark:text-slate-500">
-                            <div className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-[10px] font-bold">
-                              ?
-                            </div>
-                            <span className="text-xs italic">Unassigned</span>
-                          </div>
-                        )}
-                      </td>
-
-                      {/* 5. Progress Micro Bar */}
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center justify-center gap-2.5">
-                          <div className="w-16 sm:w-20 h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden shrink-0">
-                            <div
-                              className={`h-full rounded-full transition-all duration-500 ${
-                                isApproved
-                                  ? 'bg-emerald-500'
-                                  : isPending
-                                  ? 'bg-blue-500'
-                                  : isChanges
-                                  ? 'bg-amber-500'
-                                  : 'bg-slate-300 dark:bg-slate-700'
-                              }`}
-                              style={{ width: `${progressPct}%` }}
-                            />
-                          </div>
-                          <span className="text-xs font-mono font-medium text-slate-600 dark:text-slate-400 w-7 text-right shrink-0">
-                            {progressPct}%
-                          </span>
-                        </div>
-                      </td>
-
-                      {/* 6. Status (Glowing Dot + Text, Unboxed) */}
-                      <td className="py-3.5 px-4 text-center">
-                        {isApproved ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_6px_rgba(16,185,129,0.8)]" />
-                            <span>Verified</span>
-                          </span>
-                        ) : isPending ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                            <span>Needs Review</span>
-                          </span>
-                        ) : isChanges ? (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-orange-600 dark:text-orange-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-orange-500" />
-                            <span>Revisions</span>
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-400 dark:text-slate-500">
-                            <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-700" />
-                            <span>Locked</span>
-                          </span>
-                        )}
-                      </td>
-
-                      {/* 7. Action Button */}
-                      <td className="py-3.5 px-5 text-right">
-                        {isPending ? (
-                          <button
-                            onClick={() => setInspectingStep(step)}
-                            className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-[0_0_12px_rgba(37,99,235,0.35)] transition-all cursor-pointer inline-flex items-center gap-1.5"
-                          >
-                            <span>Review</span>
-                            <ArrowRight className="w-3.5 h-3.5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => setInspectingStep(step)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
-                          >
-                            Details
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
+                        {/* 7. Action Button */}
+                        <td className="py-3.5 px-5 text-right">
+                          {isPending ? (
+                            <button
+                              onClick={() => setInspectingStep(step)}
+                              className="px-3.5 py-1.5 rounded-lg text-xs font-bold text-white bg-blue-600 hover:bg-blue-500 shadow-[0_0_12px_rgba(37,99,235,0.35)] transition-all cursor-pointer inline-flex items-center gap-1.5"
+                            >
+                              <span>Review</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => setInspectingStep(step)}
+                              className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-all cursor-pointer"
+                            >
+                              Details
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
           </div>
@@ -854,33 +919,41 @@ export default function StepVerificationDashboard() {
             </p>
           </div>
 
-          <div className="relative pl-6 space-y-6 border-l-2 border-slate-200 dark:border-slate-800">
-            {auditLogs.map((log) => (
-              <div key={log.id} className="relative space-y-1">
-                <span
-                  className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-[#07080c] ${
-                    log.action === 'STEP_APPROVED'
-                      ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
-                      : log.action === 'WORK_SUBMITTED'
-                      ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
-                      : 'bg-blue-500'
-                  }`}
-                />
-                <div className="flex items-center justify-between">
-                  <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <span>{log.actorName} ({formatRoleName(log.actorRole, 'title')})</span>
-                    <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded uppercase border border-blue-200 dark:border-blue-500/20">
-                      {log.action.replace('_', ' ')}
+          {auditLogs.length === 0 ? (
+            <div className="py-8 text-center text-slate-400 dark:text-slate-500">
+              <Activity className="w-8 h-8 mx-auto mb-2 opacity-30 text-emerald-500" />
+              <p className="text-xs font-semibold text-slate-600 dark:text-slate-400">No verification activity recorded</p>
+              <p className="text-[11px] text-slate-400 mt-0.5">Verification sign-offs, reviews, and milestone unlocks will appear here.</p>
+            </div>
+          ) : (
+            <div className="relative pl-6 space-y-6 border-l-2 border-slate-200 dark:border-slate-800">
+              {auditLogs.map((log) => (
+                <div key={log.id} className="relative space-y-1">
+                  <span
+                    className={`absolute -left-[31px] top-0 w-4 h-4 rounded-full border-2 border-white dark:border-[#07080c] ${
+                      log.action === 'STEP_APPROVED'
+                        ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]'
+                        : log.action === 'WORK_SUBMITTED'
+                        ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]'
+                        : 'bg-blue-500'
+                    }`}
+                  />
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                      <span>{log.actorName} ({formatRoleName(log.actorRole, 'title')})</span>
+                      <span className="text-[9px] font-mono font-extrabold px-2 py-0.5 bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 rounded uppercase border border-blue-200 dark:border-blue-500/20">
+                        {log.action.replace('_', ' ')}
+                      </span>
+                    </h4>
+                    <span className="text-[10px] font-mono text-slate-400">
+                      {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
-                  </h4>
-                  <span className="text-[10px] font-mono text-slate-400">
-                    {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                  </span>
+                  </div>
+                  <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">{log.details}</p>
                 </div>
-                <p className="text-xs text-slate-600 dark:text-slate-300 font-medium">{log.details}</p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -946,6 +1019,7 @@ export default function StepVerificationDashboard() {
                   <div className="flex flex-wrap gap-2 pt-1">
                     {inspectingStep.evidence.attachments.map((att: string) => {
                       const isPdf = att.toLowerCase().endsWith('.pdf');
+                      const fileUrl = resolveAttachmentUrl(att, inspectingStep);
                       return (
                         <button
                           key={att}
@@ -953,28 +1027,28 @@ export default function StepVerificationDashboard() {
                           onClick={() => {
                             if (isPdf) {
                               openPdfViewer(
-                                att === 'Architecture_v1.2.pdf' ? '/Architecture_v1.2.pdf' : `/uploads/${att}`,
+                                fileUrl,
                                 att,
                                 {
                                   uploadedBy: inspectingStep.evidence?.submittedBy?.name || 'Ram',
                                   isVerified: inspectingStep.status === 'APPROVED_COMPLETED',
                                 }
                               );
+                            } else {
+                              window.open(fileUrl, '_blank', 'noopener,noreferrer');
                             }
                           }}
-                          className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono shadow-sm transition-all flex items-center gap-1.5 ${
+                          className={`px-2.5 py-1.5 rounded-lg border text-[11px] font-mono shadow-sm transition-all flex items-center gap-1.5 cursor-pointer ${
                             isPdf
-                              ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 hover:border-red-300 dark:hover:border-red-500/50 cursor-pointer'
-                              : 'bg-white dark:bg-[#07080c] border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300'
+                              ? 'bg-red-50 dark:bg-red-500/10 border-red-200 dark:border-red-500/30 text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/20 hover:border-red-300 dark:hover:border-red-500/50'
+                              : 'bg-white dark:bg-[#07080c] border-emerald-200 dark:border-emerald-500/30 text-emerald-700 dark:text-emerald-300 hover:bg-slate-50'
                           }`}
                         >
                           <span>{isPdf ? '📕' : '📄'}</span>
                           <span>{att}</span>
-                          {isPdf && (
-                            <span className="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-500/20 text-[9px] font-bold uppercase tracking-wider text-red-700 dark:text-red-300">
-                              View PDF
-                            </span>
-                          )}
+                          <span className="px-1.5 py-0.5 rounded bg-blue-100 dark:bg-blue-500/20 text-[9px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-300">
+                            {isPdf ? 'View PDF' : 'Open File'}
+                          </span>
                         </button>
                       );
                     })}
@@ -1018,20 +1092,20 @@ export default function StepVerificationDashboard() {
                   />
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5 pt-2 border-t border-slate-100 dark:border-slate-800/80">
                   <button
                     type="button"
                     onClick={() => handleVerifyAction('REJECT')}
-                    className="px-3.5 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                    className="w-full sm:w-auto px-3.5 py-2.5 sm:py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 dark:bg-rose-500/10 dark:hover:bg-rose-500/20 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
                   >
                     ✖ Reject Step
                   </button>
 
-                  <div className="flex items-center gap-2.5">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
                     <button
                       type="button"
                       onClick={() => handleVerifyAction('REQUEST_CHANGES')}
-                      className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors"
+                      className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-500/10 dark:hover:bg-amber-500/20 dark:text-amber-400 border border-amber-200 dark:border-amber-500/30 rounded-xl font-bold text-xs cursor-pointer transition-colors text-center"
                     >
                       ↺ Request Revisions
                     </button>
@@ -1042,9 +1116,9 @@ export default function StepVerificationDashboard() {
                         backgroundColor: '#2563eb',
                         boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)'
                       }}
-                      className="px-5 py-2 hover:brightness-110 text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center gap-2 shadow"
+                      className="w-full sm:w-auto px-5 py-2.5 sm:py-2 hover:brightness-110 text-white rounded-xl font-bold text-xs transition-all cursor-pointer flex items-center justify-center gap-2 shadow"
                     >
-                      <Check className="w-4 h-4" />
+                      <Check className="w-4 h-4 shrink-0" />
                       <span>Approve & Unlock Next Step</span>
                     </button>
                   </div>

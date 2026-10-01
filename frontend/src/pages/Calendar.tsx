@@ -23,49 +23,41 @@ export default function Calendar() {
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(selectedProjectId);
 
-  const mockEvents: Event[] = [
-    { id: '101', title: '🚀 DB Schema Drafting', start: '2026-07-06', color: '#10B981', allDay: true },
-    { id: '102', title: '🔐 Security JWT Integration', start: '2026-07-09', color: '#EF4444', allDay: true },
-    { id: '103', title: '💻 Glassmorphic UI coding', start: '2026-07-15', color: '#3B82F6', allDay: true },
-    { id: '105', title: '☁️ AWS Deploy Setup', start: '2026-07-22', color: '#8B5CF6', allDay: true },
-    { id: '106', title: '🧪 Timeline Grid Testing', start: '2026-07-26', color: '#F59E0B', allDay: true }
-  ];
-
   const fetchProjects = async () => {
     try {
       const res = await api.get('/api/projects');
-      setProjectsList(res.data);
-      if (!activeProjectId && res.data.length > 0) {
-        setActiveProjectId(res.data[0].id);
+      const list = Array.isArray(res.data) ? res.data : [];
+      setProjectsList(list);
+      if (!activeProjectId && list.length > 0) {
+        setActiveProjectId(list[0].id);
       }
     } catch (err) {
-      setProjectsList([
-        { id: 1, name: 'Prologue SaaS Dashboard' },
-        { id: 2, name: 'Workflow Suite Integration' }
-      ]);
-      if (!activeProjectId) setActiveProjectId(1);
+      setProjectsList([]);
     }
   };
 
   const fetchCalendarTasks = async () => {
-    if (!activeProjectId) return;
+    if (!activeProjectId) {
+      setEvents([]);
+      return;
+    }
     try {
       const res = await api.get(`/api/tasks/project/${activeProjectId}`);
-      if (res.data && res.data.length > 0) {
+      if (res.data && Array.isArray(res.data) && res.data.length > 0) {
         const mapped: Event[] = res.data.map((t: any) => ({
           id: t.id.toString(),
           title: t.title,
-          start: t.dueDate || '2026-07-14',
+          start: t.dueDate || new Date().toISOString().split('T')[0],
           allDay: true,
           color: t.priority === 'CRITICAL' ? '#EF4444' : t.priority === 'HIGH' ? '#F59E0B' : t.priority === 'MEDIUM' ? '#3B82F6' : '#64748B',
           extendedProps: t
         }));
         setEvents(mapped);
       } else {
-        setEvents(mockEvents);
+        setEvents([]);
       }
     } catch (err) {
-      setEvents(mockEvents);
+      setEvents([]);
     }
   };
 
@@ -110,30 +102,28 @@ export default function Calendar() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12">
+    <div className="space-y-6 pb-20">
       {/* Header Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
-              FullCalendar Schedule
-            </h1>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-              Review and reschedule task deadlines with interactive click drags.
-            </p>
-          </div>
-
-          <LuxurySelect
-            className="w-48 sm:w-56"
-            value={activeProjectId || ''}
-            onChange={(val) => setActiveProjectId(Number(val))}
-            placeholder="Select Project..."
-            options={projectsList.map(p => ({
-              value: String(p.id),
-              label: p.name
-            }))}
-          />
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white">
+            FullCalendar Schedule
+          </h1>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+            Review and reschedule task deadlines with interactive click drags.
+          </p>
         </div>
+
+        <LuxurySelect
+          className="w-full sm:w-56"
+          value={activeProjectId || ''}
+          onChange={(val) => setActiveProjectId(Number(val))}
+          placeholder="Select Project..."
+          options={projectsList.map(p => ({
+            value: String(p.id),
+            label: p.name
+          }))}
+        />
       </div>
 
       {/* Info Warning banner */}
@@ -147,7 +137,7 @@ export default function Calendar() {
       </div>
 
       {/* FullCalendar Wrapper Panel */}
-      <div className="glass-panel p-6 shadow-xl border border-slate-200/50 dark:border-white/5 bg-white/30">
+      <div className="glass-panel p-3 sm:p-6 shadow-xl border border-slate-200/50 dark:border-white/5 bg-white/30 overflow-x-auto">
         <FullCalendar
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="dayGridMonth"
@@ -177,6 +167,21 @@ export default function Calendar() {
           margin-bottom: 1.5rem !important;
           flex-wrap: wrap !important;
           gap: 8px !important;
+        }
+        @media (max-width: 640px) {
+          .fc-header-toolbar {
+            flex-direction: column !important;
+            align-items: center !important;
+            gap: 10px !important;
+          }
+          .fc-toolbar-title {
+            font-size: 1.1rem !important;
+            text-align: center !important;
+          }
+          .fc-button-primary {
+            padding: 5px 8px !important;
+            font-size: 0.65rem !important;
+          }
         }
         .fc-button-primary {
           background-color: rgba(255, 255, 255, 0.05) !important;

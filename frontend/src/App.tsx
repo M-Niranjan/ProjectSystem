@@ -5,6 +5,7 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-
 import { useAuthStore } from './store/useAuthStore';
 import { useUIStore } from './store/useUIStore';
 import { getDashboardPathForRole, normalizeRole } from './services/authRoles';
+import { forceUnlockAllScroll } from './hooks/useScrollLock';
 
 // Components & Modules
 import Sidebar from './components/Sidebar';
@@ -16,10 +17,15 @@ import TaskDetailModal from './components/TaskDetailModal';
 import CreateProjectModal from './components/CreateProjectModal';
 import CreateTaskModal from './components/CreateTaskModal';
 import LuxuryToast from './components/common/LuxuryToast';
+import SignOutConfirmModal from './components/common/SignOutConfirmModal';
+import LiveRefreshProvider from './components/LiveRefreshProvider';
 
 // Pages
 import Login from './pages/Login';
+import RegisterOrganization from './pages/RegisterOrganization';
+import OrgSelector from './pages/OrgSelector';
 import ResetPassword from './pages/ResetPassword';
+import AcceptInvitation from './pages/AcceptInvitation';
 import Dashboard, { AdminDashboard, TeamLeaderDashboard, EmployeeDashboard } from './pages/Dashboard';
 import Projects from './pages/Projects';
 import Boards from './pages/Boards';
@@ -200,7 +206,7 @@ function RoleGuard({ allowedRoles, children }: { allowedRoles: string[]; childre
 }
 
 function AppContent() {
-  const { user, token, initAuth, loading } = useAuthStore();
+  const { user, token, initAuth, loading, activeOrganizationId } = useAuthStore();
   const { activeView, initTheme, sidebarExpanded, setView } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
@@ -216,6 +222,7 @@ function AppContent() {
 
   // 1. Sync location.pathname -> activeView and scroll to top cleanly on route change
   useEffect(() => {
+    forceUnlockAllScroll();
     window.scrollTo(0, 0);
     if (!token || !user) return;
     const matchedView = getViewFromPath(location.pathname);
@@ -251,13 +258,28 @@ function AppContent() {
     return <ResetPassword />;
   }
 
+  // Handle invitation acceptance page even when unauthenticated
+  if (location.pathname === '/accept-invitation') {
+    return <AcceptInvitation />;
+  }
+
+  // Handle organization registration page even when unauthenticated
+  if (location.pathname === '/register-organization') {
+    return <RegisterOrganization />;
+  }
+
   // Render Login page if unauthorized
   if (!token || !user) {
     return <Login />;
   }
 
+  // Multi-Organization guard: if no organization is active, or navigating to select-organization
+  if (!activeOrganizationId || location.pathname === '/select-organization') {
+    return <OrgSelector />;
+  }
+
   return (
-    <div className="relative min-h-screen select-none overflow-x-hidden">
+    <div className="relative min-h-screen overflow-x-hidden">
       {/* Pure Uniform Background Layer */}
       <div className="animated-bg" />
 
@@ -268,7 +290,7 @@ function AppContent() {
 
         {/* Content Wrapper */}
         <div 
-          className={`flex-1 flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ease-in-out ${sidebarExpanded ? 'md:pl-[286px]' : 'md:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
+          className={`flex-1 flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
         >
           {/* Header Frosted Navbar */}
           <Navbar />
@@ -318,6 +340,7 @@ function AppContent() {
                     <Route path="/step-verification" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><StepVerificationDashboard /></RoleGuard>} />
                     <Route path="/reviews" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><TaskReviews /></RoleGuard>} />
                     <Route path="/performance" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee', 'ROLE_MANAGER', 'ROLE_ADMIN', 'admin']}><MyPerformance /></RoleGuard>} />
+                    <Route path="/select-organization" element={<OrgSelector />} />
 
                     <Route path="*" element={<RoleDashboardRedirect />} />
                   </Routes>
@@ -334,6 +357,7 @@ function AppContent() {
       <TaskDetailModal />
       <CreateProjectModal />
       <CreateTaskModal />
+      <SignOutConfirmModal />
     </div>
   );
 }
@@ -341,7 +365,9 @@ function AppContent() {
 export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <AppContent />
+      <LiveRefreshProvider>
+        <AppContent />
+      </LiveRefreshProvider>
     </QueryClientProvider>
   );
 }

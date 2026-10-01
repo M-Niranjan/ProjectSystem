@@ -82,7 +82,7 @@ export default function ResetPassword() {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center p-4 md:p-8 overflow-hidden select-none bg-slate-950">
+    <div className="relative min-h-screen flex items-center justify-center p-4 md:p-8 overflow-y-auto bg-slate-950">
       {/* Background wallpaper */}
       <div 
         className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat filter brightness-90 contrast-105"
@@ -97,7 +97,7 @@ export default function ResetPassword() {
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-        className="w-full max-w-md relative z-10 overflow-hidden rounded-[32px] border border-white/40 shadow-[0_32px_80px_rgba(0,0,0,0.4)] backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90 p-8 md:p-10 text-slate-900 dark:text-white"
+        className="w-full max-w-md relative z-10 overflow-hidden rounded-[28px] sm:rounded-[32px] border border-white/40 shadow-[0_32px_80px_rgba(0,0,0,0.4)] backdrop-blur-2xl bg-white/90 dark:bg-slate-900/90 p-5 sm:p-8 md:p-10 text-slate-900 dark:text-white my-auto"
       >
         {/* Header Icon */}
         <div className="w-16 h-16 rounded-3xl bg-gradient-to-tr from-purple-600 to-indigo-600 border border-white/40 flex items-center justify-center shadow-xl mb-6 mx-auto">

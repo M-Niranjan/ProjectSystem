@@ -145,11 +145,12 @@ export default function CreateProjectModal() {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 15 }}
               transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-              className="glass-panel w-full max-w-lg p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 max-h-[90vh] overflow-y-auto rounded-3xl modal-dialog-contain overscroll-contain"
+              className="glass-panel w-full max-w-lg p-4 sm:p-6 shadow-2xl relative border border-slate-200/50 dark:border-white/10 z-50 max-h-[90vh] overflow-y-auto rounded-2xl sm:rounded-3xl modal-dialog-contain overscroll-contain"
             >
               <button
                 onClick={() => setProjectModalOpen(false)}
-                className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                title="Close"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -310,7 +311,7 @@ export default function CreateProjectModal() {
 
                 {/* Team Members Invite section */}
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-wrap items-center justify-between gap-1.5">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                       Invite Team Members
                     </label>
@@ -400,7 +401,7 @@ export default function CreateProjectModal() {
                   <button
                     type="submit"
                     disabled={loading}
-                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-blue-500/10 transition-colors disabled:opacity-50"
+                    className="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs cursor-pointer shadow-md shadow-blue-500/20 transition-all active:scale-98 disabled:opacity-50"
                   >
                     {loading ? 'Initializing...' : 'Initialize Workspace'}
                   </button>

@@ -2,9 +2,23 @@ import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
 
 // Force-clear stale mock data when the mock version changes
-const MOCK_VERSION = 'v12-completely-clean-no-default-users';
+const MOCK_VERSION = 'v13-pure-user-data-zero-defaults';
 if (localStorage.getItem('mock_version') !== MOCK_VERSION) {
-  ['mock_projects', 'mock_tasks', 'mock_teammates', 'mock_messages', 'mock_notifications', 'mock_user', 'mock_audit_logs', 'mock_roles_permissions', 'mock_users_db'].forEach(k => localStorage.removeItem(k));
+  [
+    'mock_projects',
+    'mock_tasks',
+    'mock_teammates',
+    'mock_messages',
+    'mock_notifications',
+    'mock_audit_logs',
+    'mock_users_db',
+    'prologue_workspace_docs',
+    'mock_pending_review_tasks',
+    'workspace_activities_stream',
+    'mock_verification_steps',
+    'mock_verification_audits',
+    'mock_verification_notifications',
+  ].forEach(k => localStorage.removeItem(k));
   localStorage.setItem('mock_version', MOCK_VERSION);
 }
 
@@ -187,22 +201,14 @@ const mockAdapter = async (config: any) => {
         createdAt: new Date().toISOString()
       };
     } else {
-      resData = [
-        { id: 1, content: 'Alice, make sure the border radius matches the standard 16px variables.', user: { id: 1001, name: 'Ramesh' }, createdAt: '2026-07-14T11:20:00Z' },
-        { id: 2, content: 'Understood, updated in Figma design system.', user: { id: 999, name: 'Niranjan' }, createdAt: '2026-07-14T11:22:00Z' }
-      ];
+      resData = [];
     }
   } else if (url.includes('/api/tasks/') && url.includes('/timer')) {
-    resData = { isRunning: false, elapsedTime: 1200 };
+    resData = { isRunning: false, elapsedTime: 0 };
   } else if (url.includes('/api/tasks/') && url.includes('/ai-subtasks')) {
-    resData = [
-      { id: 1, title: 'Draft schema specs', isCompleted: true },
-      { id: 2, title: 'Configure unit test suite', isCompleted: false }
-    ];
+    resData = [];
   } else if (url.includes('/api/tasks/') && url.includes('/attachments')) {
-    resData = [
-      { id: 1, name: 'architecture_diagram.png', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=500&auto=format&fit=crop&q=80', size: '1.2 MB' }
-    ];
+    resData = [];
   } else if (url.includes('/api/tasks/project/')) {
     const match = url.match(/\/api\/tasks\/project\/(\d+)/);
     const projId = match ? parseInt(match[1]) : 0;
@@ -306,7 +312,7 @@ const mockAdapter = async (config: any) => {
         id: Date.now(),
         ...data,
         gender: data.gender || 'Male',
-        role: data.role || 'ROLE_EMPLOYEE',
+        role: data.role || (url.includes('team-leader') ? 'ROLE_MANAGER' : 'ROLE_EMPLOYEE'),
         designation: data.designation || 'Teammate',
         department: data.department || 'Technology',
         experience: Number(data.experience || 2),
@@ -517,26 +523,40 @@ const mockAdapter = async (config: any) => {
     }
   } else if (url.includes('/api/admin/audit-logs')) {
     const storedLogs = localStorage.getItem('mock_audit_logs');
-    const defaultLogs = [
-      { id: 1, user: 'Niranjan (Admin)', action: 'LOGIN', date: '2026-08-25', time: '01:15:20', activity: 'Admin logged into Prologue Workspace', status: 'SUCCESS' },
-      { id: 2, user: 'Niranjan (Admin)', action: 'ROLE_UPDATE', date: '2026-08-24', time: '18:40:12', activity: 'Assigned Ramesh to Team Employee role', status: 'SUCCESS' },
-      { id: 3, user: 'Ramesh (Employee)', action: 'TASK_SUBMIT', date: '2026-08-24', time: '14:22:05', activity: 'Submitted API Integration module for Code Review', status: 'SUCCESS' },
-      { id: 4, user: 'Rahul (Employee)', action: 'TASK_SUBMIT', date: '2026-08-25', time: '00:30:10', activity: 'Submitted task Create Patient Dashboard for Code Review', status: 'PENDING_REVIEW' }
-    ];
     resData = storedLogs ? JSON.parse(storedLogs) : [];
   } else if (url.includes('/api/admin/organization')) {
     resData = {
-      name: 'Prologue Enterprise Solutions',
+      name: 'Default Organization',
       workingHours: '09:00 - 18:00 (40h/week)',
-      timezone: 'Asia/Kolkata (IST)',
-      departments: 'Engineering, Product, Quality Assurance, Design, Management'
+      timezone: 'UTC',
+      departments: 'Engineering, Management'
     };
   } else if (url.includes('/api/logs/user/')) {
-    resData = [
-      { id: 1, action: 'CREATE', details: 'Initialized project: Prologue SaaS Dashboard', createdAt: new Date(Date.now() - 86400000).toISOString() },
-      { id: 2, action: 'UPDATE', details: 'Moved task: "Revamp login page" to IN_PROGRESS', createdAt: new Date(Date.now() - 3600000).toISOString() },
-      { id: 3, action: 'COMMENT', details: 'Added comment: "Matches radius variables" on task 101', createdAt: new Date().toISOString() }
-    ];
+    const storedLogs = localStorage.getItem('mock_audit_logs');
+    resData = storedLogs ? JSON.parse(storedLogs) : [];
+  } else if (url.includes('/api/organizations/switch')) {
+    const switchedOrg = data?.organizationId || 'org_default';
+    resData = {
+      token: localStorage.getItem('token') || 'mock_jwt_token',
+      organizationId: switchedOrg,
+      organizationName: 'Default Organization',
+      role: 'ROLE_ADMIN',
+    };
+  } else if (url.includes('/api/organizations')) {
+    resData = {
+      organizations: [
+        {
+          id: 'org_default',
+          organizationId: 'org_default',
+          organizationName: 'Default Organization',
+          organizationCode: 'default',
+          role: 'admin',
+          roleCode: 'ROLE_ADMIN',
+          status: 'active',
+        },
+      ],
+      activeOrganizationId: 'org_default',
+    };
   } else {
     resData = [];
   }
@@ -581,6 +601,10 @@ api.interceptors.request.use(
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    }
+    const orgId = localStorage.getItem('active_org_id') || sessionStorage.getItem('active_org_id');
+    if (orgId) {
+      config.headers['X-Organization-Id'] = orgId;
     }
     return config;
   },

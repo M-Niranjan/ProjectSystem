@@ -234,7 +234,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* ========================================================================= */}
       {/* 1. HORIZONTAL IDENTITY HEADER (Photo Left, Name & Details Right)           */}
       {/* ========================================================================= */}

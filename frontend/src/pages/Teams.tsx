@@ -275,7 +275,7 @@ export default function Teams() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12">
+    <div className="space-y-6 pb-20">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -283,10 +283,10 @@ export default function Teams() {
             <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl flex items-center justify-center bg-amber-500/15 border border-amber-500/30 text-amber-600 dark:text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.2)] shrink-0">
               <Network className="w-4 h-4 sm:w-5 sm:h-5 stroke-[2]" />
             </div>
-            Team Hub
+            Team Management
           </h1>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            Manage organization members, assign roles, and review designations.
+            Add Team Leaders, add Employees, assign team members, and manage organization membership.
           </p>
         </div>
 

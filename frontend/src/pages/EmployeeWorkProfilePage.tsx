@@ -123,7 +123,7 @@ export default function EmployeeWorkProfilePage() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* Top Header & Back Button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 w-full min-w-0">
         <div className="flex items-start sm:items-center gap-3 min-w-0 flex-1">

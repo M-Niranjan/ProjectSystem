@@ -1,13 +1,17 @@
 import { Router } from 'express';
 import { NotificationController } from '../controllers/notificationController';
 import { authenticateToken } from '../middleware/auth';
+import { resolveOrganization } from '../middleware/orgContext';
 
 const router = Router();
 
-router.get('/', authenticateToken, NotificationController.getNotifications);
-router.get('/unread', authenticateToken, NotificationController.getUnreadNotifications);
-router.put('/:id/read', authenticateToken, NotificationController.markAsRead);
-router.put('/read-all', authenticateToken, NotificationController.markAllAsRead);
-router.post('/', authenticateToken, NotificationController.createNotification);
+router.use(authenticateToken);
+router.use(resolveOrganization);
+
+router.get('/', NotificationController.getNotifications);
+router.get('/unread', NotificationController.getUnreadNotifications);
+router.put('/:id/read', NotificationController.markAsRead);
+router.put('/read-all', NotificationController.markAllAsRead);
+router.post('/', NotificationController.createNotification);
 
 export default router;

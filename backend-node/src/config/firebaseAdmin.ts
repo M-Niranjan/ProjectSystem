@@ -104,6 +104,11 @@ export class FirebaseAdminService {
     }
   }
 
+  public static async updateAuthUserPassword(uid: string, password: string) {
+    if (!firebaseAdminAuth) throw new Error('Firebase Admin Auth instance is unavailable');
+    return firebaseAdminAuth.updateUser(uid, { password });
+  }
+
   public static async setFirestoreUserDoc(uid: string, data: any) {
     if (!firebaseFirestore) throw new Error('Firestore DB instance is unavailable in Firebase Admin SDK');
     try {
@@ -210,4 +215,666 @@ export class FirebaseAdminService {
       return [];
     }
   }
+
+  // =========================================================================
+  // MULTI-ORGANIZATION / MULTI-TENANT HELPERS
+  // =========================================================================
+
+  public static async ensureDefaultOrganization(): Promise<Record<string, any>> {
+    if (!firebaseFirestore) {
+      return { id: 'org_default', name: 'Default Organization', code: 'default', status: 'active' };
+    }
+    try {
+      const defaultOrgRef = firebaseFirestore.collection('organizations').doc('org_default');
+      const doc = await defaultOrgRef.get();
+      if (!doc.exists) {
+        const defaultData = {
+          id: 'org_default',
+          name: 'Default Organization',
+          code: 'default',
+          description: 'Primary workspace organization',
+          status: 'active',
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        await defaultOrgRef.set(defaultData);
+        console.log('Default organization org_default initialized successfully.');
+        return defaultData;
+      }
+      return { id: doc.id, ...doc.data() };
+    } catch (err) {
+      console.error('Error ensuring default organization:', err);
+      return { id: 'org_default', name: 'Default Organization', code: 'default', status: 'active' };
+    }
+  }
+
+  public static async autoAssignDefaultOrgMembership(uid: string, email: string, name?: string, roleCode: string = 'ROLE_EMPLOYEE', targetOrgId: string = 'org_default'): Promise<Record<string, any>> {
+    if (!firebaseFirestore) {
+      return {
+        id: `${targetOrgId}_${uid}`,
+        organizationId: targetOrgId,
+        organizationName: 'Default Organization',
+        organizationCode: 'default',
+        userId: uid,
+        userName: name || email.split('@')[0],
+        userEmail: email.toLowerCase(),
+        role: roleCode === 'ROLE_ADMIN' ? 'admin' : roleCode === 'ROLE_MANAGER' ? 'teamLeader' : 'employee',
+        roleCode,
+        status: 'active',
+      };
+    }
+    try {
+      let orgDoc = await this.getOrganizationDoc(targetOrgId);
+      if (!orgDoc) {
+        orgDoc = await this.ensureDefaultOrganization();
+      }
+      const orgId = orgDoc.id || targetOrgId;
+      const memberDocId = `${orgId}_${uid}`;
+      const memberRef = firebaseFirestore.collection('organizationMembers').doc(memberDocId);
+      const existing = await memberRef.get();
+      if (!existing.exists) {
+        const canonicalRole = roleCode === 'ROLE_ADMIN' ? 'admin' : roleCode === 'ROLE_MANAGER' ? 'teamLeader' : 'employee';
+        const memberData = {
+          id: memberDocId,
+          organizationId: orgId,
+          organizationName: orgDoc.name || 'Default Organization',
+          organizationCode: orgDoc.code || 'default',
+          userId: uid,
+          userName: name || email.split('@')[0],
+          userEmail: email.toLowerCase(),
+          role: canonicalRole,
+          roleCode,
+          designation: roleCode === 'ROLE_ADMIN' ? 'System Administrator' : roleCode === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer',
+          department: roleCode === 'ROLE_ADMIN' ? 'Executive' : roleCode === 'ROLE_MANAGER' ? 'Management' : 'Engineering',
+          status: 'active',
+          joinedAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+        };
+        await memberRef.set(memberData);
+        return memberData;
+      }
+      return { id: existing.id, ...existing.data() };
+    } catch (err) {
+      console.error('Error auto-assigning org membership:', err);
+      return {
+        id: `${targetOrgId}_${uid}`,
+        organizationId: targetOrgId,
+        organizationName: 'Default Organization',
+        organizationCode: 'default',
+        userId: uid,
+        userName: name || email.split('@')[0],
+        userEmail: email.toLowerCase(),
+        role: 'employee',
+        roleCode: 'ROLE_EMPLOYEE',
+        status: 'active',
+      };
+    }
+  }
+
+  public static async getOrganizationDoc(orgId: string): Promise<Record<string, any> | null> {
+    if (!firebaseFirestore) return null;
+    try {
+      const doc = await firebaseFirestore.collection('organizations').doc(orgId).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (err) {
+      console.error(`Error getting organization doc ${orgId}:`, err);
+      return null;
+    }
+  }
+
+  public static async getOrganizationByCode(code: string): Promise<Record<string, any> | null> {
+    if (!firebaseFirestore || !code) return null;
+    const cleanCode = code.trim();
+    try {
+      // 1. Check exact match
+      const snapExact = await firebaseFirestore.collection('organizations').where('code', '==', cleanCode).limit(1).get();
+      if (!snapExact.empty) {
+        const d = snapExact.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+
+      // 2. Check uppercase
+      const snapUpper = await firebaseFirestore.collection('organizations').where('code', '==', cleanCode.toUpperCase()).limit(1).get();
+      if (!snapUpper.empty) {
+        const d = snapUpper.docs[0];
+        return { id: d.id, ...d.data() };
+      }
+
+      // 3. Fallback: check all organizations by id or case-insensitive code
+      const all = await this.getAllOrganizations();
+      const found = all.find(o => 
+        (o.code && o.code.toLowerCase() === cleanCode.toLowerCase()) || 
+        o.id.toLowerCase() === cleanCode.toLowerCase()
+      );
+      return found || null;
+    } catch (err) {
+      console.error(`Error querying organization by code ${code}:`, err);
+      return null;
+    }
+  }
+
+  public static async generateUniqueWorkspaceCode(orgName: string): Promise<string> {
+    const cleanName = (orgName || '').trim();
+    const words = cleanName.split(/\s+/).filter(w => w.length > 0);
+    let prefix = '';
+
+    if (words.length >= 3) {
+      prefix = (words[0][0] + words[1][0] + words[2][0]).toUpperCase();
+    } else if (words.length === 2) {
+      prefix = (words[0].substring(0, 2) + words[1][0]).toUpperCase();
+    } else if (words.length === 1 && words[0].length >= 3) {
+      prefix = words[0].substring(0, 3).toUpperCase();
+    }
+
+    // Keep only A-Z
+    prefix = prefix.replace(/[^A-Z]/g, '');
+    if (prefix.length < 3) {
+      const alpha = cleanName.toUpperCase().replace(/[^A-Z]/g, '');
+      prefix = (alpha + 'ORG').substring(0, 3);
+    }
+
+    // Try sequential counters from 001 to 999: e.g. ABC001, ABC002...
+    let counter = 1;
+    while (counter <= 999) {
+      const candidate = `${prefix}${String(counter).padStart(3, '0')}`;
+      const existing = await this.getOrganizationByCode(candidate);
+      if (!existing) {
+        return candidate;
+      }
+      counter++;
+    }
+
+    // Fallback if full: append random 4 digits
+    return `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+
+  public static async createInvitationDoc(token: string, data: any) {
+    if (!firebaseFirestore) throw new Error('Firestore is unavailable');
+    await firebaseFirestore.collection('invitations').doc(token).set({
+      ...data,
+      token,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return { token, ...data };
+  }
+
+  public static async getInvitationDoc(token: string): Promise<Record<string, any> | null> {
+    if (!firebaseFirestore || !token) return null;
+    try {
+      const doc = await firebaseFirestore.collection('invitations').doc(token).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (err) {
+      console.error(`Error getting invitation doc:`, err);
+      return null;
+    }
+  }
+
+  public static async updateInvitationDoc(token: string, data: any) {
+    if (!firebaseFirestore || !token) return;
+    try {
+      await firebaseFirestore.collection('invitations').doc(token).set({
+        ...data,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.error(`Error updating invitation doc ${token}:`, err);
+    }
+  }
+
+  public static async getOrgInvitations(organizationId: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore || !organizationId) return [];
+    try {
+      const snap = await firebaseFirestore.collection('invitations').where('organizationId', '==', organizationId).get();
+      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.error('Error getting org invitations:', err);
+      return [];
+    }
+  }
+
+  public static async getAllOrganizations(): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      const snapshot = await firebaseFirestore.collection('organizations').get();
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (err) {
+      console.error('Error getting all organizations:', err);
+      return [];
+    }
+  }
+
+  public static async createOrganizationDoc(orgId: string, data: any) {
+    if (!firebaseFirestore) throw new Error('Firestore DB instance is unavailable');
+    await firebaseFirestore.collection('organizations').doc(orgId).set({
+      ...data,
+      id: orgId,
+      createdAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    });
+    return { id: orgId, ...data };
+  }
+
+  public static async updateOrganizationDoc(orgId: string, data: any) {
+    if (!firebaseFirestore) throw new Error('Firestore DB instance is unavailable');
+    await firebaseFirestore.collection('organizations').doc(orgId).set({
+      ...data,
+      updatedAt: FieldValue.serverTimestamp(),
+    }, { merge: true });
+    return this.getOrganizationDoc(orgId);
+  }
+
+  public static async getUserOrgMemberships(uid: string, email?: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      const memberships: Record<string, any>[] = [];
+      const seenOrgIds = new Set<string>();
+
+      // 1. Query by userId
+      const userSnap = await firebaseFirestore.collection('organizationMembers')
+        .where('userId', '==', uid)
+        .get();
+
+      userSnap.forEach(d => {
+        const data = d.data();
+        const orgId = data.organizationId;
+        if (orgId && !seenOrgIds.has(orgId)) {
+          seenOrgIds.add(orgId);
+          memberships.push({ id: d.id, ...data });
+        }
+      });
+
+      // 2. Query by email if provided
+      if (email) {
+        const cleanEmail = email.trim().toLowerCase();
+        const emailSnap = await firebaseFirestore.collection('organizationMembers')
+          .where('userEmail', '==', cleanEmail)
+          .get();
+
+        emailSnap.forEach(d => {
+          const data = d.data();
+          const orgId = data.organizationId;
+          if (orgId && !seenOrgIds.has(orgId)) {
+            seenOrgIds.add(orgId);
+            memberships.push({ id: d.id, ...data });
+          }
+        });
+      }
+
+      // 3. Enrich with organization metadata
+      const enrichedMemberships: Record<string, any>[] = [];
+      for (const m of memberships) {
+        const orgDoc = await this.getOrganizationDoc(m.organizationId);
+        enrichedMemberships.push({
+          ...m,
+          organizationName: orgDoc?.name || m.organizationName || m.organizationId,
+          organizationCode: orgDoc?.code || m.organizationId,
+          organizationLogo: orgDoc?.logo || null,
+          organizationStatus: orgDoc?.status || 'active',
+        });
+      }
+
+      return enrichedMemberships;
+    } catch (err) {
+      console.error(`Error querying user org memberships for ${uid}:`, err);
+      return [];
+    }
+  }
+
+  public static async getOrgMembers(orgId: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      const snap = await firebaseFirestore.collection('organizationMembers')
+        .where('organizationId', '==', orgId)
+        .get();
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error(`Error querying members of org ${orgId}:`, err);
+      return [];
+    }
+  }
+
+  public static async addOrgMemberDoc(
+    orgId: string,
+    member: {
+      userId: string;
+      userEmail: string;
+      userName: string;
+      role: string;
+      roleCode: string;
+      status?: string;
+      department?: string;
+      designation?: string;
+    }
+  ) {
+    if (!firebaseFirestore) throw new Error('Firestore DB instance is unavailable');
+    const membershipId = `${orgId}_${member.userId}`;
+    const orgDoc = await this.getOrganizationDoc(orgId);
+    const data = {
+      id: membershipId,
+      organizationId: orgId,
+      organizationName: orgDoc?.name || orgId,
+      userId: member.userId,
+      userEmail: member.userEmail.trim().toLowerCase(),
+      userName: member.userName,
+      role: member.role,
+      roleCode: member.roleCode,
+      status: member.status || 'active',
+      department: member.department || 'Engineering',
+      designation: member.designation || 'Member',
+      joinedAt: FieldValue.serverTimestamp(),
+      updatedAt: FieldValue.serverTimestamp(),
+    };
+    await firebaseFirestore.collection('organizationMembers').doc(membershipId).set(data, { merge: true });
+    return data;
+  }
+
+  public static async removeOrgMemberDoc(membershipId: string) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('organizationMembers').doc(membershipId).delete();
+    } catch (err) {
+      console.error(`Error removing org membership ${membershipId}:`, err);
+    }
+  }
+
+  public static async getFirestoreUsersByOrganization(orgId: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      const memberships = await this.getOrgMembers(orgId);
+      const userList: Record<string, any>[] = [];
+      const seenUids = new Set<string>();
+
+      for (const m of memberships) {
+        if (m.userId && !seenUids.has(m.userId)) {
+          seenUids.add(m.userId);
+          const userDoc = await this.getFirestoreUserDoc(m.userId);
+          if (userDoc) {
+            userList.push({
+              ...userDoc,
+              orgRole: m.role,
+              orgRoleCode: m.roleCode,
+              membershipStatus: m.status,
+            });
+          } else {
+            userList.push({
+              id: m.userId,
+              uid: m.userId,
+              name: m.userName,
+              email: m.userEmail,
+              role: m.role,
+              roleCode: m.roleCode,
+              status: m.status,
+              department: m.department,
+              designation: m.designation,
+            });
+          }
+        }
+      }
+      return userList;
+    } catch (err) {
+      console.error('Error getting users by organization:', err);
+      return [];
+    }
+  }
+
+  // =========================================================================
+  // FIRESTORE PROJECTS PERSISTENCE
+  // =========================================================================
+  public static async createFirestoreProject(projectId: string | number, data: any) {
+    if (!firebaseFirestore) return null;
+    try {
+      const docId = String(projectId);
+      const payload = {
+        ...data,
+        id: docId,
+        createdAt: data.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await firebaseFirestore.collection('projects').doc(docId).set(payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.error(`Error saving project ${projectId} to Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async getFirestoreProjects(orgId?: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      let query: any = firebaseFirestore.collection('projects');
+      if (orgId) {
+        query = query.where('organizationId', '==', orgId);
+      }
+      const snap = await query.get();
+      return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error('Error fetching projects from Firestore:', err);
+      return [];
+    }
+  }
+
+  public static async getFirestoreProjectById(projectId: string | number): Promise<Record<string, any> | null> {
+    if (!firebaseFirestore) return null;
+    try {
+      const doc = await firebaseFirestore.collection('projects').doc(String(projectId)).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (err) {
+      console.error(`Error fetching project ${projectId} from Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async updateFirestoreProject(projectId: string | number, data: any) {
+    if (!firebaseFirestore) return null;
+    try {
+      const docId = String(projectId);
+      await firebaseFirestore.collection('projects').doc(docId).set({
+        ...data,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return this.getFirestoreProjectById(docId);
+    } catch (err) {
+      console.error(`Error updating project ${projectId} in Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async deleteFirestoreProject(projectId: string | number) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('projects').doc(String(projectId)).delete();
+    } catch (err) {
+      console.error(`Error deleting project ${projectId} from Firestore:`, err);
+    }
+  }
+
+  // =========================================================================
+  // FIRESTORE TASKS PERSISTENCE
+  // =========================================================================
+  public static async createFirestoreTask(taskId: string | number, data: any) {
+    if (!firebaseFirestore) return null;
+    try {
+      const docId = String(taskId);
+      const payload = {
+        ...data,
+        id: docId,
+        createdAt: data.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await firebaseFirestore.collection('tasks').doc(docId).set(payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.error(`Error saving task ${taskId} to Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async getFirestoreTasks(orgId?: string, projectId?: string | number): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      let query: any = firebaseFirestore.collection('tasks');
+      if (orgId) {
+        query = query.where('organizationId', '==', orgId);
+      }
+      if (projectId) {
+        query = query.where('projectId', '==', String(projectId));
+      }
+      const snap = await query.get();
+      return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error('Error fetching tasks from Firestore:', err);
+      return [];
+    }
+  }
+
+  public static async getFirestoreTaskById(taskId: string | number): Promise<Record<string, any> | null> {
+    if (!firebaseFirestore) return null;
+    try {
+      const doc = await firebaseFirestore.collection('tasks').doc(String(taskId)).get();
+      if (doc.exists) {
+        return { id: doc.id, ...doc.data() };
+      }
+      return null;
+    } catch (err) {
+      console.error(`Error fetching task ${taskId} from Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async updateFirestoreTask(taskId: string | number, data: any) {
+    if (!firebaseFirestore) return null;
+    try {
+      const docId = String(taskId);
+      await firebaseFirestore.collection('tasks').doc(docId).set({
+        ...data,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return this.getFirestoreTaskById(docId);
+    } catch (err) {
+      console.error(`Error updating task ${taskId} in Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async deleteFirestoreTask(taskId: string | number) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('tasks').doc(String(taskId)).delete();
+    } catch (err) {
+      console.error(`Error deleting task ${taskId} from Firestore:`, err);
+    }
+  }
+
+  // =========================================================================
+  // FIRESTORE NOTIFICATIONS PERSISTENCE
+  // =========================================================================
+  public static async createFirestoreNotification(notificationId: string | number, data: any) {
+    if (!firebaseFirestore) return null;
+    try {
+      const docId = String(notificationId);
+      const payload = {
+        ...data,
+        id: docId,
+        isRead: false,
+        createdAt: data.createdAt || FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+      };
+      await firebaseFirestore.collection('notifications').doc(docId).set(payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.error(`Error saving notification ${notificationId} to Firestore:`, err);
+      return null;
+    }
+  }
+
+  public static async getFirestoreNotifications(recipientId: string | number): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      const snap = await firebaseFirestore.collection('notifications')
+        .where('recipientId', '==', String(recipientId))
+        .limit(50)
+        .get();
+      return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error('Error fetching notifications from Firestore:', err);
+      return [];
+    }
+  }
+
+  public static async markFirestoreNotificationAsRead(notificationId: string | number) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('notifications').doc(String(notificationId)).set({
+        isRead: true,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.error(`Error updating notification ${notificationId} in Firestore:`, err);
+    }
+  }
+
+  // =========================================================================
+  // FIRESTORE AUDIT LOGS PERSISTENCE
+  // =========================================================================
+  public static async createFirestoreAuditLog(data: {
+    user: string;
+    action: string;
+    activity: string;
+    status?: string;
+    organizationId?: string;
+    userId?: string | number;
+  }) {
+    if (!firebaseFirestore) return null;
+    try {
+      const now = new Date();
+      const dateStr = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      const logDoc = firebaseFirestore.collection('audit_logs').doc();
+      const payload = {
+        id: logDoc.id,
+        user: data.user,
+        action: data.action,
+        activity: data.activity,
+        status: data.status || 'VERIFIED',
+        organizationId: data.organizationId || 'org_default',
+        userId: data.userId ? String(data.userId) : null,
+        date: dateStr,
+        time: timeStr,
+        timestamp: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+      };
+      await logDoc.set(payload);
+      return payload;
+    } catch (err) {
+      console.error('Error saving audit log to Firestore:', err);
+      return null;
+    }
+  }
+
+  public static async getFirestoreAuditLogs(orgId?: string): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore) return [];
+    try {
+      let query: any = firebaseFirestore.collection('audit_logs');
+      if (orgId) {
+        query = query.where('organizationId', '==', orgId);
+      }
+      query = query.limit(100);
+      const snap = await query.get();
+      return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+    } catch (err) {
+      console.error('Error fetching audit logs from Firestore:', err);
+      return [];
+    }
+  }
 }
+

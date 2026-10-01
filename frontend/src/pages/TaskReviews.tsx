@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Award, CheckCircle2, AlertCircle, MessageSquare, Clock, ArrowRight, User, Folder, Check, X, RefreshCw, CheckCheck, Sparkles, Shield } from 'lucide-react';
+import { Award, CheckCircle2, AlertCircle, MessageSquare, Clock, ArrowRight, User, Folder, Check, X, RefreshCw, CheckCheck, Sparkles, Shield, CheckSquare } from 'lucide-react';
 import api from '../services/api';
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
@@ -21,6 +21,48 @@ interface ReviewTask {
   priority?: string;
 }
 
+const defaultPendingTasks: ReviewTask[] = [
+  {
+    id: 101,
+    title: 'Implement JWT Refresh Token Rotation and Security Validation',
+    description: 'Added token blacklisting and silent rotation handler with rate-limiting.',
+    status: 'CODE_REVIEW',
+    reviewStatus: 'PENDING_REVIEW',
+    submittedForReview: true,
+    project: { id: 1, name: 'Core Infrastructure' },
+    assignee: { id: 2, name: 'Alex Rivera', role: 'EMPLOYEE', email: 'alex@taskflow.internal' },
+    actualTime: 6,
+    estimatedTime: 8,
+    priority: 'HIGH'
+  },
+  {
+    id: 102,
+    title: 'Audit and Refactor Database Indexing for Tasks Queries',
+    description: 'Optimized composite index on (org_id, status, assignee_id) reducing latency by 45%.',
+    status: 'CODE_REVIEW',
+    reviewStatus: 'PENDING_REVIEW',
+    submittedForReview: true,
+    project: { id: 1, name: 'Database Scalability' },
+    assignee: { id: 3, name: 'Sarah Chen', role: 'EMPLOYEE', email: 'sarah@taskflow.internal' },
+    actualTime: 4,
+    estimatedTime: 5,
+    priority: 'MEDIUM'
+  },
+  {
+    id: 103,
+    title: 'Build Resilient PDF Export Service with Streaming Compression',
+    description: 'Chunked binary streaming for task submission attachments with virus scanning.',
+    status: 'CODE_REVIEW',
+    reviewStatus: 'PENDING_REVIEW',
+    submittedForReview: true,
+    project: { id: 2, name: 'Document Hub' },
+    assignee: { id: 4, name: 'David Kim', role: 'EMPLOYEE', email: 'david@taskflow.internal' },
+    actualTime: 7,
+    estimatedTime: 8,
+    priority: 'HIGH'
+  }
+];
+
 export default function TaskReviews() {
   const { user } = useAuthStore();
   const { showToast } = useUIStore();
@@ -31,48 +73,6 @@ export default function TaskReviews() {
 
   // Freeze background completely when Review Task Submission modal is active
   useScrollLock(!!selectedTask);
-
-  const defaultPendingTasks: ReviewTask[] = [
-    {
-      id: 101,
-      title: 'Create Patient Dashboard Interface',
-      description: 'Implement patient medical history cards, vital signs monitoring widget, and real-time consultation booking queue for hospital staff.',
-      status: 'CODE_REVIEW',
-      reviewStatus: 'PENDING_REVIEW',
-      submittedForReview: true,
-      project: { id: 1, name: 'Hospital Management System', title: 'Hospital Management System' },
-      assignee: { id: 1002, name: 'Rahul', role: 'ROLE_EMPLOYEE' },
-      actualTime: 6.5,
-      estimatedTime: 8.0,
-      priority: 'HIGH'
-    },
-    {
-      id: 102,
-      title: 'Doctor Consultation Booking API',
-      description: 'Build secure doctor slot reservation endpoints, conflict detection algorithms, and prescription generation webhooks.',
-      status: 'CODE_REVIEW',
-      reviewStatus: 'PENDING_REVIEW',
-      submittedForReview: true,
-      project: { id: 1, name: 'Hospital Management System', title: 'Hospital Management System' },
-      assignee: { id: 1001, name: 'Ramesh', role: 'ROLE_EMPLOYEE' },
-      actualTime: 9.0,
-      estimatedTime: 12.0,
-      priority: 'HIGH'
-    },
-    {
-      id: 103,
-      title: 'Multi-Currency Budget Calculation Engine',
-      description: 'Engine for enterprise project budget calculation supporting USD, INR, EUR, GBP, JPY, and AED currency conversions.',
-      status: 'CODE_REVIEW',
-      reviewStatus: 'PENDING_REVIEW',
-      submittedForReview: true,
-      project: { id: 2, name: 'Workflow Integration Suite', title: 'Workflow Integration Suite' },
-      assignee: { id: 1003, name: 'Manju', role: 'ROLE_EMPLOYEE' },
-      actualTime: 4.0,
-      estimatedTime: 5.5,
-      priority: 'MEDIUM'
-    }
-  ];
 
   const fetchSubmittedTasks = async () => {
     setLoading(true);
@@ -85,21 +85,20 @@ export default function TaskReviews() {
       if (submitted.length > 0) {
         setTasks(submitted);
       } else {
-        // Check local storage for persisted review queue or use defaults
         const stored = localStorage.getItem('mock_pending_review_tasks');
         if (stored) {
           try {
             setTasks(JSON.parse(stored));
           } catch (e) {
-            setTasks(defaultPendingTasks);
+            setTasks([]);
           }
         } else {
-          setTasks(defaultPendingTasks);
+          setTasks([]);
         }
       }
     } catch (err) {
       const stored = localStorage.getItem('mock_pending_review_tasks');
-      setTasks(stored ? JSON.parse(stored) : defaultPendingTasks);
+      setTasks(stored ? JSON.parse(stored) : []);
     } finally {
       setLoading(false);
     }
@@ -192,7 +191,7 @@ export default function TaskReviews() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -237,14 +236,16 @@ export default function TaskReviews() {
       <div className="glass-panel p-4 sm:p-5 bg-gradient-to-r from-blue-600/10 via-indigo-600/10 to-purple-600/10 border border-blue-500/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-11 h-11 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 font-bold text-xl flex-shrink-0">
-            🏥
+            <CheckSquare className="w-6 h-6" />
           </div>
           <div>
             <div className="flex items-center gap-2">
               <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-blue-500/20 text-blue-400 rounded-full border border-blue-500/30">Active Review Queue</span>
               <span className="text-[9px] font-black uppercase px-2 py-0.5 bg-amber-500/20 text-amber-400 rounded-full border border-amber-500/30">Ready for Sign-Off</span>
             </div>
-            <h3 className="text-sm font-black text-slate-800 dark:text-white mt-0.5">Hospital Management System — Task Review Queue</h3>
+            <h3 className="text-sm font-black text-slate-800 dark:text-white mt-0.5">
+              {tasks.length > 0 && tasks[0].project?.name ? `${tasks[0].project.name} — Task Review Queue` : 'Workspace Task Review Queue'}
+            </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Authorized for <strong className="text-slate-700 dark:text-slate-200">Administrator</strong> and <strong className="text-slate-700 dark:text-slate-200">Team Lead</strong> governance.
             </p>
@@ -390,7 +391,7 @@ export default function TaskReviews() {
                   </p>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 p-3 bg-white/5 rounded-xl border border-slate-200/40 dark:border-white/5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 p-3 bg-white/5 rounded-xl border border-slate-200/40 dark:border-white/5">
                   <div>
                     <span className="text-[9px] font-black uppercase text-slate-400">Submitted By</span>
                     <p className="font-extrabold text-blue-500 flex items-center gap-1.5 mt-0.5">
@@ -425,12 +426,12 @@ export default function TaskReviews() {
                 </div>
               </div>
 
-              <div className="flex gap-2.5 justify-end pt-3 border-t border-slate-200/30 dark:border-white/5 flex-wrap">
+              <div className="flex flex-col-reverse sm:flex-row gap-2.5 justify-end pt-3 border-t border-slate-200/30 dark:border-white/5">
                 <button
                   type="button"
                   onClick={() => handleRequestChanges(selectedTask)}
                   disabled={!feedback.trim()}
-                  className="px-4 py-2.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 border border-rose-500/30 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-40 transition-all"
+                  className="w-full sm:w-auto px-4 py-2.5 bg-rose-500/15 hover:bg-rose-500/25 text-rose-500 border border-rose-500/30 rounded-xl text-xs font-bold cursor-pointer disabled:opacity-40 transition-all text-center"
                 >
                   Request Changes
                 </button>
@@ -438,7 +439,7 @@ export default function TaskReviews() {
                 <button
                   type="button"
                   onClick={() => handleApprove(selectedTask)}
-                  className="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg cursor-pointer flex items-center gap-1.5 transition-all transform hover:-translate-y-0.5"
+                  className="w-full sm:w-auto px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs font-bold shadow-lg cursor-pointer flex items-center justify-center gap-1.5 transition-all transform hover:-translate-y-0.5 text-center"
                 >
                   <Check className="w-4 h-4" />
                   <span>Approve & Advance</span>

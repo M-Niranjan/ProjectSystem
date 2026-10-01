@@ -7,7 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import {
   Mail, Lock, Eye, EyeOff, ArrowRight, KeyRound,
   CheckCircle2, X, ShieldCheck, AlertCircle,
-  Sun, Moon
+  Sun, Moon, Building2
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
@@ -18,6 +18,7 @@ import { useScrollLock } from '../hooks/useScrollLock';
 
 // Validation Schemas
 const loginSchema = z.object({
+  workspaceCode: z.string().optional(),
   email: z.string().email('Please enter a valid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
@@ -27,11 +28,10 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe] = useState(true);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [showWorkspaceInput, setShowWorkspaceInput] = useState(false);
 
   // Forgot password OTP step modal state
   const [showForgotModal, setShowForgotModal] = useState(false);
-
-  // Lock background scroll when reset password modal is open
   useScrollLock(showForgotModal);
 
   const [otpStep, setOtpStep] = useState<1 | 2 | 3>(1);
@@ -56,108 +56,111 @@ export default function Login() {
   } = useForm({
     resolver: zodResolver(loginSchema),
     defaultValues: {
+      workspaceCode: '',
       email: '',
       password: '',
     },
   });
 
   React.useEffect(() => {
-    resetLoginForm({ email: '', password: '' });
+    resetLoginForm({ workspaceCode: '', email: '', password: '' });
     clearError();
     // Wipe any delayed browser autofill after DOM render
     const timer = setTimeout(() => {
-      resetLoginForm({ email: '', password: '' });
+      resetLoginForm({ workspaceCode: '', email: '', password: '' });
     }, 150);
     return () => clearTimeout(timer);
   }, [resetLoginForm, clearError]);
+
+  const routeAfterLogin = async (fallbackRole?: string | null) => {
+    resetLoginForm();
+    let memberships = useAuthStore.getState().orgMemberships;
+    if (!memberships || memberships.length === 0) {
+      try {
+        memberships = await useAuthStore.getState().fetchMyOrganizations();
+      } catch (_e) {}
+    }
+
+    const activeOrgId = useAuthStore.getState().activeOrganizationId;
+
+    if (memberships && memberships.length > 1 && !activeOrgId) {
+      navigate('/select-organization', { replace: true });
+      return;
+    }
+
+    let detectedRole: string | null = null;
+
+    if (memberships && memberships.length === 1 && !activeOrgId) {
+      await useAuthStore.getState().setActiveOrganization(memberships[0].organizationId);
+      detectedRole = normalizeRole(memberships[0].roleCode || memberships[0].role || fallbackRole);
+    } else if (activeOrgId) {
+      const activeOrg = useAuthStore.getState().activeOrganization;
+      detectedRole = normalizeRole(activeOrg?.roleCode || activeOrg?.role || useAuthStore.getState().activeOrgRole || fallbackRole);
+    } else if (fallbackRole) {
+      detectedRole = normalizeRole(fallbackRole);
+    }
+
+    // Requirement 25 & 26: If role cannot be determined, DO NOT default to Employee.
+    if (!detectedRole) {
+      useAuthStore.setState({
+        error: 'Your account role could not be verified. Please contact your administrator.',
+        loading: false,
+      });
+      return;
+    }
+
+    const targetRoute = getDashboardPathForRole(detectedRole);
+    if (!targetRoute) {
+      useAuthStore.setState({
+        error: 'Your account role could not be verified. Please contact your administrator.',
+        loading: false,
+      });
+      return;
+    }
+
+    navigate(targetRoute, { replace: true });
+  };
 
   const onLoginSubmit = async (data: any) => {
     clearError();
     useAuthStore.setState({ loading: true, error: null });
     const email = (data.email || '').trim();
     const password = (data.password || '').trim();
+    const workspaceCode = (data.workspaceCode || '').trim() || undefined;
 
     // 1. First attempt Firebase Authentication
-    let firebaseSuccess = false;
     try {
       const userCredential = await signInWithEmailPassword(email, password);
       const user = userCredential.user;
       if (user && user.uid) {
-        let userData = await fetchFirestoreUserDoc(user.uid);
-        if (!userData) {
-          // Fallback to backend /api/auth/me using the Firebase ID token
-          try {
-            const fbToken = await user.getIdToken();
-            const meRes = await api.get('/api/auth/me', {
-              headers: { Authorization: `Bearer ${fbToken}` }
-            });
-            if (meRes.data && (meRes.data.id || meRes.data.email)) {
-              userData = meRes.data;
-            }
-          } catch { }
-        }
-
-        const rawRole = (userData as any)?.role ?? (userData as any)?.roleCode;
-        const normalizedRole = normalizeRole(rawRole);
-        if (normalizedRole) {
-          const targetRoute = getDashboardPathForRole(normalizedRole);
-          if (targetRoute) {
-            const loggedInUser = {
-              id: user.uid,
-              email: user.email || email,
-              name: (userData as any)?.name || (userData as any)?.displayName || user.displayName || email.split('@')[0],
-              role: normalizedRole,
-              designation: (userData as any)?.designation || (normalizedRole === 'ROLE_ADMIN' ? 'System Administrator' : normalizedRole === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
-              department: (userData as any)?.department || (normalizedRole === 'ROLE_ADMIN' ? 'Executive' : normalizedRole === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
-              experience: (userData as any)?.experience || 5,
-              skills: (userData as any)?.skills || '',
-              createdAt: (userData as any)?.createdAt || new Date().toISOString(),
-            };
-
-            const token = await user.getIdToken();
-            const storage = rememberMe ? localStorage : sessionStorage;
-            storage.setItem('token', token);
-            localStorage.setItem('auth_user', JSON.stringify(loggedInUser));
-            localStorage.setItem('mock_user', JSON.stringify(loggedInUser));
-            if (rememberMe) {
-              sessionStorage.setItem('token', token);
-            } else {
-              localStorage.removeItem('token');
-            }
-            useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
-            resetLoginForm();
-            navigate(targetRoute, { replace: true });
-            firebaseSuccess = true;
-            return;
-          }
-        }
-      }
-    } catch (firebaseErr: any) {
-      console.warn('Firebase Auth unhandled/skipped, attempting backend login:', firebaseErr?.code || firebaseErr?.message);
-    }
-
-    // 2. If not logged in via Firebase, attempt Backend API login
-    if (!firebaseSuccess) {
-      try {
-        const ok = await login({ email, password }, rememberMe);
+        const ok = await useAuthStore.getState().loginWithFirebase(user, rememberMe, workspaceCode);
         if (ok) {
           const currentUser = useAuthStore.getState().user;
           const role = normalizeRole(currentUser?.role);
-          const targetRoute = getDashboardPathForRole(role);
-          if (targetRoute) {
-            resetLoginForm();
-            navigate(targetRoute, { replace: true });
-            return;
-          }
+          await routeAfterLogin(role);
+          return;
         }
-      } catch (backendErr: any) {
-        console.error('Backend login error:', backendErr);
       }
+    } catch (firebaseErr: any) {
+      console.warn('Firebase Auth sign in attempt skipped:', firebaseErr?.code || firebaseErr?.message);
+    }
+
+    // 2. Attempt Backend API login (which authenticates or auto-provisions user)
+    try {
+      const ok = await login({ email, password, workspaceCode }, rememberMe);
+      if (ok) {
+        const currentUser = useAuthStore.getState().user;
+        const role = normalizeRole(currentUser?.role);
+        await routeAfterLogin(role);
+        return;
+      }
+    } catch (backendErr: any) {
+      console.error('Backend login error:', backendErr);
     }
 
     const currentError = useAuthStore.getState().error;
     if (!currentError) {
-      useAuthStore.setState({ error: 'Access Denied: This email account has not been authorized. Only administrator-approved email accounts can log in.', loading: false });
+      useAuthStore.setState({ error: 'Unable to sign in. Please verify your credentials or try again.', loading: false });
     } else {
       useAuthStore.setState({ loading: false });
     }
@@ -168,86 +171,19 @@ export default function Login() {
     clearError();
     setGoogleLoading(true);
     useAuthStore.setState({ loading: true, error: null });
+    const workspaceCode = (getValues('workspaceCode') || '').trim() || undefined;
 
     try {
       const userCredential = await signInWithGoogle();
       const user = userCredential.user;
       if (user && user.uid) {
-        let userData = await fetchFirestoreUserDoc(user.uid);
-        const fbToken = await user.getIdToken();
-
-        // If no user doc found in Firestore by UID, sync with backend firebase-login
-        if (!userData) {
-          try {
-            const syncRes = await api.post(
-              '/api/auth/firebase-login',
-              {
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName,
-                photoURL: user.photoURL,
-              },
-              {
-                headers: { Authorization: `Bearer ${fbToken}` },
-              }
-            );
-            if (syncRes.data?.user) {
-              userData = syncRes.data.user;
-            }
-          } catch (syncErr) {
-            console.warn('Backend firebase-login sync warning:', syncErr);
-          }
+        const ok = await useAuthStore.getState().loginWithFirebase(user, rememberMe, workspaceCode);
+        if (ok) {
+          const currentUser = useAuthStore.getState().user;
+          const role = normalizeRole(currentUser?.role);
+          await routeAfterLogin(role);
+          return;
         }
-
-        // Secondary fallback to /api/auth/me
-        if (!userData) {
-          try {
-            const meRes = await api.get('/api/auth/me', {
-              headers: { Authorization: `Bearer ${fbToken}` },
-            });
-            if (meRes.data && (meRes.data.id || meRes.data.email)) {
-              userData = meRes.data;
-            }
-          } catch { }
-        }
-
-        const rawRole = (userData as any)?.role ?? (userData as any)?.roleCode;
-        const normalizedRole = normalizeRole(rawRole);
-
-        if (normalizedRole) {
-          const targetRoute = getDashboardPathForRole(normalizedRole);
-          if (targetRoute) {
-            const loggedInUser = {
-              id: user.uid,
-              email: user.email || '',
-              name: (userData as any)?.name || (userData as any)?.displayName || user.displayName || user.email?.split('@')[0],
-              role: normalizedRole,
-              designation: (userData as any)?.designation || (normalizedRole === 'ROLE_ADMIN' ? 'System Administrator' : normalizedRole === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'),
-              department: (userData as any)?.department || (normalizedRole === 'ROLE_ADMIN' ? 'Executive' : normalizedRole === 'ROLE_MANAGER' ? 'Management' : 'Engineering'),
-              experience: (userData as any)?.experience || 5,
-              skills: (userData as any)?.skills || '',
-              createdAt: (userData as any)?.createdAt || new Date().toISOString(),
-            };
-
-            const token = fbToken;
-            const storage = rememberMe ? localStorage : sessionStorage;
-            storage.setItem('token', token);
-            if (rememberMe) {
-              sessionStorage.setItem('token', token);
-            } else {
-              localStorage.removeItem('token');
-            }
-            useAuthStore.setState({ user: loggedInUser as any, token, loading: false, error: null });
-            resetLoginForm();
-            navigate(targetRoute, { replace: true });
-            return;
-          }
-        }
-
-        useAuthStore.setState({
-          error: 'Access Denied: This Google account has not been authorized. Only administrator-approved accounts can log in.',
-          loading: false,
-        });
       }
     } catch (err: any) {
       console.error('Google Sign In Error:', err);
@@ -358,74 +294,62 @@ export default function Login() {
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col justify-between items-center py-10 px-4 login-bg-executive-titanium text-slate-900 dark:text-white overflow-hidden select-none transition-colors duration-300">
+    <div className="fixed inset-0 w-full h-full flex flex-col items-center p-3 sm:p-4 login-bg-executive-titanium text-slate-900 dark:text-white overflow-y-auto overscroll-contain">
       {/* Option 2: Executive Titanium Architectural Blueprint Grid Overlay */}
       <div className="blueprint-grid-overlay" aria-hidden="true" />
 
       {/* Top-Right Theme Toggle Button */}
-      <div className="absolute top-5 right-5 z-20">
+      <div className="absolute top-3 right-3 sm:top-5 sm:right-5 z-20">
         <button
           type="button"
           onClick={toggleTheme}
-          className="p-2 px-3.5 rounded-2xl glass-panel text-slate-700 dark:text-slate-200 hover:scale-105 transition-all cursor-pointer shadow-lg flex items-center gap-2 text-xs font-bold"
+          className="p-2 px-3 sm:px-3.5 rounded-2xl glass-panel text-slate-700 dark:text-slate-200 hover:border-blue-500/40 transition-colors cursor-pointer shadow-lg flex items-center gap-2 text-xs font-bold"
           title="Toggle Light / Dark Transparent Theme"
         >
-          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-600" />}
-          <span>{darkMode ? 'Dark Theme' : 'Light Theme'}</span>
+          {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-600" />}
+          <span className="hidden xs:inline">{darkMode ? 'Dark' : 'Light'}</span>
         </button>
       </div>
 
-      {/* Main Content Area */}
-      <div className="relative z-10 w-full max-w-md flex flex-col items-center my-auto">
+      {/* Main Content Area: Centered, Constant, Non-Movable */}
+      <div className="m-auto w-full max-w-[400px] flex flex-col items-center py-6 sm:py-8 relative z-10">
         {/* Brand Header */}
-        <div className="flex flex-col items-center mb-7 text-center">
+        <div className="flex flex-col items-center mb-3 text-center">
           {/* Ascending 3-Bar Logo */}
-          <div className="flex items-end gap-1.5 h-12 mb-3">
-            <div className="w-3.5 h-6 rounded-md bg-gradient-to-t from-sky-400 to-blue-500 shadow-sm" />
-            <div className="w-3.5 h-9 rounded-md bg-gradient-to-t from-blue-500 to-indigo-600 shadow-sm" />
-            <div className="w-3.5 h-12 rounded-md bg-gradient-to-t from-indigo-600 to-violet-600 shadow-sm" />
+          <div className="flex items-end gap-1.5 h-8 mb-1.5">
+            <div className="w-2.5 h-4 rounded-sm bg-blue-400 shadow-sm" />
+            <div className="w-2.5 h-6 rounded-sm bg-blue-500 shadow-sm" />
+            <div className="w-2.5 h-8 rounded-sm bg-blue-600 shadow-sm" />
           </div>
 
-          <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Task<span className="text-blue-600 dark:text-blue-400">Flow</span>
           </h1>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
             Project Management System
-          </p>
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-[0.22em] mt-2 uppercase">
-            PLAN &bull; COLLABORATE &bull; ACHIEVE
           </p>
         </div>
 
-        {/* Option 1: Obsidian Minimalist Glass Auth Card */}
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-          className="w-full obsidian-glass-card p-8 sm:p-9 shadow-2xl relative transition-all"
-        >
+        {/* Option 1: Obsidian Minimalist Glass Auth Card - Firmly Fixed & Constant */}
+        <div className="w-full obsidian-glass-card p-5 sm:p-6 shadow-2xl relative">
           <div>
-            <div className="text-center mb-6">
-              <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+            <div className="text-center mb-3">
+              <h2 className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
                 Welcome Back
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Sign in to your account
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+                Sign in to your workspace
               </p>
             </div>
 
             {error && (
-              <motion.div
-                initial={{ opacity: 0, y: -6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl p-3 mb-5 text-xs font-medium flex items-center gap-2"
-              >
+              <div className="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 text-rose-700 dark:text-rose-300 rounded-xl p-2.5 mb-3 text-xs font-medium flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 text-rose-600 dark:text-rose-400 flex-shrink-0" />
                 <span>{error}</span>
-              </motion.div>
+              </div>
             )}
 
-            <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-4" autoComplete="off">
+            <form onSubmit={handleLoginSubmit(onLoginSubmit)} className="space-y-3" autoComplete="off">
               {/* Hidden decoy fields to divert browser credential autofill */}
               <input type="text" name="prevent_autofill_user" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
               <input type="password" name="prevent_autofill_pwd" style={{ display: 'none' }} tabIndex={-1} aria-hidden="true" autoComplete="off" />
@@ -439,11 +363,11 @@ export default function Login() {
                     placeholder="Email address"
                     autoComplete="new-password"
                     {...registerLogin('email')}
-                    className="obsidian-input w-full pl-10 pr-4 py-3 placeholder-slate-400 text-xs font-medium outline-none transition-all"
+                    className="obsidian-input w-full pl-10 pr-4 py-2.5 placeholder-slate-400 text-xs font-medium outline-none transition-colors"
                   />
                 </div>
                 {loginErrors.email && (
-                  <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.email.message as string}</p>
+                  <p className="text-[10px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.email.message as string}</p>
                 )}
               </div>
 
@@ -456,7 +380,7 @@ export default function Login() {
                     placeholder="Password"
                     autoComplete="new-password"
                     {...registerLogin('password')}
-                    className="obsidian-input w-full pl-10 pr-10 py-3 placeholder-slate-400 text-xs font-medium outline-none transition-all"
+                    className="obsidian-input w-full pl-10 pr-10 py-2.5 placeholder-slate-400 text-xs font-medium outline-none transition-colors"
                   />
                   <button
                     type="button"
@@ -467,12 +391,40 @@ export default function Login() {
                   </button>
                 </div>
                 {loginErrors.password && (
-                  <p className="text-[11px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.password.message as string}</p>
+                  <p className="text-[10px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.password.message as string}</p>
                 )}
               </div>
 
-              {/* Forgot Password Link */}
-              <div className="flex justify-end pt-0.5">
+              {/* Optional Expandable Workspace Code Field (For First-Time Onboarding Connection) */}
+              {showWorkspaceInput && (
+                <div className="overflow-hidden pt-0.5">
+                  <div className="relative">
+                    <Building2 className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-blue-500 pointer-events-none z-10" />
+                    <input
+                      type="text"
+                      placeholder="Workspace Code (e.g. ABC001)"
+                      autoComplete="off"
+                      {...registerLogin('workspaceCode')}
+                      className="obsidian-input w-full pl-10 pr-4 py-2 placeholder-slate-400 text-xs font-medium outline-none transition-colors uppercase placeholder:normal-case border-blue-500/30"
+                    />
+                  </div>
+                  {loginErrors.workspaceCode && (
+                    <p className="text-[10px] text-rose-500 font-medium mt-1 ml-1">{loginErrors.workspaceCode.message as string}</p>
+                  )}
+                </div>
+              )}
+
+              {/* Action Links: Workspace Code Toggle & Forgot Password Link */}
+              <div className="flex items-center justify-between pt-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowWorkspaceInput(!showWorkspaceInput)}
+                  className="text-xs font-semibold text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 transition-colors cursor-pointer flex items-center gap-1"
+                >
+                  <Building2 className="w-3.5 h-3.5" />
+                  <span>{showWorkspaceInput ? 'Hide Workspace Code' : 'Have a Workspace Code?'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={handleOpenForgotModal}
@@ -486,7 +438,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading || googleLoading}
-                className="btn-obsidian-submit w-full py-3.5 px-4 font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                className="btn-obsidian-submit w-full py-2.5 px-4 font-bold text-xs shadow-md transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
               >
                 {loading && !googleLoading ? (
                   <>
@@ -503,7 +455,7 @@ export default function Login() {
             </form>
 
             {/* Option 1: Clean Minimalist Divider */}
-            <div className="relative my-4 flex items-center justify-center">
+            <div className="relative my-3 flex items-center justify-center">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-slate-300/80 dark:border-white/10" />
               </div>
@@ -517,7 +469,7 @@ export default function Login() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={loading || googleLoading}
-              className="btn-google-sign-in w-full py-3 px-4 flex items-center justify-center gap-3 font-semibold text-xs cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              className="btn-google-sign-in w-full py-2.5 px-4 flex items-center justify-center gap-3 font-semibold text-xs cursor-pointer disabled:opacity-50"
             >
               {googleLoading ? (
                 <>
@@ -549,30 +501,34 @@ export default function Login() {
               )}
             </button>
 
-            {/* Restricted Workspace Notice */}
-            <div className="mt-5 pt-4 border-t border-slate-200 dark:border-white/10 flex items-center justify-center gap-2 text-center">
-              <ShieldCheck className="w-4 h-4 text-emerald-500 shrink-0" />
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+            {/* Requirement 2: New Organization Registration Option */}
+            <div className="mt-2.5 pt-2 border-t border-slate-200/80 dark:border-white/10 text-center">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 mb-1 font-medium">New Organization?</p>
+              <button
+                type="button"
+                onClick={() => navigate('/register-organization')}
+                className="w-full py-1.5 px-3 rounded-xl border border-blue-500/30 dark:border-blue-400/20 bg-blue-50/60 dark:bg-blue-500/10 hover:bg-blue-100/80 dark:hover:bg-blue-500/20 text-blue-600 dark:text-blue-400 font-semibold text-xs transition-colors flex items-center justify-center gap-2 group cursor-pointer"
+              >
+                <span>Register Your Organization</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* Requirement 10: Restricted Workspace Notice */}
+            <div className="mt-2.5 flex items-center justify-center gap-1.5 text-center">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">
                 Restricted Workspace &bull; Only administrator-approved accounts can log in.
               </p>
             </div>
           </div>
-        </motion.div>
-      </div>
+        </div>
 
-      {/* Footer Branding */}
-      <div className="relative z-10 text-center mt-8">
-        <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 tracking-[0.22em] uppercase">
-          MANAGE PROJECTS &bull; BUILD BETTER TOMORROW
-        </p>
-        <div className="flex items-center justify-center gap-3 mt-2">
-          <div className="w-12 h-px bg-slate-300 dark:bg-white/10" />
-          <div className="flex items-end gap-1 h-3.5">
-            <div className="w-1 h-2 rounded-xs bg-blue-400" />
-            <div className="w-1 h-2.5 rounded-xs bg-blue-600" />
-            <div className="w-1 h-3.5 rounded-xs bg-indigo-600" />
-          </div>
-          <div className="w-12 h-px bg-slate-300 dark:bg-white/10" />
+        {/* Footer Branding: In flow right below card, zero overlap */}
+        <div className="mt-3 text-center pointer-events-none hidden sm:block">
+          <p className="text-[9px] font-bold text-slate-400/80 dark:text-slate-500/80 tracking-[0.22em] uppercase">
+            MANAGE PROJECTS &bull; BUILD BETTER TOMORROW
+          </p>
         </div>
       </div>
 

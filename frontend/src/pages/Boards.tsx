@@ -15,6 +15,7 @@ import { motion } from 'framer-motion';
 import confetti from 'canvas-confetti';
 import { useScrollLock } from '../hooks/useScrollLock';
 import LuxurySelect from '../components/common/LuxurySelect';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
 interface Task {
   id: number;
@@ -147,6 +148,10 @@ export default function Boards() {
       window.removeEventListener('task-status-updated', fetchTasks);
     };
   }, [activeProjectId]);
+
+  // Hook into global live auto-refresh
+  useLiveRefresh(fetchTasks);
+  useScrollLock(!!gatePrompt);
 
   // Validation function checks constraints step-by-step
   const validateTransition = (task: Task, targetStatus: string): { valid: boolean; error?: string } => {
@@ -369,7 +374,7 @@ export default function Boards() {
   };
 
   return (
-    <div className="space-y-6 select-none h-[calc(100vh-100px)] flex flex-col relative">
+    <div className="space-y-6 min-h-[calc(100vh-100px)] flex flex-col relative pb-16">
       {/* Title Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 flex-shrink-0 w-full min-w-0">
         <div>
@@ -395,14 +400,14 @@ export default function Boards() {
             </label>
           )}
 
-          <div className="relative max-w-xs">
+          <div className="relative flex-1 sm:flex-initial max-w-xs">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"
               placeholder="Filter board tasks..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs w-40 sm:w-48"
+              className="pl-9 pr-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs w-full sm:w-48"
             />
           </div>
 
@@ -494,7 +499,7 @@ export default function Boards() {
 
       {/* Columns Container */}
       <DndContext sensors={sensors} onDragEnd={handleDragEnd}>
-        <div className="flex-1 overflow-x-auto pb-4 flex gap-6 items-start h-full mt-4 min-h-0">
+        <div className="flex-1 overflow-x-auto pb-4 flex gap-4 sm:gap-6 items-start h-full mt-4 min-h-0 custom-scrollbar overscroll-x-contain">
           {COLUMNS.map(col => {
             const isEmployeeRole = user?.role === 'ROLE_EMPLOYEE';
             const colTasks = tasks.filter(t => {
@@ -691,7 +696,7 @@ function KanbanColumn({ column, tasks, onCardClick, onActionClick, onSendBackCli
   return (
     <div
       ref={setNodeRef}
-      className={`flex-shrink-0 w-80 max-h-full rounded-2xl border-t-4 border border-slate-200/50 dark:border-white/5 p-4 flex flex-col ${column.color}`}
+      className={`flex-shrink-0 w-[280px] xs:w-80 max-h-full rounded-2xl border-t-4 border border-slate-200/50 dark:border-white/5 p-4 flex flex-col ${column.color}`}
     >
       {/* Column Header */}
       <div className="flex items-center justify-between mb-4 flex-shrink-0">

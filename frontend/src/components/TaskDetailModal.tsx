@@ -119,22 +119,11 @@ export default function TaskDetailModal() {
       const attachRes = await api.get(`/api/attachments/task/${taskId}`);
       setAttachments(Array.isArray(attachRes.data) ? attachRes.data : []);
     } catch (err) {
-      // Mock fallbacks
-      setComments([
-        { id: 1, content: 'Alice, make sure the border radius matches the standard 16px variables.', user: { id: 2, name: 'Bob Johnson' }, createdAt: '2026-07-14T11:20:00Z' },
-        { id: 2, content: 'Already on it! I am compiling the CSS variables right now.', user: { id: 1, name: 'Alice Smith' }, createdAt: '2026-07-14T11:45:00Z' }
-      ]);
-      setAttachments([
-        { id: 1, fileName: 'Dashboard_Mockup.png', fileUrl: '#', fileType: 'image/png', createdAt: '2026-07-14T10:00:00Z' }
-      ]);
+      setComments([]);
+      setAttachments([]);
     }
 
-    // Default mock subtasks
-    setSubtasks([
-      { id: 1, title: 'Map Tailwind variables in index.css', completed: true },
-      { id: 2, title: 'Add hover micro-interactions to task cards', completed: false },
-      { id: 3, title: 'Configure GSAP magnetic button hooks', completed: false }
-    ]);
+    setSubtasks([]);
   };
 
   const handleToggleSubtask = (subId: number) => {
@@ -166,7 +155,7 @@ export default function TaskDetailModal() {
       const mockComm: Comment = {
         id: Date.now(),
         content: newComment,
-        user: { id: user?.id || 1, name: user?.name || 'Alice Smith', profilePhoto: user?.profilePhoto },
+        user: { id: user?.id || 1, name: user?.name || 'Member', profilePhoto: user?.profilePhoto },
         createdAt: new Date().toISOString()
       };
       setComments([...comments, mockComm]);
@@ -240,16 +229,14 @@ export default function TaskDetailModal() {
       return;
     }
     
-    if (confirm(`Do you want to log ${hours} hours to this task?`)) {
-      try {
-        const res = await api.post(`/api/tasks/${task.id}/timer?additionalHours=${hours}`);
-        setTask(res.data);
-      } catch (err) {
-        // Offline update
-        setTask({ ...task, actualTime: task.actualTime + hours });
-      }
-      setTimeElapsed(0);
+    try {
+      const res = await api.post(`/api/tasks/${task.id}/timer?additionalHours=${hours}`);
+      setTask(res.data);
+    } catch (err) {
+      // Offline update
+      setTask({ ...task, actualTime: task.actualTime + hours });
     }
+    setTimeElapsed(0);
   };
 
   const formatTime = (seconds: number) => {
@@ -282,18 +269,19 @@ export default function TaskDetailModal() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-            className="glass-panel w-full max-w-4xl h-[85vh] shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-hidden flex flex-col md:flex-row modal-dialog-contain overscroll-contain"
+            className="glass-panel w-full max-w-4xl max-h-[90vh] md:h-[85vh] shadow-2xl relative border border-slate-200/50 dark:border-white/10 overflow-y-auto md:overflow-hidden flex flex-col md:flex-row modal-dialog-contain overscroll-contain"
           >
             {/* Close */}
             <button
               onClick={() => setIsOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-white z-50 cursor-pointer"
+              className="absolute top-3 right-3 sm:top-4 sm:right-4 p-1.5 rounded-full bg-slate-100 dark:bg-white/10 text-slate-400 hover:text-slate-600 dark:hover:text-white z-50 cursor-pointer"
+              title="Close modal"
             >
               <X className="w-5 h-5" />
             </button>
 
             {/* Left Column - Main Details & Comments */}
-            <div className="flex-1 p-6 md:p-8 overflow-y-auto border-r border-slate-200/30 dark:border-white/5 space-y-6">
+            <div className="flex-1 p-4 sm:p-6 md:p-8 md:overflow-y-auto border-b md:border-b-0 md:border-r border-slate-200/30 dark:border-white/5 space-y-6">
               <div>
                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{task.project.name}</p>
                 <h2 className="text-xl font-black text-slate-800 dark:text-white mt-1">{task.title}</h2>
@@ -415,7 +403,7 @@ export default function TaskDetailModal() {
             </div>
 
             {/* Right Column - Task Metadata & Timer controls */}
-            <div className="w-full md:w-80 p-6 md:p-8 bg-slate-500/5 overflow-y-auto space-y-6">
+            <div className="w-full md:w-80 p-4 sm:p-6 md:p-8 bg-slate-500/5 md:overflow-y-auto space-y-6 shrink-0">
               {/* Task stopwatch timer */}
               <div className="glass-panel p-4 border border-blue-500/20 bg-blue-500/5 rounded-2xl text-center space-y-3.5">
                 <p className="text-[10px] font-black text-blue-500 uppercase tracking-widest flex items-center justify-center gap-1">

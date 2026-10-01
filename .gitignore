@@ -19,3 +19,10 @@ dist/
 Thumbs.db
 .idea/
 .vscode/
+
+# Uploads
+uploads/
+**/uploads/
+frontend/public/uploads/
+*.pdf
+backend-node/uploads/

@@ -28,6 +28,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { formatRoleName } from '../services/authRoles';
 import { useScrollLock } from '../hooks/useScrollLock';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
 interface Task {
   id: number;
@@ -163,6 +164,9 @@ export default function Tasks() {
       window.removeEventListener('task-status-updated', fetchTasks);
     };
   }, [activeProjectId]);
+
+  // Hook into global live auto-refresh
+  useLiveRefresh(fetchTasks);
 
   const showToastMsg = (msg: string, type: 'success' | 'error' | 'info' = 'success') => {
     showToast(msg, type);
@@ -358,7 +362,7 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-5 select-none pt-1 sm:pt-2 pb-12 w-full min-w-0">
+    <div className="space-y-5 pt-1 sm:pt-2 pb-20 w-full min-w-0">
       {/* Tier 1: Title & Primary Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>

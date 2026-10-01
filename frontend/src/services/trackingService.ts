@@ -93,7 +93,7 @@ export async function getTrackingOverviewData() {
         overdueTasksCount: overdueTasks.length,
         completionRate,
         workloadLevel: workloadInfo.level,
-        currentProject: emp.currentProject || projects[0]?.name || 'Hospital Management System',
+        currentProject: emp.currentProject || projects[0]?.name || 'Workspace',
         currentStatus: emp.currentStatus || 'ONLINE',
         warningMessage: workloadInfo.warning,
         tasksList: assignedTasks,
@@ -131,44 +131,8 @@ export async function getEmployeeProfileById(id: number | string): Promise<Emplo
       (e) => String(e.id).toLowerCase() === targetIdStr || e.name.toLowerCase() === targetIdStr
     );
 
-    // Fallback search if not found directly in overview.employees
     if (!emp) {
-      const defaultEmps: Record<string, Partial<EmployeeProfileData>> = {
-        '1001': { id: 1001, name: 'Ramesh', designation: 'Software Developer', department: 'Engineering', currentProject: 'Prologue SaaS Dashboard' },
-        '1002': { id: 1002, name: 'Rahul', designation: 'Frontend Developer', department: 'Web Engineering', currentProject: 'Hospital Management System' },
-        '1003': { id: 1003, name: 'Manju', designation: 'Backend Developer', department: 'Engineering', currentProject: 'Workflow Integration Suite' },
-        '1004': { id: 1004, name: 'Vinay', designation: 'QA Developer', department: 'Quality Assurance', currentProject: 'Hospital Management System' },
-      };
-
-      const fallbackInfo = defaultEmps[targetIdStr];
-      if (fallbackInfo) {
-        const assignedTasks = (overview.tasks || []).filter(
-          (t: any) => t.assignee && (String(t.assignee.id) === targetIdStr || t.assignee.name === fallbackInfo.name)
-        );
-        const completedTasks = assignedTasks.filter((t: any) => t.status === 'COMPLETED');
-        const inProgressTasks = assignedTasks.filter((t: any) => t.status !== 'COMPLETED');
-        const overdueTasks = assignedTasks.filter((t: any) => t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'COMPLETED');
-
-        emp = {
-          id: fallbackInfo.id || Number(id),
-          name: fallbackInfo.name || 'Employee',
-          role: 'ROLE_EMPLOYEE',
-          designation: fallbackInfo.designation || 'Software Engineer',
-          department: fallbackInfo.department || 'Engineering',
-          profilePhoto: undefined,
-          assignedTasksCount: assignedTasks.length,
-          completedTasksCount: completedTasks.length,
-          inProgressTasksCount: inProgressTasks.length,
-          overdueTasksCount: overdueTasks.length,
-          completionRate: assignedTasks.length ? Math.round((completedTasks.length / assignedTasks.length) * 100) : 100,
-          workloadLevel: 'BALANCED',
-          currentProject: fallbackInfo.currentProject || 'Hospital Management System',
-          currentStatus: 'ONLINE',
-          tasksList: assignedTasks,
-          blockersList: (overview.blockers || []).filter((b: any) => String(b.reporterId) === targetIdStr || b.reporterName === fallbackInfo.name),
-          recentActivity: (overview.activities || []).filter((a: any) => String(a.actorId) === targetIdStr || a.actorName === fallbackInfo.name),
-        };
-      }
+      return null;
     }
 
     if (emp) {

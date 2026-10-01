@@ -14,6 +14,10 @@ export interface AuthenticatedUser {
 export interface AuthRequest extends Request {
   user?: AuthenticatedUser;
   firebaseUid?: string;
+  organizationId?: string;
+  orgRole?: string;
+  orgMembership?: any;
+  allMemberships?: any[];
 }
 
 const JWT_SECRET = process.env.JWT_SECRET || '404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970';
@@ -43,7 +47,13 @@ export const authenticateToken = async (req: AuthRequest, res: Response, next: N
         console.warn('Database user lookup warning for JWT user:', dbErr);
       }
 
-      const role = normalizeRole(databaseUser?.role || decodedJwt.role || 'ROLE_EMPLOYEE') as Role;
+      const rawRole = decodedJwt.role || databaseUser?.role;
+      const role = normalizeRole(rawRole) as Role;
+      if (!role) {
+        return res.status(403).json({
+          message: 'Your account role could not be verified. Please contact your administrator.'
+        });
+      }
       let resolvedUid = String(decodedJwt.id || '');
       if ((!resolvedUid || resolvedUid === '900000' || !isNaN(Number(resolvedUid))) && (decodedJwt.email || databaseUser?.email)) {
         try {

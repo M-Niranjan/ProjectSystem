@@ -97,6 +97,8 @@ interface UIState {
   setProjectModalOpen: (isOpen: boolean) => void;
   setTaskModalOpen: (isOpen: boolean, status?: string | null, isEdit?: boolean, task?: any | null) => void;
   setChatContactId: (id: number | null) => void;
+  signOutModalOpen: boolean;
+  setSignOutModalOpen: (isOpen: boolean) => void;
 }
 
 const applyAccentStyles = (accent: AccentColor) => {
@@ -276,6 +278,8 @@ export const useUIStore = create<UIState>((set, get) => ({
     editingTask: task 
   }),
   setChatContactId: (id) => set({ chatContactId: id }),
+  signOutModalOpen: false,
+  setSignOutModalOpen: (isOpen) => set({ signOutModalOpen: isOpen }),
   toast: null,
   showToast: (message: string, type: ToastType = 'success', duration = 3500) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);

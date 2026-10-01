@@ -4,6 +4,7 @@ dotenv.config();
 import express from 'express';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { sequelize, connectDB } from './config/database';
 
 import authRoutes from './routes/authRoutes';
@@ -17,7 +18,9 @@ import notificationRoutes from './routes/notificationRoutes';
 import reportRoutes from './routes/reportRoutes';
 import adminRoutes from './routes/adminRoutes';
 import attachmentRoutes from './routes/attachmentRoutes';
+import organizationRoutes from './routes/organizationRoutes';
 import { errorHandler } from './middleware/errorHandler';
+import { FirebaseAdminService } from './config/firebaseAdmin';
 
 import { seedInitialAdmin } from './scripts/seedAdmin';
 
@@ -33,15 +36,49 @@ app.use(
     },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin', 'X-Organization-Id', 'x-organization-id'],
   })
 );
 
 app.use(express.json({ limit: '20mb' }));
 app.use(express.urlencoded({ extended: true, limit: '20mb' }));
 
-// Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+// Serve uploaded files statically with smart resolver for timestamped filenames
+const uploadsDir = path.resolve(__dirname, '../uploads');
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+
+app.get('/uploads/:filename', (req, res, next) => {
+  const reqFilename = decodeURIComponent(req.params.filename);
+  const directPath = path.join(uploadsDir, reqFilename);
+
+  // 1. Direct file match
+  if (fs.existsSync(directPath) && fs.statSync(directPath).isFile()) {
+    return res.sendFile(directPath);
+  }
+
+  // 2. Fallback search for timestamped versions (*_filename or matching name)
+  try {
+    const files = fs.readdirSync(uploadsDir);
+    const cleanReq = reqFilename.toLowerCase();
+    const matches = files.filter(f => {
+      const lower = f.toLowerCase();
+      return lower === cleanReq || lower.endsWith('_' + cleanReq) || lower.includes(cleanReq);
+    });
+
+    if (matches.length > 0) {
+      matches.sort((a, b) => b.localeCompare(a));
+      return res.sendFile(path.join(uploadsDir, matches[0]));
+    }
+  } catch (err) {
+    console.error('Error resolving upload file:', err);
+  }
+
+  next();
+});
+
+app.use('/uploads', express.static(uploadsDir));
 
 // Register API routes matching exact Java Spring Boot path mappings
 app.use('/api/auth', authRoutes);
@@ -49,12 +86,15 @@ app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/teams', teamRoutes);
+app.use('/api/team', teamRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/logs', adminRoutes);
 app.use('/api/attachments', attachmentRoutes);
+app.use('/api/organizations', organizationRoutes);
 
 // Health check endpoint
 app.get('/', (_req, res) => {
@@ -92,6 +132,7 @@ const initializeServer = async () => {
     } catch (_syncErr) {}
 
     await seedInitialAdmin();
+    await FirebaseAdminService.ensureDefaultOrganization();
     console.log('Database synced cleanly and initial Admin provisioned.');
 
     app.listen(Number(PORT), '0.0.0.0', () => {

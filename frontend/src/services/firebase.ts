@@ -93,4 +93,198 @@ export const fetchAllFirestoreUserDocs = async (): Promise<any[]> => {
   }
 };
 
+export const fetchOrganizationDoc = async (orgId: string): Promise<any | null> => {
+  try {
+    const orgDocRef = doc(firebaseDb, 'organizations', orgId);
+    const snap = await getDoc(orgDocRef);
+    if (snap.exists()) {
+      return { id: snap.id, ...snap.data() };
+    }
+    return null;
+  } catch (err) {
+    console.error(`Error fetching organization ${orgId}:`, err);
+    return null;
+  }
+};
+
+export const fetchUserOrgMemberships = async (uid: string, email?: string): Promise<any[]> => {
+  try {
+    const memberships: any[] = [];
+    const seenOrgIds = new Set<string>();
+
+    const q = query(collection(firebaseDb, 'organizationMembers'), where('userId', '==', uid));
+    const snap = await getDocs(q);
+    snap.forEach((d) => {
+      const data = d.data();
+      if (data.organizationId && !seenOrgIds.has(data.organizationId)) {
+        seenOrgIds.add(data.organizationId);
+        memberships.push({ id: d.id, ...data });
+      }
+    });
+
+    if (email && memberships.length === 0) {
+      const qEmail = query(collection(firebaseDb, 'organizationMembers'), where('userEmail', '==', email.trim().toLowerCase()));
+      const snapEmail = await getDocs(qEmail);
+      snapEmail.forEach((d) => {
+        const data = d.data();
+        if (data.organizationId && !seenOrgIds.has(data.organizationId)) {
+          seenOrgIds.add(data.organizationId);
+          memberships.push({ id: d.id, ...data });
+        }
+      });
+    }
+
+    // Enrich with organization document
+    const enriched: any[] = [];
+    for (const m of memberships) {
+      const orgDoc = await fetchOrganizationDoc(m.organizationId);
+      enriched.push({
+        ...m,
+        organizationName: orgDoc?.name || m.organizationName || m.organizationId,
+        organizationCode: orgDoc?.code || m.organizationId,
+        organizationLogo: orgDoc?.logo || null,
+        organizationStatus: orgDoc?.status || 'active',
+      });
+    }
+
+    return enriched;
+  } catch (err) {
+    console.error('Error fetching user organization memberships:', err);
+    return [];
+  }
+};
+
+// =========================================================================
+// FIRESTORE PROJECTS & TASKS PERSISTENCE HELPERS
+// =========================================================================
+
+export const fetchFirestoreProjects = async (orgId?: string): Promise<any[]> => {
+  try {
+    let q = query(collection(firebaseDb, 'projects'));
+    if (orgId) {
+      q = query(collection(firebaseDb, 'projects'), where('organizationId', '==', orgId));
+    }
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error fetching Firestore projects:', err);
+    return [];
+  }
+};
+
+export const fetchFirestoreTasks = async (orgId?: string, projectId?: string): Promise<any[]> => {
+  try {
+    let q = query(collection(firebaseDb, 'tasks'));
+    if (orgId && projectId) {
+      q = query(collection(firebaseDb, 'tasks'), where('organizationId', '==', orgId), where('projectId', '==', projectId));
+    } else if (orgId) {
+      q = query(collection(firebaseDb, 'tasks'), where('organizationId', '==', orgId));
+    } else if (projectId) {
+      q = query(collection(firebaseDb, 'tasks'), where('projectId', '==', projectId));
+    }
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+  } catch (err) {
+    console.error('Error fetching Firestore tasks:', err);
+    return [];
+  }
+};
+
+export const upsertFirestoreProject = async (projectId: string, data: Record<string, any>): Promise<boolean> => {
+  try {
+    const docRef = doc(firebaseDb, 'projects', String(projectId));
+    await setDoc(docRef, {
+      ...data,
+      id: String(projectId),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error(`Error saving Firestore project ${projectId}:`, err);
+    return false;
+  }
+};
+
+export const upsertFirestoreTask = async (taskId: string, data: Record<string, any>): Promise<boolean> => {
+  try {
+    const docRef = doc(firebaseDb, 'tasks', String(taskId));
+    await setDoc(docRef, {
+      ...data,
+      id: String(taskId),
+      updatedAt: new Date().toISOString(),
+    }, { merge: true });
+    return true;
+  } catch (err) {
+    console.error(`Error saving Firestore task ${taskId}:`, err);
+    return false;
+  }
+};
+
+export const deleteFirestoreProjectDoc = async (projectId: string): Promise<boolean> => {
+  try {
+    const docRef = doc(firebaseDb, 'projects', String(projectId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Error deleting Firestore project ${projectId}:`, err);
+    return false;
+  }
+};
+
+export const deleteFirestoreTaskDoc = async (taskId: string): Promise<boolean> => {
+  try {
+    const docRef = doc(firebaseDb, 'tasks', String(taskId));
+    await deleteDoc(docRef);
+    return true;
+  } catch (err) {
+    console.error(`Error deleting Firestore task ${taskId}:`, err);
+    return false;
+  }
+};
+
+export const fetchFirestoreAuditLogs = async (orgId?: string): Promise<any[]> => {
+  try {
+    let q: any = collection(firebaseDb, 'audit_logs');
+    if (orgId) {
+      q = query(collection(firebaseDb, 'audit_logs'), where('organizationId', '==', orgId));
+    }
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) }));
+  } catch (err) {
+    console.error('Error fetching Firestore audit logs:', err);
+    return [];
+  }
+};
+
+export const createFirestoreAuditLogDoc = async (data: Record<string, any>): Promise<boolean> => {
+  try {
+    const now = new Date();
+    const docRef = doc(collection(firebaseDb, 'audit_logs'));
+    await setDoc(docRef, {
+      ...data,
+      id: docRef.id,
+      date: now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      time: now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+      createdAt: now.toISOString(),
+      updatedAt: now.toISOString(),
+    });
+    return true;
+  } catch (err) {
+    console.error('Error writing Firestore audit log doc:', err);
+    return false;
+  }
+};
+
+export const fetchFirestoreNotifications = async (userId: string): Promise<any[]> => {
+  try {
+    const q = query(collection(firebaseDb, 'notifications'), where('userId', '==', userId));
+    const snap = await getDocs(q);
+    return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) }));
+  } catch (err) {
+    console.error('Error fetching Firestore notifications:', err);
+    return [];
+  }
+};
+
+
 

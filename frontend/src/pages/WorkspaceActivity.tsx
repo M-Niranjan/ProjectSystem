@@ -22,54 +22,6 @@ interface ActivityItem {
   status?: string;
 }
 
-const DEFAULT_ACTIVITIES: ActivityItem[] = [
-  { 
-    id: 1, 
-    action: 'CREATE', 
-    details: 'Initialized project: Prologue SaaS Dashboard architecture & design tokens', 
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    user: 'Niranjan (Admin)',
-    project: 'Prologue SaaS',
-    status: 'VERIFIED'
-  },
-  { 
-    id: 2, 
-    action: 'UPDATE', 
-    details: 'Moved task: "Revamp login page" to IN_PROGRESS with biometric auth checks', 
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    user: 'Niranjan (Admin)',
-    project: 'Prologue SaaS',
-    status: 'VERIFIED'
-  },
-  { 
-    id: 3, 
-    action: 'COMMENT', 
-    details: 'Added comment: "Matches radius variables and Linear aesthetic standard" on task #101', 
-    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    user: 'Niranjan (Admin)',
-    project: 'Prologue SaaS',
-    status: 'VERIFIED'
-  },
-  { 
-    id: 4, 
-    action: 'CREATE', 
-    details: 'Created sprint milestone: Mobile responsive viewport fixes & fluid layout', 
-    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    user: 'Team Lead',
-    project: 'Core Platform',
-    status: 'VERIFIED'
-  },
-  { 
-    id: 5, 
-    action: 'UPDATE', 
-    details: 'Verified task milestone: Notification menu mobile-safe container boundaries', 
-    createdAt: new Date(Date.now() - 1000 * 60 * 15).toISOString(),
-    user: 'QA Automation',
-    project: 'Core Platform',
-    status: 'VERIFIED'
-  }
-];
-
 export default function WorkspaceActivity() {
   const { user } = useAuthStore();
   const { showToast } = useUIStore();
@@ -84,7 +36,7 @@ export default function WorkspaceActivity() {
 
   const [newAction, setNewAction] = useState<'CREATE' | 'UPDATE' | 'COMMENT'>('UPDATE');
   const [newDetails, setNewDetails] = useState('');
-  const [newProject, setNewProject] = useState('Prologue SaaS');
+  const [newProject, setNewProject] = useState('Workspace');
 
   const fetchActivities = async () => {
     setLoading(true);
@@ -106,18 +58,15 @@ export default function WorkspaceActivity() {
           details: item.details || item.activity || 'Workspace action completed',
           createdAt: item.createdAt || item.date ? `${item.date}T${item.time || '12:00:00'}` : new Date().toISOString(),
           user: item.user || user?.name || 'Workspace User',
-          project: item.project || 'Prologue SaaS',
+          project: item.project || 'Workspace',
           status: 'VERIFIED'
         }));
         setActivities(mapped);
-        localStorage.setItem('workspace_activities_stream', JSON.stringify(mapped));
       } else {
-        setActivities(DEFAULT_ACTIVITIES);
-        localStorage.setItem('workspace_activities_stream', JSON.stringify(DEFAULT_ACTIVITIES));
+        setActivities([]);
       }
     } catch (err) {
-      console.warn('Using default activity stream fallback:', err);
-      setActivities(DEFAULT_ACTIVITIES);
+      setActivities([]);
     } finally {
       setLoading(false);
     }
@@ -153,10 +102,9 @@ export default function WorkspaceActivity() {
   };
 
   const handleClearHistory = () => {
-    if (confirm('Reset workspace activity history to system defaults?')) {
-      setActivities(DEFAULT_ACTIVITIES);
-      localStorage.setItem('workspace_activities_stream', JSON.stringify(DEFAULT_ACTIVITIES));
-    }
+    setActivities([]);
+    localStorage.removeItem('workspace_activities_stream');
+    showToast('Workspace activity history cleared.', 'info');
   };
 
   const filtered = activities.filter(act => {
@@ -222,7 +170,7 @@ export default function WorkspaceActivity() {
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -304,7 +252,7 @@ export default function WorkspaceActivity() {
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="p-3 sm:p-4 rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 flex flex-col sm:flex-row gap-3 items-center justify-between relative z-20">
         <div className="relative flex-1 w-full">
           <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
@@ -333,7 +281,7 @@ export default function WorkspaceActivity() {
       </div>
 
       {/* Activity Timeline List */}
-      <div className="rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 shadow-xl overflow-hidden w-full min-w-0">
+      <div className="rounded-2xl bg-white/5 border border-slate-200/50 dark:border-white/5 shadow-xl overflow-hidden w-full min-w-0 relative z-10">
         <div className="p-4 border-b border-slate-200/40 dark:border-white/5 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-500" />
@@ -466,7 +414,7 @@ export default function WorkspaceActivity() {
                   type="text"
                   value={newProject}
                   onChange={(e) => setNewProject(e.target.value)}
-                  placeholder="e.g. Prologue SaaS Dashboard"
+                  placeholder="e.g. Project Alpha or Core Service"
                   className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500"
                 />
               </div>

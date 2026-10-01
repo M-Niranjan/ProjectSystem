@@ -120,7 +120,7 @@ export default function Messages() {
         id: senderObj.id || m.senderId || (isMe ? (user?.id || 1) : 0),
         name: senderObj.name || (isMe ? (user?.name || 'You') : 'Team Member'),
         profilePhoto: senderObj.profilePhoto || (isMe ? user?.profilePhoto : undefined),
-        role: senderObj.role || (isMe ? user?.role : 'ROLE_EMPLOYEE')
+        role: senderObj.role || (isMe ? user?.role : undefined)
       },
       createdAt: m.createdAt || new Date().toISOString(),
       fileUrl: m.fileUrl,
@@ -153,18 +153,10 @@ export default function Messages() {
           setActiveChannelId(defaultChannel);
         }
       } else {
-        const fallback = [
-          { id: 1, name: 'project-management-system', description: 'General project channel', isPrivate: false, membersCount: 8 }
-        ];
-        setChannels(fallback);
-        if (!activeChannelId) setActiveChannelId(1);
+        setChannels([]);
       }
     } catch (err) {
-      const fallback = [
-        { id: 1, name: 'project-management-system', description: 'General project channel', isPrivate: false, membersCount: 8 }
-      ];
-      setChannels(fallback);
-      if (!activeChannelId) setActiveChannelId(1);
+      setChannels([]);
     }
 
     try {
@@ -506,7 +498,7 @@ export default function Messages() {
   const currentTypingUser = typingUsers[convKey];
 
   return (
-    <div className="h-[calc(100dvh-5rem)] md:h-[calc(100vh-5.5rem)] w-full flex rounded-2xl md:rounded-3xl border border-slate-200/80 dark:border-white/10 glass-panel overflow-hidden relative select-none shadow-2xl">
+    <div className="h-[calc(100dvh-5rem)] md:h-[calc(100vh-5.5rem)] w-full flex rounded-2xl md:rounded-3xl border border-slate-200/80 dark:border-white/10 glass-panel overflow-hidden relative shadow-2xl">
       
       {/* Toast Notification Banner */}
       <AnimatePresence>

@@ -7,6 +7,7 @@ import { useUIStore } from '../store/useUIStore';
 import TeamMemberPickerModal from '../components/TeamMemberPickerModal';
 import { useScrollLock } from '../hooks/useScrollLock';
 import LuxurySelect from '../components/common/LuxurySelect';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
 interface CurrencyOption {
   code: string;
@@ -67,24 +68,16 @@ export default function Projects() {
   const [addedEmails, setAddedEmails] = useState<string[]>([]);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
 
-  // Default Mock Projects
-  const mockProjects: Project[] = [
-    { id: 1, name: 'Prologue SaaS Dashboard', description: 'Build a next-generation enterprise project manager with glassmorphism styles.', status: 'ACTIVE', priority: 'HIGH', budget: 25000, spent: 8500, deadline: '2026-09-15', isFavorite: true, colorLabel: '#6366F1', membersCount: 5 },
-    { id: 2, name: 'Workflow Suite Integration', description: 'Design real-time WebSockets communication channels and notification triggers.', status: 'PLANNING', priority: 'CRITICAL', budget: 15000, spent: 0, deadline: '2026-08-30', isFavorite: false, colorLabel: '#3B82F6', membersCount: 3 },
-    { id: 3, name: 'Notion Sync Engine', description: 'Build background cron schedulers to sync tasks and milestones automatically.', status: 'COMPLETED', priority: 'MEDIUM', budget: 10000, spent: 9800, deadline: '2026-06-30', isFavorite: true, colorLabel: '#22C55E', membersCount: 4 },
-    { id: 4, name: 'Customer Success Portal', description: 'Implement interactive charts, PDF exporters, and spreadsheet reports downloads.', status: 'ACTIVE', priority: 'LOW', budget: 8000, spent: 2400, deadline: '2026-10-15', isFavorite: false, colorLabel: '#F59E0B', membersCount: 2 }
-  ];
-
   const fetchProjects = async () => {
     try {
       const response = await api.get('/api/projects');
-      if (response.data && response.data.length > 0) {
+      if (response.data && Array.isArray(response.data)) {
         setProjects(response.data);
       } else {
-        setProjects(mockProjects);
+        setProjects([]);
       }
     } catch (err) {
-      setProjects(mockProjects);
+      setProjects([]);
     }
   };
 
@@ -94,6 +87,10 @@ export default function Projects() {
     window.addEventListener('project-created', fetchProjects);
     return () => window.removeEventListener('project-created', fetchProjects);
   }, []);
+
+  // Hook into global live auto-refresh
+  useLiveRefresh(fetchProjects);
+  useScrollLock(isModalOpen || isPickerOpen);
 
   const toggleFavorite = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -137,12 +134,11 @@ export default function Projects() {
 
   const deleteProject = async (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
-    if (!confirm('Are you sure you want to delete this project?')) return;
+    setProjects(prev => prev.filter(p => p.id !== id));
     try {
       await api.delete(`/api/projects/${id}`);
-      setProjects(projects.filter(p => p.id !== id));
     } catch (err) {
-      setProjects(projects.filter(p => p.id !== id));
+      console.warn('Delete project notice:', err);
     }
   };
 
@@ -242,8 +238,8 @@ export default function Projects() {
   });
 
   return (
-    <div className="flex flex-col h-[calc(100vh-120px)] select-none overflow-hidden pb-4">
-      {/* Title Header - Constant */}
+    <div className="flex flex-col min-h-[calc(100vh-120px)] pb-12">
+      {/* Title Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/10 dark:border-white/5">
         <div>
           <h1 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">
@@ -256,14 +252,14 @@ export default function Projects() {
 
         <button
           onClick={openCreateModal}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/10 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0 flex-shrink-0"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 cursor-pointer transition-colors flex-shrink-0"
         >
           <Plus className="w-4 h-4" /> Create Project
         </button>
       </div>
 
-      {/* Scrollable Content (Filters + Projects list) */}
-      <div className="flex-1 overflow-y-auto mt-6 space-y-6 pr-1">
+      {/* Main Content */}
+      <div className="mt-6 space-y-6">
         {/* Filters & View Switches bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/5 border border-slate-200/50 dark:border-white/5 p-3 rounded-2xl backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-3">
@@ -279,7 +275,7 @@ export default function Projects() {
           </div>
 
           {/* Status filter selection */}
-          <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl overflow-x-auto max-w-full">
+          <div className="flex items-center gap-1.5 bg-slate-100/50 dark:bg-white/5 border border-slate-200/50 dark:border-white/5 p-1 rounded-xl overflow-x-auto max-w-full scrollbar-none no-scrollbar">
             {['ALL', 'PLANNING', 'ACTIVE', 'COMPLETED', 'ARCHIVED'].map(statusVal => (
               <button
                 key={statusVal}
@@ -417,7 +413,7 @@ export default function Projects() {
               <div
                 key={project.id}
                 onClick={() => setView('boards', project.id)}
-                className="p-4 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-between gap-4"
+                className="p-3 sm:p-4 hover:bg-white/5 transition-colors cursor-pointer flex items-center justify-between gap-2.5 sm:gap-4"
               >
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <div className="w-2.5 h-2.5 rounded-full flex-shrink-0" style={{ backgroundColor: project.colorLabel || '#3B82F6' }}></div>
@@ -427,8 +423,8 @@ export default function Projects() {
                   </div>
                 </div>
 
-                <div className="flex items-center gap-3 md:gap-5 flex-shrink-0">
-                  <div className="w-[100px] flex justify-center hidden sm:flex flex-shrink-0">
+                <div className="flex items-center gap-2 sm:gap-3 md:gap-5 flex-shrink-0">
+                  <div className="w-[100px] justify-center hidden sm:flex flex-shrink-0">
                     <span className={`text-[8px] font-black px-2 py-0.5 rounded uppercase text-center min-w-[75px] ${
                       project.status === 'COMPLETED' ? 'bg-green-500/10 text-green-500' :
                       project.status === 'PLANNING' ? 'bg-slate-500/10 text-slate-400' :
@@ -442,27 +438,27 @@ export default function Projects() {
                     Budget: ${project.spent} / ${project.budget}
                   </span>
 
-                  <span className="w-[110px] text-xs font-bold text-slate-500 flex items-center justify-center gap-1 flex-shrink-0">
+                  <span className="w-[110px] text-xs font-bold text-slate-500 hidden xs:flex items-center justify-center gap-1 flex-shrink-0">
                     <Calendar className="w-3.5 h-3.5" /> {project.deadline}
                   </span>
 
-                  <div className="w-[90px] flex items-center justify-end gap-1.5 flex-shrink-0">
+                  <div className="flex items-center justify-end gap-1 sm:gap-1.5 flex-shrink-0">
                     <button
                       onClick={(e) => toggleFavorite(project.id, e)}
-                      className={`p-1 rounded hover:bg-white/10 ${project.isFavorite ? 'text-amber-500' : 'text-slate-400'}`}
+                      className={`p-1.5 sm:p-1 rounded hover:bg-white/10 ${project.isFavorite ? 'text-amber-500' : 'text-slate-400'}`}
                     >
                       <Star className="w-4 h-4 fill-current" />
                     </button>
                     <button
                       onClick={(e) => openEditModal(project, e)}
-                      className="p-1 rounded hover:bg-white/10 text-slate-400 hover:text-blue-500"
+                      className="p-1.5 sm:p-1 rounded hover:bg-white/10 text-slate-400 hover:text-blue-500"
                       title="Edit Project"
                     >
                       <Pencil className="w-4 h-4" />
                     </button>
                     <button
                       onClick={(e) => deleteProject(project.id, e)}
-                      className="p-1 rounded hover:bg-red-500/10 text-slate-400 hover:text-red-500"
+                      className="p-1.5 sm:p-1 rounded hover:bg-red-500/10 text-slate-400 hover:text-red-500"
                     >
                       <Trash2 className="w-4 h-4" />
                     </button>
@@ -525,7 +521,7 @@ export default function Projects() {
                   ></textarea>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">Status</label>
                     <LuxurySelect
@@ -556,7 +552,7 @@ export default function Projects() {
                   </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="space-y-1">
                     <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider">
                       Budget ({selectedCurrency.symbol} {selectedCurrency.code})
@@ -727,17 +723,17 @@ export default function Projects() {
                 </div>
 
                 {/* Action buttons */}
-                <div className="flex gap-3 justify-end border-t border-slate-200/30 dark:border-white/5 pt-4 mt-6">
+                <div className="flex flex-col-reverse sm:flex-row gap-2.5 sm:gap-3 justify-end border-t border-slate-200/30 dark:border-white/5 pt-4 mt-6">
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(false)}
-                    className="px-4 py-2 border border-slate-200/50 dark:border-white/5 rounded-xl hover:bg-white/10 text-slate-500 dark:text-slate-400 font-bold text-xs cursor-pointer transition-colors"
+                    className="w-full sm:w-auto px-4 py-2.5 sm:py-2 border border-slate-200/50 dark:border-white/5 rounded-xl hover:bg-white/10 text-slate-500 dark:text-slate-400 font-bold text-xs cursor-pointer transition-colors text-center"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-blue-500/10 transition-colors"
+                    className="w-full sm:w-auto px-5 py-2.5 sm:py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs cursor-pointer shadow-lg shadow-blue-500/10 transition-colors text-center"
                   >
                     {isEditMode ? 'Save Workspace Changes' : 'Initialize Workspace'}
                   </button>

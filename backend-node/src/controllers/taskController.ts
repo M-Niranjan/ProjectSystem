@@ -3,14 +3,24 @@ import { Task, Project, User, Comment, Notification, DirectMessage, Role, Attach
 import { AuthRequest } from '../middleware/auth';
 import { AIService } from '../services/aiService';
 import { Op } from 'sequelize';
-import { firebaseFirestore, FieldValue } from '../config/firebaseAdmin';
+import { firebaseFirestore, FieldValue, FirebaseAdminService } from '../config/firebaseAdmin';
 
 export class TaskController {
-  public static async getAllTasks(_req: AuthRequest, res: Response) {
+  public static async getAllTasks(req: AuthRequest, res: Response) {
     try {
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string);
+      const projectWhere: any = {};
+      if (targetOrgId) {
+        projectWhere.organizationId = targetOrgId;
+      }
+
       const tasks = await Task.findAll({
         include: [
-          { model: Project, as: 'project' },
+          {
+            model: Project,
+            as: 'project',
+            where: Object.keys(projectWhere).length ? projectWhere : undefined,
+          },
           { model: User, as: 'assignee', attributes: { exclude: ['password'] } },
           { model: User, as: 'creator', attributes: { exclude: ['password'] } },
           { model: User, as: 'reviewer', attributes: { exclude: ['password'] } },
@@ -146,6 +156,38 @@ export class TaskController {
           { model: User, as: 'creator', attributes: { exclude: ['password'] } },
         ],
       });
+
+      // Synchronize and persist directly to Firebase Firestore
+      try {
+        await FirebaseAdminService.createFirestoreTask(task.id, {
+          id: String(task.id),
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          estimatedTime: task.estimatedTime,
+          actualTime: task.actualTime,
+          projectId: String(task.projectId),
+          organizationId: project.organizationId || req.organizationId || 'org_default',
+          assigneeId: task.assigneeId,
+          creatorId: task.creatorId,
+          assignee: (savedTask as any)?.assignee ? { id: (savedTask as any).assignee.id, name: (savedTask as any).assignee.name, email: (savedTask as any).assignee.email } : null,
+          creator: (savedTask as any)?.creator ? { id: (savedTask as any).creator.id, name: (savedTask as any).creator.name, email: (savedTask as any).creator.email } : null,
+          createdAt: task.createdAt,
+        });
+
+        await FirebaseAdminService.createFirestoreAuditLog({
+          user: req.user?.name || 'Administrator',
+          action: 'TASK_ASSIGNED',
+          activity: `${req.user?.name || 'User'} assigned task "${task.title}"`,
+          status: 'VERIFIED',
+          organizationId: project.organizationId || req.organizationId || 'org_default',
+          userId: req.user?.id,
+        });
+      } catch (fErr) {
+        console.warn('Firestore task sync warning:', fErr);
+      }
 
       return res.status(201).json(savedTask);
     } catch (err: any) {
@@ -304,6 +346,25 @@ export class TaskController {
         ],
       });
 
+      // Synchronize update to Firebase Firestore
+      try {
+        await FirebaseAdminService.updateFirestoreTask(id, {
+          title: task.title,
+          description: task.description,
+          status: task.status,
+          priority: task.priority,
+          dueDate: task.dueDate,
+          estimatedTime: task.estimatedTime,
+          actualTime: task.actualTime,
+          assigneeId: task.assigneeId,
+          reviewerId: task.reviewerId,
+          declineReason: task.declineReason,
+          assignee: (updatedTask as any)?.assignee ? { id: (updatedTask as any).assignee.id, name: (updatedTask as any).assignee.name, email: (updatedTask as any).assignee.email } : null,
+        });
+      } catch (fErr) {
+        console.warn('Firestore task update warning:', fErr);
+      }
+
       return res.json(updatedTask);
     } catch (err: any) {
       console.error('Error in updateTask:', err);
@@ -324,6 +385,14 @@ export class TaskController {
       }
 
       await task.destroy();
+
+      // Synchronize deletion in Firebase Firestore
+      try {
+        await FirebaseAdminService.deleteFirestoreTask(id);
+      } catch (fErr) {
+        console.warn('Firestore task deletion warning:', fErr);
+      }
+
       return res.json({ success: true });
     } catch (err: any) {
       console.error('Error in deleteTask:', err);

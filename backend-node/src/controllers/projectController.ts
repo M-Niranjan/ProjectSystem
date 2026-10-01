@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Project, User, Role } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { Op } from 'sequelize';
+import { FirebaseAdminService } from '../config/firebaseAdmin';
 
 export class ProjectController {
   public static async getProjects(req: AuthRequest, res: Response) {
@@ -13,8 +14,15 @@ export class ProjectController {
 
       if (!currentUser) return res.status(404).send('User not found');
 
-      // Fetch projects where user is owner or member
+      // Fetch projects scoped to active organization
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string);
+      const whereClause: any = {};
+      if (targetOrgId) {
+        whereClause.organizationId = targetOrgId;
+      }
+
       const projects = await Project.findAll({
+        where: whereClause,
         include: [
           { model: User, as: 'owner', attributes: { exclude: ['password'] } },
           { model: User, as: 'members', attributes: { exclude: ['password'] }, through: { attributes: [] } },
@@ -52,6 +60,11 @@ export class ProjectController {
         return res.status(404).send('Project not found');
       }
 
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string);
+      if (targetOrgId && project.organizationId && project.organizationId !== targetOrgId && req.user.role !== Role.ROLE_ADMIN) {
+        return res.status(403).send('Forbidden: Project belongs to another organization.');
+      }
+
       const isOwner = project.ownerId === req.user.id;
       const isMember = (project as any).members?.some((m: any) => m.id === req.user?.id);
 
@@ -74,6 +87,7 @@ export class ProjectController {
         return res.status(403).send('Employees cannot create projects');
       }
 
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || 'org_default';
       const { name, description, status, priority, budget, spent, deadline, colorLabel } = req.body;
 
       const project = await Project.create({
@@ -86,6 +100,7 @@ export class ProjectController {
         deadline,
         colorLabel,
         ownerId: req.user.id,
+        organizationId: targetOrgId,
       });
 
       const fullProject = await Project.findByPk(project.id, {
@@ -94,6 +109,36 @@ export class ProjectController {
           { model: User, as: 'members', attributes: { exclude: ['password'] }, through: { attributes: [] } },
         ],
       });
+
+      // Synchronize and persist directly to Firebase Firestore
+      try {
+        await FirebaseAdminService.createFirestoreProject(project.id, {
+          id: String(project.id),
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          priority: project.priority,
+          budget: project.budget,
+          spent: project.spent,
+          deadline: project.deadline,
+          colorLabel: project.colorLabel,
+          ownerId: project.ownerId,
+          organizationId: project.organizationId,
+          owner: (fullProject as any)?.owner ? { id: (fullProject as any).owner.id, name: (fullProject as any).owner.name, email: (fullProject as any).owner.email } : null,
+          createdAt: project.createdAt,
+        });
+
+        await FirebaseAdminService.createFirestoreAuditLog({
+          user: req.user?.name || 'Administrator',
+          action: 'PROJECT_CREATED',
+          activity: `${req.user?.name || 'Admin'} created Project ${project.name}`,
+          status: 'VERIFIED',
+          organizationId: targetOrgId,
+          userId: req.user?.id,
+        });
+      } catch (fErr) {
+        console.warn('Firestore project sync warning:', fErr);
+      }
 
       return res.status(201).json(fullProject);
     } catch (err: any) {
@@ -135,6 +180,22 @@ export class ProjectController {
         ],
       });
 
+      // Synchronize update to Firebase Firestore
+      try {
+        await FirebaseAdminService.updateFirestoreProject(id, {
+          name: project.name,
+          description: project.description,
+          status: project.status,
+          priority: project.priority,
+          budget: project.budget,
+          spent: project.spent,
+          deadline: project.deadline,
+          colorLabel: project.colorLabel,
+        });
+      } catch (fErr) {
+        console.warn('Firestore project update warning:', fErr);
+      }
+
       return res.json(updatedProject);
     } catch (err: any) {
       console.error('Error in updateProject:', err);
@@ -156,6 +217,14 @@ export class ProjectController {
       }
 
       await project.destroy();
+
+      // Synchronize deletion in Firebase Firestore
+      try {
+        await FirebaseAdminService.deleteFirestoreProject(id);
+      } catch (fErr) {
+        console.warn('Firestore project deletion warning:', fErr);
+      }
+
       return res.json({ success: true });
     } catch (err: any) {
       console.error('Error in deleteProject:', err);

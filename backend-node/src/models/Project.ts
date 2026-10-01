@@ -13,6 +13,7 @@ export interface ProjectAttributes {
   isFavorite?: boolean;
   colorLabel?: string;
   ownerId: number;
+  organizationId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -31,6 +32,7 @@ export class Project extends Model<ProjectAttributes, ProjectCreationAttributes>
   declare isFavorite: boolean;
   declare colorLabel: string;
   declare ownerId: number;
+  declare organizationId: string;
 
   declare readonly createdAt: Date;
   declare readonly updatedAt: Date;
@@ -72,6 +74,11 @@ Project.init(
     ownerId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+    },
+    organizationId: {
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'org_default',
     },
   },
   {

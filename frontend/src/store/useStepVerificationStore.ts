@@ -16,7 +16,7 @@ export interface StepEvidence {
   codeReferences?: string[];
   attachments?: string[];
   submittedAt: string;
-  submittedBy: { id: number; name: string };
+  submittedBy: { id: number; name: string; role?: string };
 }
 
 export interface TaskStep {
@@ -32,7 +32,7 @@ export interface TaskStep {
   evidence?: StepEvidence;
   reviewerNotes?: string;
   approvedAt?: string;
-  approvedBy?: { id: number; name: string };
+  approvedBy?: { id: number; name: string; role?: string };
   rejectedAt?: string;
   changesRequestedAt?: string;
 }

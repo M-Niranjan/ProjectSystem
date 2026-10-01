@@ -95,31 +95,6 @@ export async function getStepSubmissions(
     }
   } catch {}
 
-  // 4. Default mock fallback for Step 1 of Task 201 (from UI screenshot)
-  if (String(taskId) === '201' && (String(stepId) === '2011' || String(stepId) === '1')) {
-    const defaultArch: TaskPdfSubmission = {
-      id: 'sub_201_1_default',
-      taskId: 201,
-      stepId: 2011,
-      stepNumber: 1,
-      employeeId: '101',
-      employeeName: 'Ram',
-      fileName: 'Architecture_v1.2.pdf',
-      fileSize: 2516582, // 2.4 MB
-      formattedSize: '2.4 MB',
-      contentType: 'application/pdf',
-      storagePath: 'uploads/Architecture_v1.2.pdf',
-      downloadUrl: '/Architecture_v1.2.pdf',
-      uploadedAt: '2026-08-28T14:30:00Z',
-      status: 'approved',
-      version: 'Version 1',
-      versionNumber: 1,
-      isLatest: true,
-      reviewerNotes: 'Verified architecture blueprint and database schema.',
-    };
-    return [defaultArch];
-  }
-
   return [];
 }
 

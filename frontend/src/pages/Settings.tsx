@@ -1,27 +1,31 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Settings as SettingsIcon, User, Sun, Moon, Shield, Lock, Check, Sparkles, Users,
   FolderGit2, CheckSquare, Bell, FileText, Activity, Database, Link as LinkIcon,
-  Layout, Eye, EyeOff, Clock, Calendar, Mail, AlertTriangle, Monitor, Sliders, Palette, CheckCircle2, ArrowLeft, ChevronRight
+  Layout, Eye, EyeOff, Clock, Calendar, Mail, AlertTriangle, Monitor, Sliders, Palette, CheckCircle2, ArrowLeft, ChevronRight,
+  KeyRound, ScrollText
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore, AccentColor, ThemeMode, ACCENT_PRESETS } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
-import { formatRoleName } from '../services/authRoles';
+import { formatRoleName, normalizeRole } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
 
 export default function Settings() {
+  const navigate = useNavigate();
   const { user, updateProfile, logout } = useAuthStore();
   const {
     darkMode, toggleTheme, themeMode, setThemeMode, accentColor, setAccentColor,
     sidebarExpanded, toggleSidebar,
-    dashboardPrefs, setDashboardPrefs, setView, showToast
+    dashboardPrefs, setDashboardPrefs, setView, showToast,
+    setSignOutModalOpen
   } = useUIStore();
 
-  const role = user?.role || 'ROLE_EMPLOYEE';
+  const role = normalizeRole(user?.role);
   const isAdmin = role === 'ROLE_ADMIN';
-  const isTeamLead = role === 'ROLE_MANAGER' || (role as string) === 'ROLE_TEAM_LEAD';
+  const isTeamLead = role === 'ROLE_MANAGER';
   const isEmployee = role === 'ROLE_EMPLOYEE';
 
   // Active sub-tab state based on role defaults (Clean 4-category architecture)
@@ -150,9 +154,7 @@ export default function Settings() {
   };
 
   const handleSignOut = () => {
-    if (window.confirm('Are you sure you want to sign out?')) {
-      logout();
-    }
+    setSignOutModalOpen(true);
   };
 
   const handleLockWorkspace = () => {
@@ -174,7 +176,7 @@ export default function Settings() {
       },
       {
         id: 'security',
-        label: 'Security & Password',
+        label: 'Security & Permissions',
         mobileLabel: 'Security',
         icon: Shield,
         chip: 'Active',
@@ -220,7 +222,7 @@ export default function Settings() {
   const ActiveTabIcon = activeTabObj?.icon || User;
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* Desktop Title Header */}
       <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -643,6 +645,49 @@ export default function Settings() {
                 <Lock className="w-4 h-4 text-emerald-500" /> Security & Session Management
               </h3>
 
+              {/* Enterprise Governance & RBAC card for Admin */}
+              {isAdmin && (
+                <div className="p-5 rounded-2xl bg-gradient-to-br from-blue-500/10 via-indigo-500/5 to-transparent border border-blue-500/25 dark:border-blue-500/20 shadow-xs space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                        <Shield className="w-4 h-4" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-slate-900 dark:text-white">System Security & RBAC Configuration</h4>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">Enterprise role policies and permission matrices</p>
+                      </div>
+                    </div>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                      Active
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    All role permissions, user access policies, and audit trails are operating under enterprise governance for this organization.
+                  </p>
+
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/roles')}
+                      className="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      Roles & Permissions
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => navigate('/audit-logs')}
+                      className="px-3 py-1.5 bg-white dark:bg-white/10 hover:bg-slate-50 dark:hover:bg-white/15 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/10 rounded-lg text-xs font-bold shadow-xs cursor-pointer transition-all flex items-center gap-1.5"
+                    >
+                      <ScrollText className="w-3.5 h-3.5" />
+                      Audit Logs
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {/* 2FA switches */}
               <div className="flex items-center justify-between p-4.5 bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl shadow-xs">
                 <div>
@@ -940,8 +985,8 @@ export default function Settings() {
                     className="p-4 rounded-2xl bg-white dark:bg-white/5 border border-slate-200/80 dark:border-white/10 hover:border-purple-500/40 text-left group transition-all cursor-pointer shadow-xs hover:shadow-md"
                   >
                     <Users className="w-5 h-5 text-purple-500 mb-2 group-hover:scale-110 transition-transform" />
-                    <p className="text-xs font-bold text-slate-900 dark:text-white">User Directory</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Manage user accounts</p>
+                    <p className="text-xs font-bold text-slate-900 dark:text-white">Team</p>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400">Team members & roles</p>
                   </button>
 
                   <button

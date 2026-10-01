@@ -4,10 +4,19 @@ import { AuthRequest } from '../middleware/auth';
 import { ReportService } from '../services/reportService';
 
 export class ReportController {
-  public static async getAnalytics(_req: AuthRequest, res: Response) {
+  public static async getAnalytics(req: AuthRequest, res: Response) {
     try {
-      const projects = await Project.findAll();
-      const tasks = await Task.findAll();
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string);
+      const projectWhere: any = {};
+      if (targetOrgId) {
+        projectWhere.organizationId = targetOrgId;
+      }
+
+      const projects = await Project.findAll({ where: projectWhere });
+      const projectIds = projects.map((p) => p.id);
+      const tasks = await Task.findAll({
+        where: projectIds.length > 0 ? { projectId: projectIds } : undefined,
+      });
 
       const totalProjects = projects.length;
       const activeProjects = projects.filter((p) => p.status === 'ACTIVE').length;

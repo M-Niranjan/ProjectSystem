@@ -49,6 +49,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { useScrollLock } from '../hooks/useScrollLock';
 import LuxurySelect from '../components/common/LuxurySelect';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 import {
   useTrackingStore,
   TrackingTab,
@@ -136,20 +137,27 @@ export default function TeamWorkTracking() {
     navigate(`/employee/${employee.id}/work-profile`);
   };
 
-  const loadData = async () => {
-    setLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setLoading(true);
     const data = await getTrackingOverviewData();
     setEmployees(data.employees || []);
     setTasks(data.tasks || []);
     setProjects(data.projects || []);
     setBlockers(data.blockers || []);
     setActivities(data.activities || []);
-    setLoading(false);
+    if (!silent) setLoading(false);
   };
 
   useEffect(() => {
     loadData();
   }, []);
+
+  // Hook into global live auto-refresh (silent background sync)
+  useLiveRefresh(() => {
+    if (!isReportBlockerModalOpen && resolvingBlockerId === null && !selectedEmployeeProfile && !activeEmpModal) {
+      loadData(true);
+    }
+  });
 
   const isEmployeeRole = user?.role === 'ROLE_EMPLOYEE';
 
@@ -226,7 +234,10 @@ export default function TeamWorkTracking() {
     }
 
     try {
-      const reporter = user ? { reporterId: user.id, reporterName: user.name } : { reporterId: 1002, reporterName: 'Rahul' };
+      const reporter = {
+        reporterId: user?.id || 0,
+        reporterName: user?.name || 'Team Member'
+      };
       const created = await reportBlocker({
         title: newBlockerTitle,
         description: newBlockerDesc,
@@ -276,7 +287,7 @@ export default function TeamWorkTracking() {
 
   if (loading) {
     return (
-      <div className="space-y-6 select-none pb-12 w-full min-w-0 animate-pulse">
+      <div className="space-y-6 pb-20 w-full min-w-0 animate-pulse">
         <div className="h-12 w-72 bg-slate-200/80 dark:bg-white/10 rounded-2xl" />
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
           {[1, 2, 3, 4, 5, 6].map((n) => (
@@ -289,7 +300,7 @@ export default function TeamWorkTracking() {
   }
 
   return (
-    <div className="space-y-6 select-none pb-12 w-full min-w-0">
+    <div className="space-y-6 pb-20 w-full min-w-0">
       {/* Title & Navigation Header */}
       <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 w-full min-w-0">
         <div>

@@ -3,24 +3,15 @@ import { FileText, Download, Printer, BarChart3, TrendingUp, CheckSquare, Award 
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
 import LuxurySelect from '../components/common/LuxurySelect';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
 export default function Reports() {
   const { selectedProjectId } = useUIStore();
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [activeProjectId, setActiveProjectId] = useState<number | null>(selectedProjectId);
+  const [tasks, setTasks] = useState<any[]>([]);
+  const [teamMembers, setTeamMembers] = useState<any[]>([]);
   const [downloading, setDownloading] = useState<string | null>(null);
-
-  // Generate 53 weeks x 7 days grid for GitHub-style productivity heatmap
-  const generateHeatmap = () => {
-    const days = [];
-    const seed = [0, 1, 2, 4, 1, 0, 3, 0, 1, 2, 0, 4, 1, 2, 0, 0, 3];
-    for (let i = 0; i < 365; i++) {
-      days.push(seed[i % seed.length]);
-    }
-    return days;
-  };
-
-  const heatmapData = generateHeatmap();
 
   const fetchProjects = async () => {
     try {
@@ -35,19 +26,75 @@ export default function Reports() {
     }
   };
 
+  const fetchProjectData = async (projId: number | null) => {
+    try {
+      const [tasksRes, teamsRes] = await Promise.all([
+        projId ? api.get(`/api/tasks/project/${projId}`).catch(() => api.get('/api/tasks')) : api.get('/api/tasks'),
+        api.get('/api/teams').catch(() => ({ data: [] })),
+      ]);
+      setTasks(tasksRes.data || []);
+      setTeamMembers(teamsRes.data || []);
+    } catch (err) {
+      setTasks([]);
+      setTeamMembers([]);
+    }
+  };
+
   useEffect(() => {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    fetchProjectData(activeProjectId);
+  }, [activeProjectId]);
+
+  // Hook into global live auto-refresh
+  useLiveRefresh(() => {
+    fetchProjects();
+    fetchProjectData(activeProjectId);
+  });
+
+  // Generate 53 weeks x 7 days grid for GitHub-style productivity heatmap
+  const generateHeatmap = () => {
+    const days = new Array(365).fill(0);
+    const now = new Date();
+    const oneYearAgo = new Date();
+    oneYearAgo.setDate(now.getDate() - 364);
+
+    tasks.forEach((t) => {
+      const dateVal = t.updatedAt || t.completedAt || t.dueDate || t.createdAt;
+      if (dateVal) {
+        const d = new Date(dateVal);
+        const diffTime = d.getTime() - oneYearAgo.getTime();
+        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+        if (diffDays >= 0 && diffDays < 365) {
+          days[diffDays] = Math.min(days[diffDays] + 1, 4);
+        }
+      }
+    });
+    return days;
+  };
+
+  const heatmapData = generateHeatmap();
+
   // Native valid %PDF-1.4 binary stream generator
   const generatePDFReport = (project: any) => {
-    const projName = (project?.name || project?.title || 'Hospital Management System').replace(/[()\\]/g, '');
+    const projName = (project?.name || project?.title || 'Project').replace(/[()\\]/g, '');
     const projStatus = project?.status || 'ACTIVE';
-    const projPriority = project?.priority || 'HIGH';
-    const budget = project?.budget ? `$${Number(project.budget).toLocaleString()}` : '$150,000';
-    const spent = project?.spent ? `$${Number(project.spent).toLocaleString()}` : '$68,500';
-    const progress = project?.progress !== undefined ? `${project.progress}%` : '85%';
+    const projPriority = project?.priority || 'NORMAL';
+    const budget = project?.budget ? `$${Number(project.budget).toLocaleString()}` : '$0';
+    const spent = project?.spent ? `$${Number(project.spent).toLocaleString()}` : '$0';
+    const progress = project?.progress !== undefined ? `${project.progress}%` : '0%';
     const dateStr = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+
+    const taskLines = (tasks.slice(0, 5)).map((t, idx) => {
+      const title = (t.title || 'Task').slice(0, 28).padEnd(28, ' ');
+      const status = (t.status || 'ACTIVE').slice(0, 12).padEnd(12, ' ');
+      const assignee = (t.assignee?.name || 'Unassigned').slice(0, 16);
+      return `(  [${idx + 1}] ${title} - Status: ${status} - Assigned: ${assignee}) Tj\n0 -15 Td`;
+    }).join('\n');
+
+    const deliverablesContent = taskLines || '(  No deliverables recorded for this project yet.) Tj\n0 -15 Td';
 
     const pdfString = `%PDF-1.4
 1 0 obj
@@ -105,15 +152,7 @@ BT
 (2. DELIVERABLES & WORKFLOW STATUS) Tj
 0 -18 Td
 /F2 10 Tf
-(  [1] Patient Dashboard Interface      - Status: CODE REVIEW  - Assigned: Rahul Verma) Tj
-0 -15 Td
-(  [2] Doctor Consultation API          - Status: IN PROGRESS  - Assigned: Ramesh Kumar) Tj
-0 -15 Td
-(  [3] Pharmacy Inventory System        - Status: IN PROGRESS  - Assigned: Alice Smith) Tj
-0 -15 Td
-(  [4] Database Migration & Schema      - Status: COMPLETED    - Assigned: Niranjan Admin) Tj
-0 -15 Td
-(  [5] QA Security Audit & Testing      - Status: TESTING      - Assigned: Quality Team) Tj
+${deliverablesContent}
 0 -26 Td
 /F1 11 Tf
 (3. COMPLIANCE & GOVERNANCE SIGN-OFF) Tj
@@ -201,7 +240,7 @@ startxref
   };
 
   return (
-    <div className="space-y-6 select-none pb-12 print:p-0 print:space-y-4 w-full min-w-0">
+    <div className="space-y-6 pb-20 print:p-0 print:space-y-4 w-full min-w-0">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>
@@ -226,11 +265,11 @@ startxref
       </div>
 
       {/* Export panels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 print:hidden">
-        <div className="glass-panel p-6 flex flex-col justify-between h-48 border border-slate-200/50 dark:border-white/5">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 print:hidden">
+        <div className="glass-panel p-4 sm:p-6 flex flex-col justify-between min-h-[12rem] h-auto space-y-4 border border-slate-200/50 dark:border-white/5">
           <div className="space-y-2">
             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <FileText className="w-5 h-5 text-red-500" /> Export PDF Analytics
+              <FileText className="w-5 h-5 text-red-500 shrink-0" /> Export PDF Analytics
             </h3>
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
               Generates a certified executive PDF document with budget spend, task priorities, and milestone timelines.
@@ -239,16 +278,16 @@ startxref
           <button
             onClick={() => handleDownload('pdf')}
             disabled={downloading !== null}
-            className="w-full py-2.5 bg-red-600/10 hover:bg-red-600/25 border border-red-500/20 text-red-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all transform hover:-translate-y-0.5"
+            className="w-full py-2.5 px-3 bg-red-600/10 hover:bg-red-600/25 border border-red-500/20 text-red-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all transform hover:-translate-y-0.5 text-center"
           >
-            <Download className="w-4 h-4" /> {downloading === 'pdf' ? 'Generating PDF Document...' : 'Download PDF Report'}
+            <Download className="w-4 h-4 shrink-0" /> <span className="truncate">{downloading === 'pdf' ? 'Generating PDF Document...' : 'Download PDF Report'}</span>
           </button>
         </div>
 
-        <div className="glass-panel p-6 flex flex-col justify-between h-48 border border-slate-200/50 dark:border-white/5">
+        <div className="glass-panel p-4 sm:p-6 flex flex-col justify-between min-h-[12rem] h-auto space-y-4 border border-slate-200/50 dark:border-white/5">
           <div className="space-y-2">
             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-emerald-500" /> Export CSV Spreadsheet
+              <TrendingUp className="w-5 h-5 text-emerald-500 shrink-0" /> Export CSV Spreadsheet
             </h3>
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
               Formatted UTF-8 CSV spreadsheet data file for Microsoft Excel, Google Sheets, or BI analytics tools.
@@ -257,16 +296,16 @@ startxref
           <button
             onClick={() => handleDownload('excel')}
             disabled={downloading !== null}
-            className="w-full py-2.5 bg-emerald-600/10 hover:bg-emerald-600/25 border border-emerald-500/20 text-emerald-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all transform hover:-translate-y-0.5"
+            className="w-full py-2.5 px-3 bg-emerald-600/10 hover:bg-emerald-600/25 border border-emerald-500/20 text-emerald-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 transition-all transform hover:-translate-y-0.5 text-center"
           >
-            <Download className="w-4 h-4" /> {downloading === 'excel' ? 'Formatting CSV Data...' : 'Download CSV Sheet'}
+            <Download className="w-4 h-4 shrink-0" /> <span className="truncate">{downloading === 'excel' ? 'Formatting CSV Data...' : 'Download CSV Sheet'}</span>
           </button>
         </div>
 
-        <div className="glass-panel p-6 flex flex-col justify-between h-48 border border-slate-200/50 dark:border-white/5">
+        <div className="glass-panel p-4 sm:p-6 flex flex-col justify-between min-h-[12rem] h-auto space-y-4 border border-slate-200/50 dark:border-white/5 sm:col-span-2 lg:col-span-1">
           <div className="space-y-2">
             <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-wider flex items-center gap-2">
-              <Printer className="w-5 h-5 text-blue-500" /> Print Summary Logs
+              <Printer className="w-5 h-5 text-blue-500 shrink-0" /> Print Summary Logs
             </h3>
             <p className="text-[10px] text-slate-400 font-semibold leading-relaxed">
               Formats current project metrics and workspace task logs to a printable paper view layout.
@@ -274,9 +313,9 @@ startxref
           </div>
           <button
             onClick={handlePrint}
-            className="w-full py-2.5 bg-blue-600/10 hover:bg-blue-600/25 border border-blue-500/20 text-blue-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all transform hover:-translate-y-0.5"
+            className="w-full py-2.5 px-3 bg-blue-600/10 hover:bg-blue-600/25 border border-blue-500/20 text-blue-500 font-black text-xs rounded-xl flex items-center justify-center gap-1.5 cursor-pointer transition-all transform hover:-translate-y-0.5 text-center"
           >
-            <Printer className="w-4 h-4" /> Print Workspace Summary
+            <Printer className="w-4 h-4 shrink-0" /> <span className="truncate">Print Workspace Summary</span>
           </button>
         </div>
       </div>
@@ -345,19 +384,19 @@ startxref
           <div className="grid grid-cols-4 gap-3 text-xs border border-slate-300 p-3 rounded-lg bg-slate-50">
             <div>
               <p className="text-[9px] font-bold uppercase text-slate-500">Project Name</p>
-              <p className="font-black text-slate-900 mt-0.5">{(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.name || 'Hospital Management System'}</p>
+              <p className="font-black text-slate-900 mt-0.5">{(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.name || (projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.title || 'No Project Selected'}</p>
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase text-slate-500">Current Status</p>
-              <p className="font-black text-blue-700 mt-0.5">{(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.status || 'ACTIVE'}</p>
+              <p className="font-black text-blue-700 mt-0.5">{(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.status || 'N/A'}</p>
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase text-slate-500">Budget vs Spent</p>
-              <p className="font-black text-slate-900 mt-0.5">$150,000 / $68,500</p>
+              <p className="font-black text-slate-900 mt-0.5">${Number((projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.budget || 0).toLocaleString()} / ${Number((projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.spent || 0).toLocaleString()}</p>
             </div>
             <div>
               <p className="text-[9px] font-bold uppercase text-slate-500">Overall Progress</p>
-              <p className="font-black text-emerald-700 mt-0.5">85% (On Schedule)</p>
+              <p className="font-black text-emerald-700 mt-0.5">{(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.progress !== undefined ? `${(projectsList.find(p => p.id === activeProjectId) || projectsList[0])?.progress}%` : '0%'}</p>
             </div>
           </div>
         </div>
@@ -378,41 +417,27 @@ startxref
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              <tr>
-                <td className="p-2 border-r border-slate-300 font-bold">Create Patient Dashboard Interface</td>
-                <td className="p-2 border-r border-slate-300">Rahul Verma (Employee)</td>
-                <td className="p-2 border-r border-slate-300 font-black text-red-600">HIGH</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-amber-700">CODE REVIEW</td>
-                <td className="p-2 font-mono">8.0h / 6.5h</td>
-              </tr>
-              <tr>
-                <td className="p-2 border-r border-slate-300 font-bold">Doctor Consultation Booking API</td>
-                <td className="p-2 border-r border-slate-300">Ramesh Kumar (Employee)</td>
-                <td className="p-2 border-r border-slate-300 font-black text-red-600">HIGH</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-blue-700">IN PROGRESS</td>
-                <td className="p-2 font-mono">12.0h / 9.0h</td>
-              </tr>
-              <tr>
-                <td className="p-2 border-r border-slate-300 font-bold">Pharmacy Inventory System</td>
-                <td className="p-2 border-r border-slate-300">Alice Smith (Employee)</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-amber-600">MEDIUM</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-blue-700">IN PROGRESS</td>
-                <td className="p-2 font-mono">15.0h / 10.0h</td>
-              </tr>
-              <tr>
-                <td className="p-2 border-r border-slate-300 font-bold">Database Migration & Schema Setup</td>
-                <td className="p-2 border-r border-slate-300">Niranjan M (Admin)</td>
-                <td className="p-2 border-r border-slate-300 font-black text-red-600">URGENT</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-emerald-700">COMPLETED</td>
-                <td className="p-2 font-mono">6.0h / 5.5h</td>
-              </tr>
-              <tr>
-                <td className="p-2 border-r border-slate-300 font-bold">System Integration & QA Testing</td>
-                <td className="p-2 border-r border-slate-300">Quality Assurance Team</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-amber-600">MEDIUM</td>
-                <td className="p-2 border-r border-slate-300 font-bold text-purple-700">TESTING</td>
-                <td className="p-2 font-mono">10.0h / 4.0h</td>
-              </tr>
+              {tasks.length === 0 ? (
+                <tr>
+                  <td colSpan={5} className="p-4 text-center text-slate-500 italic">
+                    No deliverables recorded for this project yet.
+                  </td>
+                </tr>
+              ) : (
+                tasks.map((task) => (
+                  <tr key={task.id}>
+                    <td className="p-2 border-r border-slate-300 font-bold">{task.title}</td>
+                    <td className="p-2 border-r border-slate-300">{task.assignee?.name || 'Unassigned'}</td>
+                    <td className={`p-2 border-r border-slate-300 font-black ${
+                      task.priority === 'URGENT' || task.priority === 'HIGH' ? 'text-red-600' : 'text-amber-600'
+                    }`}>
+                      {task.priority || 'NORMAL'}
+                    </td>
+                    <td className="p-2 border-r border-slate-300 font-bold text-blue-700">{task.status?.replace('_', ' ') || 'ACTIVE'}</td>
+                    <td className="p-2 font-mono">{task.estimatedTime || 0}h / {task.actualTime || 0}h</td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -422,23 +447,27 @@ startxref
           <h2 className="text-xs font-black uppercase text-slate-900 tracking-wider mb-2">
             3. Team Resource Workload & Productivity Summary
           </h2>
-          <div className="grid grid-cols-3 gap-3 text-[10px]">
-            <div className="border border-slate-300 p-2.5 rounded-lg bg-slate-50">
-              <p className="font-black text-slate-900 text-xs">Niranjan M (Admin)</p>
-              <p className="text-slate-600 font-medium">4 Tasks • 38.5 Hours Logged</p>
-              <p className="font-extrabold text-emerald-700 mt-1">✓ 100% On-Time Delivery</p>
+          {teamMembers.length === 0 ? (
+            <div className="border border-slate-300 p-4 rounded-lg bg-slate-50 text-center text-slate-500 italic">
+              No team member workload recorded yet.
             </div>
-            <div className="border border-slate-300 p-2.5 rounded-lg bg-slate-50">
-              <p className="font-black text-slate-900 text-xs">Ramesh Kumar (Employee)</p>
-              <p className="text-slate-600 font-medium">6 Tasks • 42.0 Hours Logged</p>
-              <p className="font-extrabold text-blue-700 mt-1">↑ 95% Productivity Velocity</p>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-[10px]">
+              {teamMembers.slice(0, 6).map((member: any) => {
+                const memberTasks = tasks.filter(t => t.assignee && (t.assignee.id === member.id || t.assignee.name === member.name));
+                const completedTasks = memberTasks.filter(t => t.status === 'COMPLETED');
+                const totalHours = memberTasks.reduce((acc: number, t: any) => acc + (t.actualTime || t.estimatedTime || 0), 0);
+                const completionRate = memberTasks.length > 0 ? Math.round((completedTasks.length / memberTasks.length) * 100) : 100;
+                return (
+                  <div key={member.id || member.name} className="border border-slate-300 p-2.5 rounded-lg bg-slate-50">
+                    <p className="font-black text-slate-900 text-xs">{member.name}</p>
+                    <p className="text-slate-600 font-medium">{memberTasks.length} {memberTasks.length === 1 ? 'Task' : 'Tasks'} • {totalHours} Hours Logged</p>
+                    <p className="font-extrabold text-emerald-700 mt-1">✓ {completionRate}% Productivity</p>
+                  </div>
+                );
+              })}
             </div>
-            <div className="border border-slate-300 p-2.5 rounded-lg bg-slate-50">
-              <p className="font-black text-slate-900 text-xs">Rahul Verma (Employee)</p>
-              <p className="text-slate-600 font-medium">5 Tasks • 36.0 Hours Logged</p>
-              <p className="font-extrabold text-amber-700 mt-1">⌛ 1 Review Pending</p>
-            </div>
-          </div>
+          )}
         </div>
 
         {/* Sign-off & Audit Compliance */}

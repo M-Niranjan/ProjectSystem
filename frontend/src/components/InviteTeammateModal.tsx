@@ -316,11 +316,11 @@ export default function InviteTeammateModal({ isOpen, onClose, onInviteSuccess }
 
               {/* Filter Tabs & Quick Action Bar */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
-                <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100/70 dark:bg-white/5 rounded-xl border border-slate-200/50 dark:border-white/5 overflow-x-auto max-w-full no-scrollbar shrink-0">
                   <button
                     type="button"
                     onClick={() => setFilterTab('ALL')}
-                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
                       filterTab === 'ALL'
                         ? 'bg-white dark:bg-slate-800 text-blue-600 dark:text-blue-400 shadow-sm'
                         : 'text-slate-500 hover:text-slate-800 dark:hover:text-white'

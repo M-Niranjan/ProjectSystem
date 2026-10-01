@@ -1,8 +1,10 @@
 import { Response } from 'express';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import { User, Role } from '../models';
 import { AuthRequest, normalizeRole } from '../middleware/auth';
-import { FirebaseAdminService, FieldValue, firebaseFirestore } from '../config/firebaseAdmin';
+import { FirebaseAdminService, FieldValue, firebaseFirestore, firebaseAdminAuth } from '../config/firebaseAdmin';
+import { EmailService } from '../services/emailService';
 
 export class TeamController {
   // Admin -> Provision Team Leader
@@ -37,12 +39,29 @@ export class TeamController {
         return res.status(400).json({ message: 'An account with this email already exists.' });
       }
 
-      // Step 1: Provision in Firebase Auth via Firebase Admin SDK
+      // Resolve caller's active organization context automatically
+      const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
+      const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
+      let targetOrgId: string = req.organizationId || '';
+      if (!targetOrgId && callerMemberships.length > 0) {
+        targetOrgId = callerMemberships[0].organizationId;
+      }
+      if (!targetOrgId) {
+        const defaultOrg = await FirebaseAdminService.ensureDefaultOrganization();
+        targetOrgId = defaultOrg.id;
+      }
+
+      const orgDoc = await FirebaseAdminService.getOrganizationDoc(targetOrgId);
+      const orgName = orgDoc?.name || 'Default Organization';
+      const orgCode = orgDoc?.code || 'default';
+
+      // Step 1: Provision in Firebase Auth via Firebase Admin SDK (Generates Real Firebase UID)
       const fbUser = password 
         ? await FirebaseAdminService.createAuthUser(cleanEmail, password, name.trim())
         : await FirebaseAdminService.createAuthUserWithoutPassword(cleanEmail, name.trim());
       
       const uid = (fbUser as any).uid;
+      const initialStatus = password ? (status || 'active') : 'invited';
 
       // Step 2: Atomic Creation of Firestore users/{UID} document
       try {
@@ -52,7 +71,10 @@ export class TeamController {
           email: cleanEmail,
           role: 'teamLeader',
           roleCode: Role.ROLE_MANAGER,
-          status: status || 'active',
+          organizationId: targetOrgId,
+          organizationName: orgName,
+          organizationCode: orgCode,
+          status: initialStatus,
           designation: designation || 'Team Leader / Project Lead',
           department: department || 'Engineering',
           gender: gender || 'Male',
@@ -64,6 +86,52 @@ export class TeamController {
         console.error('Firestore creation failed, performing atomic rollback on Firebase Auth user:', fsErr);
         await FirebaseAdminService.deleteAuthUser(uid);
         return res.status(500).json({ message: 'Failed to create user profile in Firestore. Account creation rolled back.' });
+      }
+
+      // Step 3: Add newly provisioned Team Leader to the caller's active organization
+      try {
+        await FirebaseAdminService.addOrgMemberDoc(targetOrgId, {
+          userId: uid,
+          userEmail: cleanEmail,
+          userName: name.trim(),
+          role: 'teamLeader',
+          roleCode: Role.ROLE_MANAGER,
+          status: initialStatus,
+          department: department || 'Engineering',
+          designation: designation || 'Team Leader / Project Lead',
+        });
+      } catch (_orgErr) {
+        console.warn('Notice: Could not assign team leader to organization:', _orgErr);
+      }
+
+      // Step 4: Create secure invitation record
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+      try {
+        await FirebaseAdminService.createInvitationDoc(invitationToken, {
+          token: invitationToken,
+          uid,
+          email: cleanEmail,
+          name: name.trim(),
+          role: 'teamLeader',
+          roleCode: Role.ROLE_MANAGER,
+          organizationId: targetOrgId,
+          organizationName: orgName,
+          organizationCode: orgCode,
+          status: initialStatus === 'active' ? 'accepted' : 'pending',
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+          createdBy: req.firebaseUid,
+        });
+      } catch (invErr) {
+        console.warn('Notice: Could not create invitation document:', invErr);
+      }
+
+      // Step 5: Dispatch Invitation Email with TaskFlow branding and workspace code
+      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const inviteLink = `${frontendBase}/accept-invitation?token=${invitationToken}`;
+      try {
+        await EmailService.sendInvitationEmail(cleanEmail, orgName, orgCode, inviteLink);
+      } catch (emailErr) {
+        console.warn('Notice: Could not dispatch invitation email:', emailErr);
       }
 
       const resetLink = await FirebaseAdminService.generatePasswordResetLink(cleanEmail);
@@ -82,7 +150,7 @@ export class TeamController {
           department: department || 'Engineering',
           experience: 3,
           skills: 'Project Management',
-          status: status || 'active',
+          status: initialStatus,
           gender: gender || 'Male',
           profilePhoto: profilePhoto || null,
         });
@@ -93,6 +161,20 @@ export class TeamController {
       const userObj = localUser ? localUser.toJSON() : {};
       delete userObj.password;
 
+      // Log organizational activity in Firestore audit logs
+      try {
+        await FirebaseAdminService.createFirestoreAuditLog({
+          user: req.user?.name || 'Administrator',
+          action: 'MEMBER_CREATED',
+          activity: `${req.user?.name || 'Admin'} created Team Leader ${name.trim()}`,
+          status: 'VERIFIED',
+          organizationId: targetOrgId,
+          userId: req.user?.id,
+        });
+      } catch (logErr) {
+        console.warn('Audit log write error:', logErr);
+      }
+
       return res.status(201).json({
         ...userObj,
         id: uid,
@@ -101,9 +183,13 @@ export class TeamController {
         email: cleanEmail,
         role: 'teamLeader',
         roleCode: Role.ROLE_MANAGER,
-        status: status || 'active',
+        organizationId: targetOrgId,
+        organizationName: orgName,
+        organizationCode: orgCode,
+        status: initialStatus,
         createdBy: req.firebaseUid,
         resetLink,
+        inviteLink,
         message: 'Team Leader account provisioned permanently in Firestore and Firebase Auth.',
       });
     } catch (err: any) {
@@ -153,12 +239,29 @@ export class TeamController {
         return res.status(400).json({ message: 'An account with this email already exists.' });
       }
 
-      // Step 1: Provision in Firebase Auth via Admin SDK
+      // Resolve caller's active organization context automatically
+      const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
+      const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
+      let targetOrgId: string = req.organizationId || '';
+      if (!targetOrgId && callerMemberships.length > 0) {
+        targetOrgId = callerMemberships[0].organizationId;
+      }
+      if (!targetOrgId) {
+        const defaultOrg = await FirebaseAdminService.ensureDefaultOrganization();
+        targetOrgId = defaultOrg.id;
+      }
+
+      const orgDoc = await FirebaseAdminService.getOrganizationDoc(targetOrgId);
+      const orgName = orgDoc?.name || 'Default Organization';
+      const orgCode = orgDoc?.code || 'default';
+
+      // Step 1: Provision in Firebase Auth via Admin SDK (Generates Real Firebase UID)
       const fbUser = password
         ? await FirebaseAdminService.createAuthUser(cleanEmail, password, name.trim())
         : await FirebaseAdminService.createAuthUserWithoutPassword(cleanEmail, name.trim());
       
       const uid = (fbUser as any).uid;
+      const initialStatus = password ? (status || 'active') : 'invited';
 
       // Determine teamLeaderId
       const assignedTL = creatorRoleNorm === 'ROLE_MANAGER' 
@@ -179,7 +282,10 @@ export class TeamController {
           email: cleanEmail,
           role: assignedRole,
           roleCode: assignedRoleCode,
-          status: status || 'active',
+          organizationId: targetOrgId,
+          organizationName: orgName,
+          organizationCode: orgCode,
+          status: initialStatus,
           teamLeaderId: assignedTL,
           designation: designation || (assignedRole === 'admin' ? 'System Administrator' : 'Software Engineer'),
           department: department || 'Engineering',
@@ -192,6 +298,52 @@ export class TeamController {
         console.error('Firestore creation failed, performing atomic rollback on Firebase Auth user:', fsErr);
         await FirebaseAdminService.deleteAuthUser(uid);
         return res.status(500).json({ message: 'Failed to create user profile in Firestore. Account creation rolled back.' });
+      }
+
+      // Step 3: Add newly provisioned Employee to caller's active organization
+      try {
+        await FirebaseAdminService.addOrgMemberDoc(targetOrgId, {
+          userId: uid,
+          userEmail: cleanEmail,
+          userName: name.trim(),
+          role: assignedRole,
+          roleCode: assignedRoleCode,
+          status: initialStatus,
+          department: department || 'Engineering',
+          designation: designation || (assignedRole === 'admin' ? 'System Administrator' : 'Software Engineer'),
+        });
+      } catch (_orgErr) {
+        console.warn('Notice: Could not assign employee to organization:', _orgErr);
+      }
+
+      // Step 4: Create secure invitation record
+      const invitationToken = crypto.randomBytes(32).toString('hex');
+      try {
+        await FirebaseAdminService.createInvitationDoc(invitationToken, {
+          token: invitationToken,
+          uid,
+          email: cleanEmail,
+          name: name.trim(),
+          role: assignedRole,
+          roleCode: assignedRoleCode,
+          organizationId: targetOrgId,
+          organizationName: orgName,
+          organizationCode: orgCode,
+          status: initialStatus === 'active' ? 'accepted' : 'pending',
+          expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
+          createdBy: req.firebaseUid,
+        });
+      } catch (invErr) {
+        console.warn('Notice: Could not create invitation document:', invErr);
+      }
+
+      // Step 5: Dispatch Invitation Email with TaskFlow branding and workspace code
+      const frontendBase = process.env.FRONTEND_URL || 'http://localhost:5173';
+      const inviteLink = `${frontendBase}/accept-invitation?token=${invitationToken}`;
+      try {
+        await EmailService.sendInvitationEmail(cleanEmail, orgName, orgCode, inviteLink);
+      } catch (emailErr) {
+        console.warn('Notice: Could not dispatch invitation email:', emailErr);
       }
 
       const resetLink = await FirebaseAdminService.generatePasswordResetLink(cleanEmail);
@@ -210,7 +362,7 @@ export class TeamController {
           department: department || 'Engineering',
           experience: 1,
           skills: 'Software Engineering',
-          status: status || 'active',
+          status: initialStatus,
           gender: gender || 'Male',
           profilePhoto: profilePhoto || null,
         });
@@ -221,18 +373,36 @@ export class TeamController {
       const userObj = localUser ? localUser.toJSON() : {};
       delete userObj.password;
 
+      // Log organizational activity in Firestore audit logs
+      try {
+        await FirebaseAdminService.createFirestoreAuditLog({
+          user: req.user?.name || 'Administrator',
+          action: 'MEMBER_CREATED',
+          activity: `${req.user?.name || 'Admin'} created Employee ${name.trim()}`,
+          status: 'VERIFIED',
+          organizationId: targetOrgId,
+          userId: req.user?.id,
+        });
+      } catch (logErr) {
+        console.warn('Audit log write error:', logErr);
+      }
+
       return res.status(201).json({
         ...userObj,
         id: uid,
         uid,
         name: name.trim(),
         email: cleanEmail,
-        role: 'employee',
-        roleCode: Role.ROLE_EMPLOYEE,
-        status: status || 'active',
+        role: assignedRole,
+        roleCode: assignedRoleCode,
+        organizationId: targetOrgId,
+        organizationName: orgName,
+        organizationCode: orgCode,
+        status: initialStatus,
         teamLeaderId: assignedTL,
         createdBy: req.firebaseUid,
         resetLink,
+        inviteLink,
         message: 'Employee account provisioned permanently in Firestore and Firebase Auth.',
       });
     } catch (err: any) {
@@ -270,20 +440,48 @@ export class TeamController {
 
       const requesterProfile = await FirebaseAdminService.getFirestoreUserDoc(req.firebaseUid);
       const requesterRoleNorm = normalizeRole(String(requesterProfile?.role || req.user.role));
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || requesterProfile?.organizationId;
 
       let firestoreUsers: any[] = [];
-      if (requesterRoleNorm === 'ROLE_ADMIN') {
-        firestoreUsers = await FirebaseAdminService.getAllFirestoreUsers();
-      } else if (requesterRoleNorm === 'ROLE_MANAGER') {
-        firestoreUsers = await FirebaseAdminService.getFirestoreUsersByTeamLeader(req.firebaseUid);
+      if (targetOrgId) {
+        // Multi-tenant: filter users strictly belonging to this organization
+        const orgUsers = await FirebaseAdminService.getFirestoreUsersByOrganization(targetOrgId);
+        if (requesterRoleNorm === 'ROLE_ADMIN') {
+          firestoreUsers = orgUsers;
+        } else {
+          // Team Leader or Employee: only users belonging to their team within this organization
+          firestoreUsers = orgUsers.filter(u => u.teamLeaderId === req.firebaseUid || u.uid === req.firebaseUid || u.id === req.firebaseUid);
+        }
       } else {
-        firestoreUsers = await FirebaseAdminService.getFirestoreUsersByTeamLeader(req.firebaseUid);
+        if (requesterRoleNorm === 'ROLE_ADMIN') {
+          firestoreUsers = await FirebaseAdminService.getAllFirestoreUsers();
+        } else {
+          firestoreUsers = await FirebaseAdminService.getFirestoreUsersByTeamLeader(req.firebaseUid);
+        }
       }
 
       return res.json(firestoreUsers);
     } catch (err: any) {
       console.error('Error in getAllMembers:', err);
       return res.status(500).json({ error: err.message });
+    }
+  }
+
+  // Get organization invitations
+  public static async getInvitations(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user || !req.firebaseUid) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string);
+      if (!targetOrgId) {
+        return res.json([]);
+      }
+      const invitations = await FirebaseAdminService.getOrgInvitations(targetOrgId);
+      return res.json(invitations);
+    } catch (err: any) {
+      console.error('Error in getInvitations:', err);
+      return res.json([]);
     }
   }
 
@@ -366,21 +564,67 @@ export class TeamController {
 
   public static async deleteMember(req: AuthRequest, res: Response) {
     try {
-      const targetId = req.params.id;
+      const targetId = String(req.params.id || '');
+      const targetEmail = (req.query.email as string) || (req.body?.email as string) || '';
 
-      // Delete from Firestore
-      await FirebaseAdminService.deleteFirestoreUserDoc(targetId);
+      let userEmail = targetEmail ? targetEmail.toLowerCase().trim() : '';
 
-      // Delete from Firebase Auth
-      await FirebaseAdminService.deleteAuthUser(targetId);
-
-      // Delete from SQL database if exists
+      // 1. Delete from SQL database if exists
       try {
-        const user = await User.findByPk(parseInt(targetId));
-        if (user) await user.destroy();
-      } catch (e) {}
+        if (!isNaN(Number(targetId))) {
+          const sqlUser = await User.findByPk(Number(targetId));
+          if (sqlUser) {
+            if (!userEmail) userEmail = sqlUser.email.toLowerCase().trim();
+            await sqlUser.destroy();
+          }
+        }
+        if (userEmail) {
+          await User.destroy({ where: { email: userEmail } });
+        }
+      } catch (sqlErr) {
+        console.warn('SQL delete user notice:', sqlErr);
+      }
 
-      return res.json({ message: 'User permanently deleted from Firestore and Firebase Auth.' });
+      // 2. Delete from Firestore by document ID
+      if (targetId) {
+        try {
+          await FirebaseAdminService.deleteFirestoreUserDoc(targetId);
+        } catch (_e) {}
+      }
+
+      // 3. Delete from Firestore by email (in case doc ID was email or random)
+      if (userEmail && firebaseFirestore) {
+        try {
+          const snap = await firebaseFirestore.collection('users').where('email', '==', userEmail).get();
+          for (const d of snap.docs) {
+            await d.ref.delete();
+          }
+          const memberSnap = await firebaseFirestore.collection('organizationMembers').where('userEmail', '==', userEmail).get();
+          for (const d of memberSnap.docs) {
+            await d.ref.delete();
+          }
+        } catch (fsErr) {
+          console.warn('Firestore email-based delete notice:', fsErr);
+        }
+      }
+
+      // 4. Delete from Firebase Auth
+      if (targetId) {
+        try {
+          await FirebaseAdminService.deleteAuthUser(targetId);
+        } catch (_e) {}
+      }
+      if (userEmail && firebaseAdminAuth) {
+        try {
+          const authUser = await firebaseAdminAuth.getUserByEmail(userEmail);
+          if (authUser && authUser.uid) {
+            await FirebaseAdminService.deleteAuthUser(authUser.uid);
+            await FirebaseAdminService.deleteFirestoreUserDoc(authUser.uid);
+          }
+        } catch (_e) {}
+      }
+
+      return res.json({ success: true, message: 'User permanently deleted across all databases and authentication providers.' });
     } catch (err: any) {
       console.error('Error in deleteMember:', err);
       return res.status(500).json({ error: err.message });
@@ -411,8 +655,12 @@ export class TeamController {
         return res.status(403).json({ message: 'Forbidden: Only authorized Team Leaders can access eligible teammates.' });
       }
 
-      // Retrieve all users directly from Firestore
-      const allUsers = await FirebaseAdminService.getAllFirestoreUsers();
+      // Retrieve all users directly from Firestore scoped to active organization (Requirement 20)
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || leaderProfile?.organizationId || (req.user as any)?.organizationId;
+      if (!targetOrgId) {
+        return res.status(400).json({ message: 'Active organization context is required.' });
+      }
+      const allUsers = await FirebaseAdminService.getFirestoreUsersByOrganization(targetOrgId);
 
       // Map Team Leaders (uid -> name) to provide current team assignment labels
       const teamLeaderMap = new Map<string, string>();

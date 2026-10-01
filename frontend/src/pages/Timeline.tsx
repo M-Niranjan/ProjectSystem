@@ -111,90 +111,7 @@ export default function Timeline() {
   };
 
   // Initial rich mock tasks anchored relative to today
-  const defaultMockTasks: Task[] = useMemo(() => [
-    {
-      id: 101,
-      title: 'Database Schema & Core Migrations',
-      status: 'COMPLETED',
-      priority: 'HIGH',
-      startDate: getRelativeDate(-8),
-      dueDate: getRelativeDate(-3),
-      progress: 100,
-      assignee: 'Bob',
-      actualTime: 18.5,
-      estimatedTime: 20,
-      description: 'Design PostgreSQL schemas, indexing constraints, and Sequelize models.'
-    },
-    {
-      id: 102,
-      title: 'Auth API & Firebase JWT Integration',
-      status: 'COMPLETED',
-      priority: 'CRITICAL',
-      startDate: getRelativeDate(-4),
-      dueDate: getRelativeDate(1),
-      progress: 100,
-      assignee: 'Bob',
-      dependencyId: 101,
-      actualTime: 14.0,
-      estimatedTime: 16,
-      description: 'Implement JWT token generation, role verification middleware, and refresh tokens.'
-    },
-    {
-      id: 103,
-      title: 'Glassmorphic Web & Mobile UI Design',
-      status: 'IN_PROGRESS',
-      priority: 'HIGH',
-      startDate: getRelativeDate(-1),
-      dueDate: getRelativeDate(7),
-      progress: 65,
-      assignee: 'Alice',
-      dependencyId: 102,
-      actualTime: 22.5,
-      estimatedTime: 30,
-      description: 'Build futuristic UI design with Tailwind, responsive grids, and dark theme support.'
-    },
-    {
-      id: 104,
-      title: 'Milestone: Alpha Release v1.0',
-      status: 'IN_PROGRESS',
-      priority: 'CRITICAL',
-      startDate: getRelativeDate(7),
-      dueDate: getRelativeDate(7),
-      progress: 25,
-      isMilestone: true,
-      actualTime: 4.0,
-      estimatedTime: 8,
-      description: 'Internal testing release for verification pipeline and core workflow modules.'
-    },
-    {
-      id: 105,
-      title: 'Cloud Deployment & Container Config',
-      status: 'TO_DO',
-      priority: 'CRITICAL',
-      startDate: getRelativeDate(8),
-      dueDate: getRelativeDate(15),
-      progress: 0,
-      assignee: 'Charlie',
-      dependencyId: 104,
-      actualTime: 0,
-      estimatedTime: 18,
-      description: 'Dockerize frontend and backend with AWS ECS Fargate and environment secrets.'
-    },
-    {
-      id: 106,
-      title: 'Gantt & Time Tracking End-to-End Testing',
-      status: 'TO_DO',
-      priority: 'MEDIUM',
-      startDate: getRelativeDate(11),
-      dueDate: getRelativeDate(18),
-      progress: 0,
-      assignee: 'Alice',
-      dependencyId: 103,
-      actualTime: 0,
-      estimatedTime: 12,
-      description: 'Validate multi-touch gestures, live stopwatch synchronization, and PDF reports.'
-    }
-  ], []);
+  const defaultMockTasks: Task[] = useMemo(() => [], []);
 
   // Time Logs persistence in localStorage
   const [timeLogs, setTimeLogs] = useState<TimeLogEntry[]>(() => {
@@ -204,41 +121,7 @@ export default function Timeline() {
     } catch (e) {
       console.error(e);
     }
-    return [
-      {
-        id: 'log-1',
-        taskId: 101,
-        taskTitle: 'Database Schema & Core Migrations',
-        userName: 'Bob',
-        hours: 4.5,
-        category: 'Architecture',
-        date: getRelativeDate(-5),
-        notes: 'Refactored migration scripts and added index for task lookups.',
-        timestamp: '10:30 AM'
-      },
-      {
-        id: 'log-2',
-        taskId: 102,
-        taskTitle: 'Auth API & Firebase JWT Integration',
-        userName: 'Bob',
-        hours: 6.0,
-        category: 'Development',
-        date: getRelativeDate(-2),
-        notes: 'Tested role-based authorization headers and mobile push tokens.',
-        timestamp: '03:15 PM'
-      },
-      {
-        id: 'log-3',
-        taskId: 103,
-        taskTitle: 'Glassmorphic Web & Mobile UI Design',
-        userName: 'Alice',
-        hours: 5.5,
-        category: 'UI/UX Design',
-        date: getRelativeDate(0),
-        notes: 'Polished Work Profile modal alignment and responsive layout on mobile.',
-        timestamp: '01:45 PM'
-      }
-    ];
+    return [];
   });
 
   useEffect(() => {
@@ -298,13 +181,13 @@ export default function Timeline() {
           }));
           setTasks(mapped);
         } else {
-          setTasks(defaultMockTasks);
+          setTasks([]);
         }
       } else {
-        setTasks(defaultMockTasks);
+        setTasks([]);
       }
     } catch (err) {
-      setTasks(defaultMockTasks);
+      setTasks([]);
     } finally {
       setTimeout(() => setIsRefreshing(false), 400);
     }
@@ -590,7 +473,7 @@ export default function Timeline() {
   }, [tasks]);
 
   return (
-    <div className="space-y-5 select-none w-full min-w-0 pb-12">
+    <div className="space-y-5 w-full min-w-0 pb-20">
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-3 sm:gap-4 w-full min-w-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -614,9 +497,9 @@ export default function Timeline() {
           </div>
 
           {/* Project Selector & Actions */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
             <LuxurySelect
-              className="w-48 sm:w-56"
+              className="w-full xs:w-48 sm:w-56"
               value={activeProjectId || ''}
               onChange={(val) => setActiveProjectId(Number(val))}
               placeholder="Select Project..."
@@ -692,7 +575,7 @@ export default function Timeline() {
                 value={timerTaskId || ''}
                 onChange={(e) => setTimerTaskId(Number(e.target.value))}
                 disabled={timerState === 'RUNNING'}
-                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white outline-none cursor-pointer max-w-[220px] sm:max-w-xs truncate"
+                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white outline-none cursor-pointer max-w-[160px] xs:max-w-[220px] sm:max-w-xs truncate"
               >
                 {tasks.map(t => (
                   <option className="dark:bg-slate-900" key={t.id} value={t.id}>

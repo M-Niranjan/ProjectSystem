@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { Notification, User } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { EmailService } from '../services/emailService';
+import { FirebaseAdminService } from '../config/firebaseAdmin';
 
 export class NotificationController {
   public static async getNotifications(req: AuthRequest, res: Response) {
@@ -53,6 +54,13 @@ export class NotificationController {
       notification.isRead = true;
       await notification.save();
 
+      // Synchronize read status to Firebase Firestore
+      try {
+        await FirebaseAdminService.markFirestoreNotificationAsRead(id);
+      } catch (fErr) {
+        console.warn('Firestore notification update warning:', fErr);
+      }
+
       return res.json(notification);
     } catch (err: any) {
       console.error('Error in markAsRead:', err);
@@ -89,13 +97,29 @@ export class NotificationController {
       }
 
       for (const recipient of recipients) {
-        await Notification.create({
+        const notif = await Notification.create({
           title: title || 'Notification Alert',
           message: message || 'System update',
           type: type || 'SYSTEM_ALERT',
           isRead: false,
           recipientId: recipient.id,
         });
+
+        // Synchronize notification to Firebase Firestore
+        try {
+          await FirebaseAdminService.createFirestoreNotification(notif.id, {
+            id: String(notif.id),
+            title: notif.title,
+            message: notif.message,
+            type: notif.type,
+            isRead: false,
+            recipientId: String(recipient.id),
+            userId: (recipient as any).uid || String(recipient.id),
+            createdAt: notif.createdAt,
+          });
+        } catch (fErr) {
+          console.warn('Firestore notification sync warning:', fErr);
+        }
 
         if (recipient.email && recipient.email.includes('@')) {
           EmailService.sendEmailAlert(recipient.email, `[Project Workspace Alert] ${title}`, message || '');

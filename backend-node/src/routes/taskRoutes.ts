@@ -1,16 +1,20 @@
 import { Router } from 'express';
 import { TaskController } from '../controllers/taskController';
 import { authenticateToken } from '../middleware/auth';
+import { resolveOrganization } from '../middleware/orgContext';
 import { uploadPdf } from '../middleware/upload';
 
 const router = Router();
 
-router.get('/', authenticateToken, TaskController.getAllTasks);
-router.get('/project/:projectId', authenticateToken, TaskController.getProjectTasks);
-router.get('/:id', authenticateToken, TaskController.getTaskById);
-router.post('/', authenticateToken, TaskController.createTask);
-router.put('/:id', authenticateToken, TaskController.updateTask);
-router.delete('/:id', authenticateToken, TaskController.deleteTask);
+router.use(authenticateToken);
+router.use(resolveOrganization);
+
+router.get('/', TaskController.getAllTasks);
+router.get('/project/:projectId', TaskController.getProjectTasks);
+router.get('/:id', TaskController.getTaskById);
+router.post('/', TaskController.createTask);
+router.put('/:id', TaskController.updateTask);
+router.delete('/:id', TaskController.deleteTask);
 
 router.get('/:id/comments', authenticateToken, TaskController.getComments);
 router.post('/:id/comments', authenticateToken, TaskController.addComment);

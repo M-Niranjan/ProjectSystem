@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "seed:admin": "ts-node src/scripts/seedAdmin.ts"
+    "seed:admin": "ts-node src/scripts/seedAdmin.ts",
+    "migrate:org": "ts-node-dev --transpile-only src/scripts/migrateDefaultOrg.ts"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

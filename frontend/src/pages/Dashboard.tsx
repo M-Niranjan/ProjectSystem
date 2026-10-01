@@ -1,5 +1,6 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Clock,
   CheckSquare,
@@ -14,6 +15,7 @@ import {
   FolderGit2,
   Timer,
   ShieldCheck,
+  ShieldAlert,
   KeyRound,
   Building2,
   ScrollText,
@@ -21,26 +23,79 @@ import {
   UserPlus,
   Info,
   Sparkles,
-  ArrowUpRight
+  ArrowUpRight,
+  FileText,
+  Calendar,
+  Activity,
+  Layers,
+  ChevronRight,
+  TrendingUp,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
-import { normalizeRole, formatRoleName } from '../services/authRoles';
+import { normalizeRole, formatRoleName, getDashboardPathForRole } from '../services/authRoles';
 import InviteTeammateModal from '../components/InviteTeammateModal';
 import LuxurySelect from '../components/common/LuxurySelect';
+import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
 interface DashboardProps {
   forcedRole?: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';
 }
 
 export default function Dashboard({ forcedRole }: DashboardProps = {}) {
-  const { user } = useAuthStore();
+  const navigate = useNavigate();
+  const { user, activeOrganization } = useAuthStore();
   const { setView } = useUIStore();
   const [time, setTime] = useState(new Date());
 
-  const effectiveRole = forcedRole || normalizeRole(user?.role);
-  if (!effectiveRole) return null;
+  const verifiedRole = normalizeRole(user?.role);
+  const effectiveRole = forcedRole || verifiedRole;
+
+  // Strict role verification guard for Admin Dashboard
+  if (forcedRole === 'ROLE_ADMIN' && verifiedRole !== 'ROLE_ADMIN') {
+    return (
+      <div className="p-8 max-w-xl mx-auto my-12 glass-panel border border-rose-500/30 rounded-3xl text-center space-y-4 shadow-xl">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center font-bold text-xl">
+          <ShieldAlert className="w-7 h-7" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white">Admin Authorization Required</h2>
+        <p className="text-xs font-semibold text-slate-400">
+          This dashboard is strictly restricted to verified System Administrators for {activeOrganization?.organizationName || 'this workspace'}. Your account role could not be verified with administrator privileges.
+        </p>
+        <button
+          onClick={() => {
+            const dest = getDashboardPathForRole(user?.role);
+            if (dest) navigate(dest);
+            else navigate('/');
+          }}
+          className="px-5 py-2.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+        >
+          Return to Authorized Workspace
+        </button>
+      </div>
+    );
+  }
+
+  if (!effectiveRole) {
+    return (
+      <div className="p-8 max-w-xl mx-auto my-12 glass-panel border border-amber-500/30 rounded-3xl text-center space-y-4 shadow-xl">
+        <div className="w-14 h-14 mx-auto rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-500 flex items-center justify-center font-bold text-xl">
+          <AlertCircle className="w-7 h-7" />
+        </div>
+        <h2 className="text-lg font-black text-slate-900 dark:text-white">Role Verification Required</h2>
+        <p className="text-xs font-semibold text-slate-400">
+          Your account role is currently unassigned or pending authorization. Please contact your organization administrator for access.
+        </p>
+        <button
+          onClick={() => navigate('/')}
+          className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs rounded-xl shadow-md cursor-pointer transition-all"
+        >
+          Back to Login
+        </button>
+      </div>
+    );
+  }
 
   const isAdmin = effectiveRole === 'ROLE_ADMIN';
   const isTeamLead = effectiveRole === 'ROLE_MANAGER';
@@ -66,6 +121,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   const [projectsList, setProjectsList] = useState<any[]>([]);
   const [auditLogs, setAuditLogs] = useState<any[]>([]);
   const [isInviteModalOpen, setIsInviteModalOpen] = useState(false);
+
+  // Dynamic Admin metrics state (100% backend/Firestore driven)
+  const [tasksList, setTasksList] = useState<any[]>([]);
+  const [allTeamMembers, setAllTeamMembers] = useState<any[]>([]);
+  const [invitationsList, setInvitationsList] = useState<any[]>([]);
 
   // Assign task form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
@@ -101,24 +161,30 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
         const completed = assigned.filter((t: any) => t.status === 'COMPLETED').length;
         const total = assigned.length;
 
+        const uniqueProjects = new Set(assigned.map((t: any) => t.project?.id).filter(Boolean));
         setStats({
-          totalProjects: 1,
-          activeProjects: 1,
+          totalProjects: uniqueProjects.size,
+          activeProjects: uniqueProjects.size,
           completedProjects: 0,
           totalTasks: total,
           completedTasks: completed,
           pendingTasks: total - completed,
-          productivityScore: total > 0 ? Math.round((completed / total) * 100) : 98
+          productivityScore: total > 0 ? Math.round((completed / total) * 100) : 0
         });
 
       } else {
+        // 1. Report Analytics
         const reportsRes = await api.get('/api/reports/analytics');
         if (reportsRes.data) {
-          setStats(prev => ({ ...prev, ...reportsRes.data, productivityScore: prev.productivityScore || 98 }));
+          setStats(prev => ({ ...prev, ...reportsRes.data, productivityScore: prev.productivityScore || 100 }));
         }
 
+        // 2. Organization Team Members from Firestore
         const teamsRes = await api.get('/api/teams');
-        const assignableStaff = (teamsRes.data || []).filter(
+        const teamData = teamsRes.data || [];
+        setAllTeamMembers(teamData);
+
+        const assignableStaff = teamData.filter(
           (e: any) => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan'
         );
         setEmployeeDirectory(assignableStaff);
@@ -126,12 +192,30 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           setNewTaskAssigneeId((assignableStaff[0].id || assignableStaff[0].uid).toString());
         }
 
+        // 3. Organization Projects
         const projectsRes = await api.get('/api/projects');
         setProjectsList(projectsRes.data || []);
         if (projectsRes.data.length > 0 && !newTaskProjectId) {
           setNewTaskProjectId(projectsRes.data[0].id.toString());
         }
 
+        // 4. Organization Tasks (Dynamically scoped to active organization)
+        try {
+          const tasksRes = await api.get('/api/tasks');
+          setTasksList(tasksRes.data || []);
+        } catch {
+          setTasksList([]);
+        }
+
+        // 5. Organization Invitations
+        try {
+          const invRes = await api.get('/api/teams/invitations');
+          setInvitationsList(invRes.data || []);
+        } catch {
+          setInvitationsList([]);
+        }
+
+        // 6. Organization Recent Activity
         try {
           const auditRes = await api.get('/api/admin/audit-logs');
           setAuditLogs(auditRes.data || []);
@@ -150,6 +234,9 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
     window.addEventListener('task-status-updated', handleUpdate);
     return () => window.removeEventListener('task-status-updated', handleUpdate);
   }, [user]);
+
+  // Hook into global live auto-refresh
+  useLiveRefresh(loadDashboardData);
 
   // Employee Accept Task Flow
   const handleAcceptTask = async (taskId: number) => {
@@ -233,22 +320,102 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
     return 'Developer';
   };
 
-  // Teammates to display (guaranteeing Vinay, Ram, Mallu as in Option 2)
-  const displayTeammates = employeeDirectory.length > 0
-    ? employeeDirectory.filter(e => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan')
-    : [
-        { id: 1007, name: 'Vinay', role: 'ROLE_MANAGER', designation: 'Lead' },
-        { id: 1006, name: 'Ram', role: 'ROLE_EMPLOYEE', designation: 'Frontend' },
-        { id: 1008, name: 'Mallu', role: 'ROLE_EMPLOYEE', designation: 'Developer' }
-      ];
+  // Teammates to display (only real registered employees, excluding current admin)
+  const displayTeammates = employeeDirectory.filter(
+    e => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan'
+  );
 
   const activeCount = myTasks.filter(t => t.status !== 'COMPLETED').length;
 
+  // =========================================================================
+  // DYNAMIC ADMIN TELEMETRY & MULTI-ORGANIZATION METRICS
+  // =========================================================================
+  const orgName = activeOrganization?.organizationName || 'Default Organization';
+  const workspaceCode = activeOrganization?.organizationCode || activeOrganization?.organizationId || 'WORKSPACE: DEFAULT';
+  const orgStatus = activeOrganization?.status || 'Active Workspace';
+
+  // Dynamic team member counts
+  const teamLeaders = allTeamMembers.filter(
+    (m: any) => normalizeRole(m.role || m.roleCode) === 'ROLE_MANAGER'
+  );
+  const employees = allTeamMembers.filter(
+    (m: any) => normalizeRole(m.role || m.roleCode) === 'ROLE_EMPLOYEE'
+  );
+  const activeMembers = allTeamMembers.filter(
+    (m: any) => (m.status || 'active').toLowerCase() === 'active'
+  );
+
+  // Dynamic invitations counts
+  const pendingInvitesCount = invitationsList.length > 0
+    ? invitationsList.filter((i: any) => i.status === 'pending' && (!i.expiresAt || i.expiresAt > Date.now())).length
+    : allTeamMembers.filter((m: any) => (m.status || '').toLowerCase() === 'pending' || (m.invitationStatus || '').toLowerCase() === 'pending').length;
+
+  const acceptedInvitesCount = invitationsList.length > 0
+    ? invitationsList.filter((i: any) => i.status === 'accepted').length
+    : allTeamMembers.filter((m: any) => (m.status || '').toLowerCase() === 'active').length;
+
+  const expiredInvitesCount = invitationsList.length > 0
+    ? invitationsList.filter((i: any) => i.status === 'expired' || (i.expiresAt && i.expiresAt <= Date.now() && i.status !== 'accepted')).length
+    : 0;
+
+  // Dynamic active projects
+  const activeProjects = projectsList.filter(
+    (p: any) => p.status !== 'COMPLETED' && !p.completed
+  );
+
+  // Dynamic overdue tasks
+  const currentDate = new Date();
+  const overdueTasks = tasksList.filter(
+    (t: any) => t.status !== 'COMPLETED' && t.dueDate && new Date(t.dueDate) < currentDate
+  );
+
+  // Dynamic task lifecycle breakdown
+  const taskOverviewCounts = {
+    backlog: tasksList.filter((t: any) => (t.status || '').toUpperCase() === 'BACKLOG').length,
+    analysis: tasksList.filter((t: any) => ['ANALYSIS', 'PLANNING'].includes((t.status || '').toUpperCase())).length,
+    planned: tasksList.filter((t: any) => (t.status || '').toUpperCase() === 'PLANNED').length,
+    toDo: tasksList.filter((t: any) => ['TODO', 'TO_DO'].includes((t.status || '').toUpperCase())).length,
+    inProgress: tasksList.filter((t: any) => ['IN_PROGRESS', 'ACCEPTED', 'CODE_REVIEW', 'TESTING', 'REVIEW'].includes((t.status || '').toUpperCase())).length,
+    completed: tasksList.filter((t: any) => (t.status || '').toUpperCase() === 'COMPLETED').length,
+    overdue: overdueTasks.length,
+  };
+
+  // Helper for human-readable relative time
+  const formatRelativeTime = (dateInput: any) => {
+    if (!dateInput) return 'Just now';
+    let timestamp: number;
+    if (typeof dateInput === 'number') {
+      timestamp = dateInput;
+    } else if (dateInput?.toDate && typeof dateInput.toDate === 'function') {
+      timestamp = dateInput.toDate().getTime();
+    } else if (dateInput?.seconds) {
+      timestamp = dateInput.seconds * 1000;
+    } else {
+      timestamp = new Date(dateInput).getTime();
+    }
+    if (isNaN(timestamp)) return 'Recently';
+
+    const diffSec = Math.max(0, Math.floor((Date.now() - timestamp) / 1000));
+    if (diffSec < 60) return 'Just now';
+    if (diffSec < 3600) {
+      const mins = Math.floor(diffSec / 60);
+      return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+    }
+    if (diffSec < 86400) {
+      const hours = Math.floor(diffSec / 3600);
+      return `${hours} hour${hours === 1 ? '' : 's'} ago`;
+    }
+    const days = Math.floor(diffSec / 86400);
+    if (days < 7) {
+      return `${days} day${days === 1 ? '' : 's'} ago`;
+    }
+    return new Date(timestamp).toLocaleDateString();
+  };
+
   return (
-    <div className="space-y-6 select-none pt-1 sm:pt-2 pb-12 w-full min-w-0">
+    <div className="space-y-6 pt-1 sm:pt-2 pb-20 w-full min-w-0">
       {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* OPTION 2 UNIFIED HEADER ACROSS ALL DASHBOARDS */}
+      {/* TOP BAR: ORGANIZATION + WORKSPACE + ADMIN WELCOME                         */}
       {/* ========================================================================= */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
@@ -261,184 +428,492 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           </p>
         </div>
 
-        {/* Option 2 Telemetry Capsule (Digital Clock & Active Workspace) */}
-        <div className="flex items-center gap-2.5 shrink-0 self-start sm:self-auto">
-          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
-            <Clock className="w-3.5 h-3.5 text-slate-400" />
+        {/* Telemetry Capsule (Digital Clock & Active Workspace Scope) */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0 self-start sm:self-auto w-full sm:w-auto">
+          {isAdmin && (
+            <div className="px-2.5 sm:px-3 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 sm:gap-2 shadow-xs">
+              <Building2 className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+              <span className="font-bold text-slate-900 dark:text-white truncate max-w-[110px] xs:max-w-[140px] sm:max-w-[180px]">{orgName}</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 font-bold shrink-0">{workspaceCode}</span>
+            </div>
+          )}
+
+          <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-mono text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
+            <Clock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
             <span>{time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}</span>
           </div>
 
-          <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
-            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
+          <div className="px-3 sm:px-3.5 py-1.5 rounded-xl bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/80 text-xs font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-2 shadow-xs">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)] shrink-0" />
             <span>Active workspace</span>
           </div>
         </div>
       </div>
 
       {/* ========================================================================= */}
-      {/* 1. ADMIN DASHBOARD VIEW (OPTION 2 TITANIUM MINIMALIST STUDIO AESTHETIC) */}
+      {/* 1. REDESIGNED ADMIN DASHBOARD VIEW                                        */}
       {/* ========================================================================= */}
       {isAdmin && (
         <div className="space-y-6 w-full min-w-0">
-          {/* Row 1: 4 Symmetrical KPI Cards */}
+          {/* ===================================================================== */}
+          {/* STATISTICS: 4 DYNAMIC TOP KPI CARDS                                   */}
+          {/* ===================================================================== */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full min-w-0">
             {/* Card 1: Active Projects */}
             <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
-                <span className="w-5 h-5 rounded-full bg-blue-50 dark:bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">
-                  i
-                </span>
+                <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center">
+                  <FolderGit2 className="w-4 h-4" />
+                </div>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects || 2}</div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital, SaaS Workspace</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{activeProjects.length}</div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {projectsList.length > 0 ? `${activeProjects.length} active of ${projectsList.length} total projects` : 'No active projects'}
+                </p>
               </div>
             </div>
 
-            {/* Card 2: Completed Deliverables */}
+            {/* Card 2: Total Tasks */}
             <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Completed Projects</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Total Tasks</span>
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 flex items-center justify-center">
+                  <CheckSquare className="w-4 h-4" />
+                </div>
               </div>
               <div className="mt-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.completedProjects || 1}</span>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
-                    On Track
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{tasksList.length}</span>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                    {taskOverviewCounts.completed} Done
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">100% On-Time Delivery</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {tasksList.length > 0 ? `${taskOverviewCounts.inProgress} in progress • ${taskOverviewCounts.toDo} to do` : 'No tasks recorded yet'}
+                </p>
               </div>
             </div>
 
-            {/* Card 3: Total Teams */}
+            {/* Card 3: Team Members */}
             <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Teams</span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Team Members</span>
+                <div className="w-7 h-7 rounded-lg bg-teal-50 text-teal-600 dark:bg-teal-500/10 dark:text-teal-400 flex items-center justify-center">
+                  <Users className="w-4 h-4" />
+                </div>
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">3</span>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Engineering, QA</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{allTeamMembers.length}</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">Members</span>
                 </div>
-                <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-2/3"></div>
-                </div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {teamLeaders.length} Team Leaders • {employees.length} Employees
+                </p>
               </div>
             </div>
 
-            {/* Card 4: Governance & Security Health */}
+            {/* Card 4: Overdue Tasks */}
             <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg relative overflow-hidden group hover:shadow-md dark:hover:border-slate-700/80 transition-all flex flex-col justify-between">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Governance & Security</span>
-              </div>
-              <div className="mt-3">
-                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">98%</div>
-                <div className="mt-2">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
-                    Optimal Security
-                  </span>
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Overdue Tasks</span>
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${overdueTasks.length > 0 ? 'bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-400' : 'bg-emerald-50 text-emerald-600 dark:bg-emerald-500/10 dark:text-emerald-400'}`}>
+                  <AlertCircle className="w-4 h-4" />
                 </div>
               </div>
+              <div className="mt-3">
+                <div className="flex items-center gap-3">
+                  <span className={`text-3xl font-black tracking-tight ${overdueTasks.length > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-slate-900 dark:text-white'}`}>
+                    {overdueTasks.length}
+                  </span>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                    overdueTasks.length > 0
+                      ? 'bg-rose-50 dark:bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-500/30'
+                      : 'bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/30'
+                  }`}>
+                    {overdueTasks.length > 0 ? 'Action Required' : 'On Schedule'}
+                  </span>
+                </div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {overdueTasks.length > 0 ? `${overdueTasks.length} task(s) past expected deadline` : 'All project deliverables on track'}
+                </p>
+              </div>
             </div>
           </div>
 
-          {/* Row 2: Action Alert Banner */}
-          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600"></div>
-            <div className="pl-3 sm:pl-2">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                System Security & RBAC Configuration Active
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                All role permissions, user access policies, and audit trails are operating under enterprise governance.
-              </p>
+          {/* ===================================================================== */}
+          {/* ORGANIZATION OVERVIEW                                                 */}
+          {/* ===================================================================== */}
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-xs dark:shadow-lg space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800/60">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-600/15 to-indigo-600/15 text-blue-600 dark:text-blue-400 border border-blue-500/25 flex items-center justify-center font-bold shadow-xs">
+                  <Building2 className="w-5.5 h-5.5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2.5 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">{orgName}</h2>
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-mono font-bold bg-blue-50 text-blue-700 dark:bg-blue-500/15 dark:text-blue-300 border border-blue-200 dark:border-blue-500/30">
+                      Workspace: {workspaceCode}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 dark:bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/30">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      {orgStatus}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                    Multi-Tenant Organization Workspace • Isolated database and verified role-based access
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => navigate('/organization')}
+                className="self-start sm:self-auto px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 text-white rounded-xl text-xs font-bold border border-slate-800 dark:border-white/10 shadow-xs cursor-pointer transition-all flex items-center gap-2 active:scale-95"
+              >
+                Manage Organization <ArrowRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => setView('audit-logs')}
-              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
-              className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
-            >
-              View Audit Logs <ArrowRight className="w-4 h-4" />
-            </button>
+
+            {/* Organization Metrics Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Team Leaders</span>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{teamLeaders.length}</div>
+                <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold mt-0.5 block">Engineering Leads</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Employees</span>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{employees.length}</div>
+                <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold mt-0.5 block">Active Engineers</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeProjects.length}</div>
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5 block">In Progress</span>
+              </div>
+              <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/70 dark:border-slate-800/80">
+                <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Active Tasks</span>
+                <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">
+                  {tasksList.filter(t => t.status !== 'COMPLETED').length}
+                </div>
+                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5 block">Work in Flight</span>
+              </div>
+            </div>
           </div>
 
-          {/* Row 3: Admin System Modules & Audit Feed */}
+          {/* ===================================================================== */}
+          {/* PROJECT OVERVIEW                                                      */}
+          {/* ===================================================================== */}
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-xs dark:shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Project Overview</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Organization projects with real-time sprint progress, task completion, and target delivery dates
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/projects')}
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+              >
+                View All Projects <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {projectsList && projectsList.length > 0 ? (
+                projectsList.slice(0, 4).map((p: any) => {
+                  const pTasks = tasksList.filter(
+                    (t: any) => (t.project && (t.project.id === p.id || t.project.name === p.name)) || t.projectId === p.id
+                  );
+                  const pCompleted = pTasks.filter((t: any) => t.status === 'COMPLETED').length;
+                  const pTotal = pTasks.length;
+                  const pProgress = pTotal > 0 ? Math.round((pCompleted / pTotal) * 100) : (p.progress || (p.status === 'COMPLETED' ? 100 : 0));
+                  const leadName = p.owner?.name || p.teamLeader?.name || 'Assigned Lead';
+                  const dueDate = p.deadline || p.endDate || p.dueDate || 'Flexible';
+                  const status = p.status || (p.completed ? 'COMPLETED' : 'ACTIVE');
+
+                  return (
+                    <div key={p.id} className="py-4 first:pt-2 last:pb-1 space-y-2.5">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center shrink-0 font-bold text-xs">
+                            <FolderGit2 className="w-4 h-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="font-bold text-sm text-slate-900 dark:text-white truncate">{p.name}</span>
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200/60 dark:border-blue-500/20 shrink-0">
+                                {status}
+                              </span>
+                            </div>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 block truncate">
+                              Lead: <span className="font-semibold text-slate-700 dark:text-slate-300">{leadName}</span> • Due: {dueDate}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between sm:justify-end sm:text-right shrink-0 gap-3">
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{pProgress}%</span>
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                            {pCompleted} / {pTotal} tasks completed
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Progress bar */}
+                      <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-blue-600 to-indigo-500 rounded-full transition-all duration-500"
+                          style={{ width: `${Math.min(100, Math.max(0, pProgress))}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="py-8 text-center space-y-3">
+                  <p className="text-xs text-slate-500 dark:text-slate-400">No projects created in this organization yet.</p>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/projects')}
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow cursor-pointer transition-all"
+                  >
+                    + Create First Project
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ===================================================================== */}
+          {/* TASK OVERVIEW                                                         */}
+          {/* ===================================================================== */}
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-xs dark:shadow-lg space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Task Overview</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                  Dynamic distribution across all workflow lifecycle states
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/tasks')}
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1 self-start sm:self-auto"
+              >
+                View All Tasks <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            {/* 7 Lifecycle Stage Cards */}
+            <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 lg:grid-cols-7 gap-2.5 sm:gap-3">
+              {[
+                { label: 'Backlog', count: taskOverviewCounts.backlog, color: 'text-slate-600 dark:text-slate-300', bg: 'bg-slate-50 dark:bg-slate-800/40 border-slate-200/70 dark:border-slate-700/60' },
+                { label: 'Analysis', count: taskOverviewCounts.analysis, color: 'text-purple-600 dark:text-purple-400', bg: 'bg-purple-50/50 dark:bg-purple-500/10 border-purple-200/60 dark:border-purple-500/20' },
+                { label: 'Planned', count: taskOverviewCounts.planned, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-200/60 dark:border-blue-500/20' },
+                { label: 'To Do', count: taskOverviewCounts.toDo, color: 'text-sky-600 dark:text-sky-400', bg: 'bg-sky-50/50 dark:bg-sky-500/10 border-sky-200/60 dark:border-sky-500/20' },
+                { label: 'In Progress', count: taskOverviewCounts.inProgress, color: 'text-amber-600 dark:text-amber-400', bg: 'bg-amber-50/50 dark:bg-amber-500/10 border-amber-200/60 dark:border-amber-500/20' },
+                { label: 'Completed', count: taskOverviewCounts.completed, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50/50 dark:bg-emerald-500/10 border-emerald-200/60 dark:border-emerald-500/20' },
+                { label: 'Overdue', count: taskOverviewCounts.overdue, color: 'text-rose-600 dark:text-rose-400', bg: 'bg-rose-50/50 dark:bg-rose-500/10 border-rose-200/60 dark:border-rose-500/20' },
+              ].map(stage => (
+                <div key={stage.label} className={`p-2.5 sm:p-3 rounded-xl border ${stage.bg} flex flex-col justify-between min-h-[80px] sm:min-h-[85px]`}>
+                  <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400 truncate">{stage.label}</span>
+                  <div className={`text-xl sm:text-2xl font-black ${stage.color} tracking-tight mt-1`}>{stage.count}</div>
+                  <span className="text-[9px] sm:text-[10px] text-slate-400 dark:text-slate-500 font-medium mt-0.5">Tasks</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ===================================================================== */}
+          {/* TEAM OVERVIEW & INVITATIONS SUMMARY                                   */}
+          {/* ===================================================================== */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            {/* System Modules Panel (7 cols) */}
+            {/* Team Overview (7 cols) */}
             <div className="lg:col-span-7 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">System Modules & Governance</h3>
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider">Quick Access</span>
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {[
-                  { title: 'User Directory', desc: 'Create & assign roles', icon: Users, view: 'users' },
-                  { title: 'Roles & Perms', desc: 'RBAC permissions matrix', icon: KeyRound, view: 'roles' },
-                  { title: 'Org Settings', desc: 'Working defaults & limits', icon: Building2, view: 'organization' },
-                  { title: 'Teams Config', desc: 'Manage Team Leads', icon: Network, view: 'teams' },
-                  { title: 'Audit Logs', desc: 'Security event history', icon: ScrollText, view: 'audit-logs' },
-                ].map(mod => {
-                  const Icon = mod.icon;
-                  return (
-                    <button
-                      key={mod.title}
-                      onClick={() => setView(mod.view)}
-                      className="p-4 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200/80 hover:border-blue-400 dark:bg-[#080b13] dark:border-slate-800/90 dark:hover:border-slate-700 dark:hover:bg-[#121827] text-left transition-all cursor-pointer group flex flex-col justify-between min-h-[105px]"
-                    >
-                      <div className="flex items-center justify-between w-full">
-                        <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
-                          <Icon className="w-4 h-4" />
-                        </div>
-                        <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 dark:text-slate-500 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                      </div>
-                      <div className="mt-3">
-                        <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">{mod.title}</p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{mod.desc}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Audit Logs Feed Panel (5 cols) */}
-            <div className="lg:col-span-5 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-white">Recent Security Logs</h3>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Team Overview</h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">Engineering leadership and active personnel</p>
+                </div>
                 <button
-                  onClick={() => setView('audit-logs')}
-                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                  type="button"
+                  onClick={() => navigate('/users')}
+                  className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs cursor-pointer transition-all active:scale-95"
                 >
-                  View All →
+                  Manage Team
                 </button>
               </div>
 
-              <div className="divide-y divide-slate-100 dark:divide-slate-800/50 max-h-[300px] overflow-y-auto pr-1">
-                {auditLogs && auditLogs.length > 0 ? (
-                  auditLogs.slice(0, 5).map((log: any) => (
-                    <div key={log.id} className="py-2.5 flex items-center justify-between text-xs">
-                      <div>
-                        <div className="flex items-center gap-1.5">
-                          <span className="font-bold text-slate-900 dark:text-white">{log.user || 'System'}</span>
-                          <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400">
-                            {log.action}
-                          </span>
-                        </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{log.activity}</p>
-                      </div>
-                      <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2 py-0.5 rounded-full shrink-0">
-                        {log.status || 'SUCCESS'}
-                      </span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-xs text-slate-400 py-6 text-center">No security logs recorded yet.</p>
-                )}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Team Leaders</span>
+                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{teamLeaders.length}</div>
+                  <span className="text-[10px] text-blue-600 dark:text-blue-400 font-semibold">Managers</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Employees</span>
+                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{employees.length}</div>
+                  <span className="text-[10px] text-teal-600 dark:text-teal-400 font-semibold">Engineers</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Active Members</span>
+                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{activeMembers.length}</div>
+                  <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">Active</span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90">
+                  <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Pending Invites</span>
+                  <div className="text-2xl font-black text-slate-900 dark:text-white mt-1">{pendingInvitesCount}</div>
+                  <span className="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">Pending</span>
+                </div>
               </div>
+            </div>
+
+            {/* Invitations Summary (5 cols) */}
+            <div className="lg:col-span-5 bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="text-base font-bold text-slate-900 dark:text-white tracking-tight">Invitations Summary</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-400">Workspace onboarding status</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setIsInviteModalOpen(true)}
+                    className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 dark:bg-white/10 dark:hover:bg-white/15 text-white rounded-xl text-xs font-bold border border-slate-800 dark:border-white/10 shadow-xs cursor-pointer transition-all active:scale-95"
+                  >
+                    Manage Invitations
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4">
+                  <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90 text-center">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">Pending</span>
+                    <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{pendingInvitesCount}</div>
+                  </div>
+                  <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90 text-center">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">Accepted</span>
+                    <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">{acceptedInvitesCount}</div>
+                  </div>
+                  <div className="p-2.5 sm:p-3.5 rounded-xl bg-slate-50 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90 text-center">
+                    <span className="text-[10px] sm:text-[11px] font-semibold text-slate-500 dark:text-slate-400">Expired</span>
+                    <div className="text-xl sm:text-2xl font-black text-slate-400 dark:text-slate-500 mt-1">{expiredInvitesCount}</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="pt-2 border-t border-slate-100 dark:border-slate-800/60 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+                <span>Secure email invitation tokens</span>
+                <span className="font-semibold text-blue-600 dark:text-blue-400">Active Org Scope</span>
+              </div>
+            </div>
+          </div>
+
+          {/* ===================================================================== */}
+          {/* RECENT ACTIVITY                                                       */}
+          {/* ===================================================================== */}
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-xs dark:shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Recent Activity</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Real-time operational events within {orgName}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/workspace-activity')}
+                className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+              >
+                View All Activity <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
+
+            <div className="divide-y divide-slate-100 dark:divide-slate-800/60">
+              {auditLogs && auditLogs.length > 0 ? (
+                auditLogs.slice(0, 5).map((log: any) => (
+                  <div key={log.id} className="py-3 first:pt-1 last:pb-1 flex items-center justify-between text-xs gap-3">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400 flex items-center justify-center font-bold text-xs shrink-0">
+                        {(log.user || 'A')[0].toUpperCase()}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-slate-900 dark:text-white truncate">
+                          {log.activity || log.details || `${log.user || 'User'} performed ${log.action}`}
+                        </p>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 block">
+                          {formatRelativeTime(log.createdAt || log.timestamp || log.date)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-0.5 rounded-full shrink-0">
+                      {log.status || 'VERIFIED'}
+                    </span>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-xs text-slate-400">
+                  No recent activity logged for this organization yet.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* ===================================================================== */}
+          {/* QUICK ACCESS                                                          */}
+          {/* ===================================================================== */}
+          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 sm:p-6 shadow-xs dark:shadow-lg space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Quick Access</h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400">Core operational modules for enterprise project delivery</p>
+              </div>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Fast Navigation</span>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+              {[
+                { title: 'Team', desc: 'Manage Leaders & Staff', icon: Users, to: '/users' },
+                { title: 'Projects', desc: 'Deliverables & roadmaps', icon: FolderGit2, to: '/projects' },
+                { title: 'Tasks', desc: 'Workflows & sprint boards', icon: CheckSquare, to: '/tasks' },
+                { title: 'Invitations', desc: 'Invite team members', icon: UserPlus, action: () => setIsInviteModalOpen(true) },
+                { title: 'Organization', desc: 'Workspace settings & code', icon: Building2, to: '/organization' },
+                { title: 'Documents', desc: 'Project specs & assets', icon: FileText, to: '/documents' },
+                { title: 'Activity', desc: 'Audit trails & logs', icon: Clock, to: '/workspace-activity' },
+              ].map(mod => {
+                const Icon = mod.icon;
+                return (
+                  <button
+                    key={mod.title}
+                    onClick={() => {
+                      if (mod.action) {
+                        mod.action();
+                      } else if (mod.to) {
+                        navigate(mod.to);
+                      }
+                    }}
+                    className="p-4 rounded-xl bg-slate-50/80 hover:bg-slate-100 border border-slate-200/80 hover:border-blue-400 dark:bg-[#080b13] dark:border-slate-800/90 dark:hover:border-slate-700 dark:hover:bg-[#121827] text-left transition-all cursor-pointer group flex flex-col justify-between min-h-[110px]"
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 border border-blue-200/60 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 flex items-center justify-center group-hover:scale-105 transition-transform">
+                        <Icon className="w-4 h-4" />
+                      </div>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-blue-600 dark:text-slate-500 dark:group-hover:text-blue-400 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+                    </div>
+                    <div className="mt-3">
+                      <p className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">{mod.title}</p>
+                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{mod.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -460,8 +935,10 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 </span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.activeProjects || 2}</div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital Management System</p>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{projectsList.length}</div>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {projectsList.length > 0 ? projectsList[0]?.name : 'No active projects'}
+                </p>
               </div>
             </div>
 
@@ -472,12 +949,14 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
               <div className="mt-3">
                 <div className="flex items-center gap-3">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">1</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.pendingTasks > 0 ? stats.pendingTasks : 0}</span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
-                    Needs Review
+                    {stats.pendingTasks > 0 ? 'Needs Review' : 'Up to Date'}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Patient Dashboard</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {stats.pendingTasks > 0 ? `${stats.pendingTasks} review(s) pending` : 'All tasks reviewed'}
+                </p>
               </div>
             </div>
 
@@ -488,11 +967,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
               <div className="mt-3">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.totalTasks || 8}</span>
-                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">2 In Progress</span>
+                  <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.totalTasks || 0}</span>
+                  <span className="text-xs font-medium text-slate-500 dark:text-slate-400">{stats.completedTasks || 0} Completed</span>
                 </div>
                 <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full mt-3 overflow-hidden">
-                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full w-1/4"></div>
+                  <div className="h-full bg-blue-600 dark:bg-blue-500 rounded-full" style={{ width: `${stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 0}%` }}></div>
                 </div>
               </div>
             </div>
@@ -503,7 +982,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Sprint Velocity & Health</span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">98%</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 100)}%</div>
                 <div className="mt-2">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
                     Optimal Health
@@ -513,28 +992,30 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             </div>
           </div>
 
-          {/* Row 2: Real World Workflow Highlight & Task Review Queue Banner */}
-          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-            <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600 dark:bg-blue-500"></div>
+          {/* Row 2: Workflow Highlight (Only shown when there are tasks pending review) */}
+          {stats.pendingTasks > 0 && (
+            <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+              <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-600 dark:bg-blue-500"></div>
 
-            <div className="pl-3 sm:pl-2">
-              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
-                Hospital Management System — Create Patient Dashboard
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Submitted by <strong className="text-slate-800 dark:text-slate-200">Rahul</strong> (Employee) for Team Lead approval.
-              </p>
+              <div className="pl-3 sm:pl-2">
+                <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">
+                  Tasks Pending Code Review & Sign-Off ({stats.pendingTasks})
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Team members have submitted work ready for engineering review and quality approval.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setView('reviews')}
+                style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
+                className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
+              >
+                Review & Approve Task <ArrowRight className="w-4 h-4" />
+              </button>
             </div>
-
-            <button
-              type="button"
-              onClick={() => setView('reviews')}
-              style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
-              className="w-full sm:w-auto px-5 py-2.5 hover:brightness-110 text-white rounded-xl font-semibold text-xs flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-95 shrink-0"
-            >
-              Review & Approve Task <ArrowRight className="w-4 h-4" />
-            </button>
-          </div>
+          )}
 
           {/* Row 3: Team Workload & Allocation AND Quick Task Assignment */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
@@ -560,7 +1041,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
 
               <div className="space-y-3">
-                {displayTeammates.map((emp, idx) => {
+                {displayTeammates.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs font-semibold rounded-2xl border border-dashed border-slate-200 dark:border-white/10">
+                    No team members added yet. Click &quot;Invite Teammate&quot; above to add members to your workspace.
+                  </div>
+                ) : displayTeammates.map((emp, idx) => {
                   const workloadPct = idx === 0 ? 65 : idx === 1 ? 45 : idx === 2 ? 80 : 50;
                   const workloadGradient = workloadPct >= 80 
                     ? 'from-amber-500 to-rose-500' 
@@ -735,7 +1220,9 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               </div>
               <div className="mt-3">
                 <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{activeCount}</div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">Hospital & SaaS Workspace</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {myTasks.length > 0 ? (myTasks[0].project?.name || 'Active Tasks') : 'No active tasks'}
+                </p>
               </div>
             </div>
 
@@ -748,10 +1235,12 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 <div className="flex items-center gap-3">
                   <span className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{pendingTasks.length}</span>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30">
-                    Action Required
+                    {pendingTasks.length > 0 ? 'Action Required' : 'None'}
                   </span>
                 </div>
-                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">New Work Assignments</p>
+                <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mt-2 truncate">
+                  {pendingTasks.length > 0 ? `${pendingTasks.length} new assignment(s)` : 'All assignments accepted'}
+                </p>
               </div>
             </div>
 
@@ -777,10 +1266,12 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Velocity & Score</span>
               </div>
               <div className="mt-3">
-                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.productivityScore || 98}%</div>
+                <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {myTasks.length > 0 ? `${stats.productivityScore || 0}%` : '—'}
+                </div>
                 <div className="mt-2">
                   <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
-                    Optimal Health
+                    {myTasks.length > 0 ? 'Active Performance' : 'Awaiting Tasks'}
                   </span>
                 </div>
               </div>
