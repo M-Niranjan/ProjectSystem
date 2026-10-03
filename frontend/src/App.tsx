@@ -278,8 +278,10 @@ function AppContent() {
     return <OrgSelector />;
   }
 
+  const isMessagesPage = location.pathname === '/messages';
+
   return (
-    <div className="relative min-h-screen overflow-x-hidden">
+    <div className={`relative ${isMessagesPage ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'}`}>
       {/* Pure Uniform Background Layer */}
       <div className="animated-bg" />
 
@@ -290,12 +292,16 @@ function AppContent() {
 
         {/* Content Wrapper */}
         <div 
-          className={`flex-1 flex flex-col min-h-screen max-w-full overflow-x-hidden transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
+          className={`flex-1 flex flex-col ${isMessagesPage ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} max-w-full transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
         >
           {/* Header Frosted Navbar */}
           <Navbar />
 
-          <main className="flex-1 main-workspace-frame px-3 sm:px-6 md:px-8 w-full max-w-7xl mx-auto min-w-0 max-w-full overflow-x-hidden print:p-0 print:m-0 print:pt-0 print:max-w-none">
+          <main className={`flex-1 min-w-0 max-w-full print:p-0 print:m-0 print:pt-0 print:max-w-none ${
+            isMessagesPage
+              ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-1 sm:p-2 overflow-hidden'
+              : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 w-full max-w-7xl mx-auto'
+          }`}>
             <ErrorBoundary>
               <Routes location={location}>
                     <Route path="/" element={<RoleDashboardRedirect />} />

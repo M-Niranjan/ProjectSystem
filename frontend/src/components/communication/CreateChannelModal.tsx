@@ -15,14 +15,14 @@ const channelSchema = z.object({
     .regex(/^[a-z0-9-]+$/, 'Use lowercase letters, numbers, and hyphens only (e.g. project-updates)'),
   description: z.string().max(120, 'Description cannot exceed 120 characters').optional(),
   isPrivate: z.boolean(),
-  selectedMembers: z.array(z.number()).optional(),
+  selectedMembers: z.array(z.union([z.number(), z.string()])).optional(),
 });
 
 export type ChannelFormData = {
   name: string;
   description?: string;
   isPrivate: boolean;
-  selectedMembers?: number[];
+  selectedMembers?: (number | string)[];
 };
 
 interface CreateChannelModalProps {
@@ -66,7 +66,7 @@ export default function CreateChannelModal({
     onClose();
   };
 
-  const toggleMemberSelection = (memberId: number) => {
+  const toggleMemberSelection = (memberId: number | string) => {
     const current = selectedMembers;
     if (current.includes(memberId)) {
       setValue('selectedMembers', current.filter((id) => id !== memberId));

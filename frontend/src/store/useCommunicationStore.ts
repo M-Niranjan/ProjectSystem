@@ -7,27 +7,42 @@ export interface Reaction {
 }
 
 export interface ChatMessage {
-  id: number;
+  id: number | string;
+  messageId?: string;
+  conversationId?: string;
+  organizationId?: string;
+  senderId?: string;
+  receiverId?: string;
+  recipientId?: string;
   content: string;
+  text?: string;
+  message?: string;
+  status?: string;
+  type?: string;
+  messageType?: string;
   sender: {
-    id: number;
+    id: number | string;
     name: string;
     profilePhoto?: string;
     role?: string;
   };
   createdAt: string;
+  timestamp?: any;
   fileUrl?: string;
   fileName?: string;
+  fileType?: string;
   fileSize?: number;
   isRead?: boolean;
   isPinned?: boolean;
-  replyTo?: { id: number; senderName: string; content: string } | null;
-  reactions?: Record<string, number[]>; // emoji -> array of userIds
-  task?: { id: number; title: string };
+  isEdited?: boolean;
+  isDeleted?: boolean;
+  replyTo?: { id: number | string; senderName: string; content: string } | null;
+  reactions?: Record<string, (number | string)[]>; // emoji -> array of userIds
+  task?: { id: number | string; title: string };
 }
 
 export interface ChannelItem {
-  id: number;
+  id: number | string;
   name: string;
   description?: string;
   isPrivate?: boolean;
@@ -37,7 +52,8 @@ export interface ChannelItem {
 }
 
 export interface ContactItem {
-  id: number;
+  id: number | string;
+  uid?: string;
   name: string;
   email: string;
   role: string;
@@ -45,20 +61,22 @@ export interface ContactItem {
   department?: string;
   profilePhoto?: string;
   isOnline?: boolean;
+  status?: 'online' | 'away' | 'busy' | 'offline';
+  lastSeen?: any;
 }
 
 interface CommunicationState {
   activeTab: 'channels' | 'dms';
-  activeChannelId: number | null;
-  activeContactId: number | null;
+  activeChannelId: number | string | null;
+  activeContactId: number | string | null;
   sidebarOpen: boolean; // mobile drawer
   detailsPanelOpen: boolean;
   searchQuery: string;
   messageSearchQuery: string;
   
   // Realtime & Presence
-  onlineUsers: Set<number>;
-  typingUsers: Record<string, { userId: number; userName: string }>;
+  onlineUsers: Set<number | string>;
+  typingUsers: Record<string, { userId: number | string; userName: string }>;
   unreadCounts: Record<string, number>; // key: "ch_1" or "dm_101"
   mutedConversations: Set<string>;
 
@@ -69,8 +87,8 @@ interface CommunicationState {
 
   // Actions
   setActiveTab: (tab: 'channels' | 'dms') => void;
-  setActiveChannelId: (id: number | null) => void;
-  setActiveContactId: (id: number | null) => void;
+  setActiveChannelId: (id: number | string | null) => void;
+  setActiveContactId: (id: number | string | null) => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setDetailsPanelOpen: (open: boolean) => void;

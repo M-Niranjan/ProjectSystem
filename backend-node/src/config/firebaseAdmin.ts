@@ -598,6 +598,8 @@ export class FirebaseAdminService {
           if (userDoc) {
             userList.push({
               ...userDoc,
+              uid: m.userId,
+              id: m.userId,
               orgRole: m.role,
               orgRoleCode: m.roleCode,
               membershipStatus: m.status,

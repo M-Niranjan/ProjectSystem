@@ -80,7 +80,7 @@ interface UIState {
   preselectedStatus: string | null;
   isTaskEditMode: boolean;
   editingTask: any | null;
-  chatContactId: number | null;
+  chatContactId: string | number | null;
   toast: ToastNotification | null;
   showToast: (message: string, type?: ToastType, duration?: number) => void;
   hideToast: () => void;
@@ -96,7 +96,7 @@ interface UIState {
   setView: (view: string, projectId?: number | null) => void;
   setProjectModalOpen: (isOpen: boolean) => void;
   setTaskModalOpen: (isOpen: boolean, status?: string | null, isEdit?: boolean, task?: any | null) => void;
-  setChatContactId: (id: number | null) => void;
+  setChatContactId: (id: string | number | null) => void;
   signOutModalOpen: boolean;
   setSignOutModalOpen: (isOpen: boolean) => void;
 }

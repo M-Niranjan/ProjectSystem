@@ -19,10 +19,105 @@ const firebaseConfig = {
 };
 
 import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
 export const firebaseDb = getFirestore(firebaseApp);
+export const firebaseStorage = getStorage(firebaseApp);
+
+/**
+ * Uploads a chat attachment with fallback mechanisms.
+ * Tries Firebase Storage first, then backend multipart upload, then DataURL.
+ */
+export const uploadChatAttachment = async (
+  file: File,
+  orgId: string,
+  convId: string,
+  onProgress?: (progress: number) => void
+): Promise<{ name: string; url: string; size: number; type: string }> => {
+  if (onProgress) onProgress(20);
+
+  // 1. Try Firebase Storage
+  if (firebaseStorage) {
+    try {
+      const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+      const filePath = `chat_attachments/${orgId}/${convId}/${Date.now()}_${sanitizedName}`;
+      const fileStorageRef = storageRef(firebaseStorage, filePath);
+      
+      if (onProgress) onProgress(45);
+      await uploadBytes(fileStorageRef, file, {
+        contentType: file.type || 'application/octet-stream',
+      });
+      if (onProgress) onProgress(85);
+      
+      const downloadUrl = await getDownloadURL(fileStorageRef);
+      if (onProgress) onProgress(100);
+      return {
+        name: file.name,
+        url: downloadUrl,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+      };
+    } catch (storageErr) {
+      console.warn('Firebase Storage upload failed, trying backend fallback:', storageErr);
+    }
+  }
+
+  // 2. Try Backend Node upload (/api/attachments/upload)
+  try {
+    if (onProgress) onProgress(60);
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
+    const response = await fetch(`${apiBase}/api/attachments/upload`, {
+      method: 'POST',
+      headers: {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        'X-Organization-Id': orgId,
+      },
+      body: formData,
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      if (onProgress) onProgress(100);
+      return {
+        name: file.name,
+        url: data.fileUrl || data.url,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+      };
+    }
+  } catch (backendErr) {
+    console.warn('Backend attachment upload failed, trying DataURL fallback:', backendErr);
+  }
+
+  // 3. Resilient Base64 Data URL fallback for local offline simulation
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (onProgress) onProgress(100);
+      resolve({
+        name: file.name,
+        url: reader.result as string,
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+      });
+    };
+    reader.onerror = () => {
+      resolve({
+        name: file.name,
+        url: URL.createObjectURL(file),
+        size: file.size,
+        type: file.type || 'application/octet-stream',
+      });
+    };
+    reader.readAsDataURL(file);
+  });
+};
 
 const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });

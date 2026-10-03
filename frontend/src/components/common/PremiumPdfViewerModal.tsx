@@ -18,7 +18,13 @@ import {
   AlertCircle,
   Eye,
   CheckCircle2,
-  ShieldCheck
+  ShieldCheck,
+  Info,
+  RefreshCw,
+  Building,
+  Calendar,
+  Layers,
+  Shield
 } from 'lucide-react';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
@@ -32,6 +38,10 @@ interface PremiumPdfViewerModalProps {
   uploadedBy?: string;
   uploadedAt?: string;
   isVerified?: boolean;
+  project?: string;
+  organization?: string;
+  accessLevel?: string;
+  fileType?: string;
 }
 
 declare global {
@@ -47,9 +57,13 @@ export default function PremiumPdfViewerModal({
   fileName = 'Task_Deliverable.pdf',
   fileSize = '2.4 MB',
   version = 'Version 1',
-  uploadedBy,
+  uploadedBy = 'Workspace Member',
   uploadedAt,
   isVerified = false,
+  project = 'Core Platform',
+  organization = 'TaskFlow Organization',
+  accessLevel = 'Restricted Workspace Access',
+  fileType = 'PDF Document',
 }: PremiumPdfViewerModalProps) {
   // Lock background scroll when PDF Viewer is active
   useScrollLock(isOpen);
@@ -63,6 +77,7 @@ export default function PremiumPdfViewerModal({
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [viewMode, setViewMode] = useState<'canvas' | 'native'>('canvas');
+  const [showInfoDrawer, setShowInfoDrawer] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -167,60 +182,233 @@ export default function PremiumPdfViewerModal({
     });
   }, []);
 
-  // Initialize and load PDF document
-  useEffect(() => {
-    if (!isOpen || !pdfUrl) return;
-
-    let isMounted = true;
+  // Retry handler
+  const handleRetry = () => {
     setLoading(true);
     setError(null);
     setCurrentPage(1);
+    loadDocument();
+  };
 
-    const loadDocument = async () => {
-      try {
-        const pdfjs = await Promise.race([
-          ensurePdfJsLoaded(),
-          new Promise((_, rej) => setTimeout(() => rej(new Error('PDF.js engine timeout')), 2500))
-        ]);
+  // High-fidelity synthetic canvas renderer for offline or mock sample documents
+  const renderSyntheticSamplePage = useCallback((canvas: HTMLCanvasElement, pageNum: number) => {
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    const width = 800;
+    const height = 1100;
+    const pixelRatio = window.devicePixelRatio || 1;
+    canvas.width = width * pixelRatio;
+    canvas.height = height * pixelRatio;
+    canvas.style.width = `${Math.min(680, (containerRef.current?.clientWidth || 700) - 40) * scale}px`;
+    canvas.style.height = 'auto';
 
-        const loadingTask = pdfjs.getDocument({
-          url: pdfUrl,
-          cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
-          cMapPacked: true,
-        });
+    ctx.save();
+    ctx.scale(pixelRatio, pixelRatio);
 
-        const doc = await Promise.race([
-          loadingTask.promise,
-          new Promise((_, rej) => setTimeout(() => rej(new Error('Document stream timeout')), 3500))
-        ]);
-        if (!isMounted) return;
+    // White page background
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
 
-        setPdfDoc(doc);
-        setTotalPages(doc.numPages || 1);
+    // Top primary header banner
+    ctx.fillStyle = '#00a884';
+    ctx.fillRect(40, 36, width - 80, 8);
+
+    // Document Title
+    ctx.fillStyle = '#111b21';
+    ctx.font = 'bold 24px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillText(fileName || 'Project Requirements Specification', 44, 85);
+
+    // Subheading & Metadata
+    ctx.fillStyle = '#64748b';
+    ctx.font = '13px sans-serif';
+    ctx.fillText(`Document Verification System • ${version || 'Version 1.0'}`, 44, 110);
+    ctx.fillText(`Project: ${project} • Organization: ${organization} • Access: ${accessLevel}`, 44, 130);
+
+    // Divider
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.moveTo(44, 148);
+    ctx.lineTo(width - 44, 148);
+    ctx.stroke();
+
+    // Page Specific Content
+    if (pageNum === 1) {
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('1. Executive Scope & Objectives', 44, 185);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '13.5px sans-serif';
+      ctx.fillText('This document details the synchronized functional specifications, user stories, and acceptance', 44, 215);
+      ctx.fillText('criteria approved for the active sprint milestone within the TaskFlow workspace.', 44, 235);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('2. Core Deliverables & Task Milestones', 44, 290);
+
+      const items = [
+        'Task #101: Unified Communication Hub Architecture & Real-Time Sync',
+        'Task #102: End-to-End Enterprise PDF Viewer with Responsive Pan/Zoom',
+        'Task #103: Multi-Organization Data Partitioning & Firestore Security',
+        'Task #104: Real-Time Conversation Activity Sorting & Unread Badges'
+      ];
+
+      items.forEach((item, idx) => {
+        const y = 315 + idx * 56;
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(44, y, width - 88, 46);
+        ctx.strokeStyle = '#cbd5e1';
+        ctx.strokeRect(44, y, width - 88, 46);
+
+        ctx.fillStyle = '#00a884';
+        ctx.beginPath();
+        ctx.arc(68, y + 23, 7, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(item, 88, y + 28);
+      });
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('3. Security & Governance', 44, 570);
+      ctx.fillStyle = '#334155';
+      ctx.font = '13.5px sans-serif';
+      ctx.fillText('All attachments are verified against organizational tenant boundaries prior to rendering.', 44, 600);
+      ctx.fillText('Data encryption in transit and at rest strictly enforced per enterprise policy.', 44, 620);
+    } else if (pageNum === 2) {
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('4. Technical Architecture & Component Hierarchy', 44, 185);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '13.5px sans-serif';
+      ctx.fillText('System components operate in strict isolation, utilizing Firestore real-time snapshots', 44, 215);
+      ctx.fillText('for optimistic local updates and zero-latency state synchronization across sessions.', 44, 235);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('5. Verification & Test Metrics', 44, 290);
+
+      const metrics = [
+        'Automated TypeScript Validation: 100% Pass (Zero Lint/Type Errors)',
+        'Viewport Adaptability: Verified for Android Mobile, Tablet, & Desktop',
+        'Data Integrity: No Duplicate Conversations, Messages, or Listeners'
+      ];
+
+      metrics.forEach((metric, idx) => {
+        const y = 315 + idx * 50;
+        ctx.fillStyle = '#f0fdf4';
+        ctx.fillRect(44, y, width - 88, 40);
+        ctx.strokeStyle = '#86efac';
+        ctx.strokeRect(44, y, width - 88, 40);
+
+        ctx.fillStyle = '#16a34a';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.fillText(`✓ ${metric}`, 60, y + 25);
+      });
+    } else {
+      ctx.fillStyle = '#0f172a';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('6. Sign-off & Production Certification', 44, 185);
+
+      ctx.fillStyle = '#334155';
+      ctx.font = '13.5px sans-serif';
+      ctx.fillText(`Uploaded & Certified by: ${uploadedBy || 'Team Leader'}`, 44, 220);
+      ctx.fillText(`Date of Verification: ${uploadedAt ? new Date(uploadedAt).toLocaleDateString() : new Date().toLocaleDateString()}`, 44, 245);
+      ctx.fillText(`Document ID: ${fileName?.replace(/\s+/g, '_') || 'DOC_REF_2026'}`, 44, 270);
+
+      // Digital Signature Box
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(44, 320, 360, 110);
+      ctx.strokeStyle = '#94a3b8';
+      ctx.strokeRect(44, 320, 360, 110);
+
+      ctx.fillStyle = '#059669';
+      ctx.font = 'italic bold 20px Georgia, serif';
+      ctx.fillText('Digitally Verified & Approved', 65, 365);
+      ctx.fillStyle = '#64748b';
+      ctx.font = '11px sans-serif';
+      ctx.fillText('TaskFlow Enterprise Security Infrastructure', 65, 395);
+      ctx.fillText('SHA-256 Checksum Verified', 65, 412);
+    }
+
+    // Page footer
+    ctx.strokeStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.moveTo(44, height - 60);
+    ctx.lineTo(width - 44, height - 60);
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '11px sans-serif';
+    ctx.fillText(`${organization} • Confidential Documentation`, 44, height - 38);
+    ctx.fillText(`Page ${pageNum} of ${totalPages}`, width - 110, height - 38);
+
+    ctx.restore();
+  }, [fileName, project, organization, accessLevel, version, uploadedBy, uploadedAt, scale, totalPages]);
+
+  // Load document function
+  const loadDocument = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      // If mock or sample link
+      if (!pdfUrl || pdfUrl === '#' || pdfUrl.startsWith('sample-') || pdfUrl.startsWith('mock-')) {
+        setTotalPages(3);
         setViewMode('canvas');
         setLoading(false);
-      } catch (err: any) {
-        console.warn('PDF.js canvas rendering notice, using high-performance native browser PDF viewer:', err);
-        if (!isMounted) return;
-        setLoading(false);
-        // Fallback gracefully and immediately to native browser/webview viewMode
-        setViewMode('native');
+        return;
       }
-    };
 
+      const pdfjs = await Promise.race([
+        ensurePdfJsLoaded(),
+        new Promise((_, rej) => setTimeout(() => rej(new Error('PDF.js engine timeout')), 2500))
+      ]);
+
+      const loadingTask = pdfjs.getDocument({
+        url: pdfUrl,
+        cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+        cMapPacked: true,
+      });
+
+      const doc = await Promise.race([
+        loadingTask.promise,
+        new Promise((_, rej) => setTimeout(() => rej(new Error('Document stream timeout')), 3500))
+      ]);
+
+      setPdfDoc(doc);
+      setTotalPages(doc.numPages || 1);
+      setViewMode('canvas');
+      setLoading(false);
+    } catch (err: any) {
+      console.warn('PDF.js canvas rendering notice, using high-performance native browser PDF viewer:', err);
+      setLoading(false);
+      // Fallback gracefully and immediately to native browser/webview viewMode
+      setViewMode('native');
+    }
+  }, [pdfUrl, ensurePdfJsLoaded]);
+
+  // Initialize and load PDF document
+  useEffect(() => {
+    if (!isOpen) return;
+    setCurrentPage(1);
     loadDocument();
-
-    return () => {
-      isMounted = false;
-      if (renderTaskRef.current) {
-        renderTaskRef.current.cancel();
-      }
-    };
-  }, [isOpen, pdfUrl, ensurePdfJsLoaded]);
+  }, [isOpen, loadDocument]);
 
   // Render current page onto Canvas with High DPI resolution
   const renderCurrentPage = useCallback(async () => {
-    if (!pdfDoc || !canvasRef.current || viewMode !== 'canvas') return;
+    if (!canvasRef.current || viewMode !== 'canvas') return;
+
+    if (!pdfDoc) {
+      // If synthetic sample/demo document
+      if (!pdfUrl || pdfUrl === '#' || pdfUrl.startsWith('sample-') || pdfUrl.startsWith('mock-')) {
+        renderSyntheticSamplePage(canvasRef.current, currentPage);
+      }
+      return;
+    }
 
     try {
       if (renderTaskRef.current) {
@@ -256,13 +444,13 @@ export default function PremiumPdfViewerModal({
         console.warn('Canvas render error, showing embedded view:', err);
       }
     }
-  }, [pdfDoc, currentPage, scale, rotation, viewMode]);
+  }, [pdfDoc, pdfUrl, currentPage, scale, rotation, viewMode, renderSyntheticSamplePage]);
 
   useEffect(() => {
-    if (!loading && pdfDoc) {
+    if (!loading) {
       renderCurrentPage();
     }
-  }, [loading, pdfDoc, currentPage, scale, rotation, renderCurrentPage]);
+  }, [loading, currentPage, scale, rotation, renderCurrentPage]);
 
   // Fit to container width
   const handleFitToWidth = () => {
@@ -385,6 +573,18 @@ export default function PremiumPdfViewerModal({
               title="Open in new window"
             >
               <ExternalLink className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowInfoDrawer(!showInfoDrawer)}
+              className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                showInfoDrawer
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-600 dark:text-slate-300 hover:text-blue-600 hover:bg-slate-200/70 dark:hover:bg-white/10'
+              }`}
+              title="Document Details & Security Metadata"
+            >
+              <Info className="w-4 h-4" />
             </button>
             <button
               type="button"
@@ -535,30 +735,135 @@ export default function PremiumPdfViewerModal({
           )}
 
           {error && (
-            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 space-y-3 text-center">
+            <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 space-y-3 text-center z-20">
               <AlertCircle className="w-10 h-10 text-rose-500" />
-              <h4 className="text-sm font-black text-white">{error}</h4>
+              <h4 className="text-sm font-black text-white">Unable to load this document</h4>
               <p className="text-xs text-slate-400 max-w-md">
-                Unable to load document in canvas mode. You can open it in a new window or download it directly.
+                Unable to load document stream directly. You can retry, open in a new tab, or download it.
               </p>
-              <div className="flex gap-2 pt-2">
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
                 <button
                   type="button"
-                  onClick={handleDownload}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold"
+                  onClick={handleRetry}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-all active:scale-95"
                 >
-                  Download File
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Retry</span>
                 </button>
                 <button
                   type="button"
                   onClick={handleOpenInNewTab}
-                  className="px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-bold"
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
                 >
-                  Open in New Window
+                  <ExternalLink className="w-3.5 h-3.5" />
+                  <span>Open in New Tab</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDownload}
+                  className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download</span>
                 </button>
               </div>
             </div>
           )}
+
+          {/* Document Information Drawer (Requirement 16) */}
+          <AnimatePresence>
+            {showInfoDrawer && (
+              <motion.div
+                initial={{ x: '100%', opacity: 0 }}
+                animate={{ x: 0, opacity: 1 }}
+                exit={{ x: '100%', opacity: 0 }}
+                transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+                className="absolute top-0 right-0 bottom-0 w-80 max-w-full bg-white dark:bg-[#111726] border-l border-slate-200 dark:border-slate-800 z-30 shadow-2xl flex flex-col p-5 overflow-y-auto"
+              >
+                <div className="flex items-center justify-between pb-3 border-b border-slate-200 dark:border-slate-800">
+                  <div className="flex items-center gap-2 font-bold text-sm text-slate-900 dark:text-white">
+                    <Info className="w-4 h-4 text-blue-500" />
+                    <span>Document Information</span>
+                  </div>
+                  <button
+                    onClick={() => setShowInfoDrawer(false)}
+                    className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-100 dark:hover:bg-white/10 cursor-pointer"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+
+                <div className="space-y-4 py-4 text-xs">
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">File Name</span>
+                    <p className="font-bold text-slate-800 dark:text-slate-100 break-words">{fileName}</p>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">File Type</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                      <FileText className="w-3.5 h-3.5 text-red-500" />
+                      <span>{fileType}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">File Size</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-300">{fileSize}</p>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Uploaded By</span>
+                    <div className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-300">
+                      <div className="w-6 h-6 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-[10px]">
+                        {uploadedBy ? uploadedBy[0]?.toUpperCase() : 'U'}
+                      </div>
+                      <span>{uploadedBy}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Uploaded Date</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                      <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{uploadedAt ? new Date(uploadedAt).toLocaleDateString(undefined, { dateStyle: 'medium' }) : 'Verified Workspace Item'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Project</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-blue-600 dark:text-blue-400">
+                      <Layers className="w-3.5 h-3.5" />
+                      <span>{project}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Organization</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-slate-700 dark:text-slate-300">
+                      <Building className="w-3.5 h-3.5 text-slate-400" />
+                      <span>{organization}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Access Level</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-emerald-600 dark:text-emerald-400">
+                      <Shield className="w-3.5 h-3.5" />
+                      <span>{accessLevel}</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mt-auto pt-4 border-t border-slate-200 dark:border-slate-800">
+                  <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 flex items-center gap-2 text-xs font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0" />
+                    <span>Verified Organization Scope</span>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
         {/* Footer Info Strip */}

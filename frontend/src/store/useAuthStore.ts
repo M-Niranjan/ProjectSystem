@@ -357,6 +357,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         const activeUser: User = {
           id: firebaseUser.uid as any,
+          uid: firebaseUser.uid,
           email: firebaseUser.email || '',
           name:
             (userData as any).name ||
@@ -526,7 +527,12 @@ export const useAuthStore = create<AuthState>((set, get) => {
         if (rememberMe) {
           localStorage.setItem('token', accessToken);
         }
-        localStorage.setItem('auth_user', JSON.stringify(user));
+        const resolvedUid = user?.uid || (typeof user?.id === 'string' && isNaN(Number(user?.id)) ? user.id : (firebaseAuth.currentUser?.uid || String(user?.id || '')));
+        const userWithUid = {
+          ...user,
+          uid: resolvedUid,
+        };
+        localStorage.setItem('auth_user', JSON.stringify(userWithUid));
 
         const memberships: OrgMembership[] = orgMemberships || [];
         localStorage.setItem('org_memberships', JSON.stringify(memberships));
@@ -626,7 +632,8 @@ export const useAuthStore = create<AuthState>((set, get) => {
           }
 
           user = {
-            id: 900000 + Array.from(String(firebaseUser.uid || '')).reduce((total: number, character: string) => total + character.charCodeAt(0), 0),
+            id: firebaseUser.uid as any,
+            uid: firebaseUser.uid,
             name: firebaseUser.displayName || userDoc?.name || emailLower.split('@')[0] || 'User',
             email: emailLower,
             role,

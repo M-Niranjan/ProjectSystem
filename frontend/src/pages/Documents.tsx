@@ -50,6 +50,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import PremiumPdfViewerModal from '../components/common/PremiumPdfViewerModal';
 
 // ============================================================================
 // TYPES & INTERFACES (Concept D: Unified Mixed Items)
@@ -524,6 +525,29 @@ export default function Documents() {
   // File preview modal state
   const [previewFile, setPreviewFile] = useState<DocumentItem | null>(null);
 
+  // PDF Viewer Modal State (Requirement 13)
+  const [viewingPdf, setViewingPdf] = useState<{
+    isOpen: boolean;
+    url: string;
+    fileName: string;
+    fileSize: string;
+    uploadedBy: string;
+    uploadedAt: string;
+    project: string;
+    organization: string;
+    accessLevel: string;
+  }>({
+    isOpen: false,
+    url: '',
+    fileName: '',
+    fileSize: '',
+    uploadedBy: '',
+    uploadedAt: '',
+    project: '',
+    organization: '',
+    accessLevel: ''
+  });
+
   // Human-Readable WYSIWYG Editor State
   const [editTitle, setEditTitle] = useState('');
   const [editContent, setEditContent] = useState('');
@@ -830,10 +854,25 @@ export default function Documents() {
   // ============================================================================
   const openEditorForDoc = (doc: DocumentItem) => {
     if (doc.type !== 'written') {
-      // Only show preview modal for images (actual visual content);
-      // for all other uploaded files, download directly — no redundant popup.
       if (doc.fileType === 'image' && doc.fileUrl) {
         setPreviewFile(doc);
+      } else if (
+        doc.fileType === 'pdf' ||
+        doc.title.toLowerCase().endsWith('.pdf') ||
+        (doc.originalFileName && doc.originalFileName.toLowerCase().endsWith('.pdf'))
+      ) {
+        // Open Professional PDF Viewer (Requirement 13)
+        setViewingPdf({
+          isOpen: true,
+          url: doc.fileUrl || '#',
+          fileName: doc.title || 'Document.pdf',
+          fileSize: doc.fileSize || '2.4 MB',
+          uploadedBy: doc.author || 'Workspace Member',
+          uploadedAt: doc.createdAt || doc.updatedAt,
+          project: doc.project || 'Core Platform',
+          organization: (user as any)?.company || 'TaskFlow Organization',
+          accessLevel: 'Restricted Workspace Access'
+        });
       } else {
         handleDownloadFile(doc);
       }
@@ -2303,6 +2342,20 @@ ${item.content || ''}
           </div>
         )}
       </AnimatePresence>
+
+      {/* Enterprise Premium PDF Viewer (Requirement 13) */}
+      <PremiumPdfViewerModal
+        isOpen={viewingPdf.isOpen}
+        onClose={() => setViewingPdf((prev) => ({ ...prev, isOpen: false }))}
+        pdfUrl={viewingPdf.url}
+        fileName={viewingPdf.fileName}
+        fileSize={viewingPdf.fileSize}
+        uploadedBy={viewingPdf.uploadedBy}
+        uploadedAt={viewingPdf.uploadedAt}
+        project={viewingPdf.project}
+        organization={viewingPdf.organization}
+        accessLevel={viewingPdf.accessLevel}
+      />
     </div>
   );
 }

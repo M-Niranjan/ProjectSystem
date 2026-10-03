@@ -454,6 +454,26 @@ input:-webkit-autofill:active,
   }
 }
 
+/* Inside scrollbar for communication members and chat messages */
+.custom-scroll-area {
+  scrollbar-width: thin;
+  scrollbar-color: #37424a rgba(17, 27, 33, 0.4);
+}
+.custom-scroll-area::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scroll-area::-webkit-scrollbar-track {
+  background: rgba(17, 27, 33, 0.4);
+}
+.custom-scroll-area::-webkit-scrollbar-thumb {
+  background: #37424a;
+  border-radius: 9999px;
+}
+.custom-scroll-area::-webkit-scrollbar-thumb:hover {
+  background: #00a884;
+}
+
 /* Linear Obsidian Frosted Neon Rim Glows */
 .glass-glow-cyan {
   border-color: rgba(6, 182, 212, 0.48) !important;

@@ -184,7 +184,7 @@ export class AuthController {
       }
 
       const token = jwt.sign(
-        { id: user.id, email: user.email, role: activeOrgRole || user.role, name: user.name, organizationId: activeOrgId },
+        { id: user.id, uid: resolvedUid, email: user.email, role: activeOrgRole || user.role, name: user.name, organizationId: activeOrgId },
         JWT_SECRET,
         { expiresIn: `${parseInt(JWT_EXPIRATION) / 1000}s` }
       );
@@ -194,7 +194,7 @@ export class AuthController {
 
       return res.json({
         accessToken: token,
-        user: { ...userObj, role: activeOrgRole || user.role, organizationId: activeOrgId },
+        user: { ...userObj, uid: resolvedUid, role: activeOrgRole || user.role, organizationId: activeOrgId },
         orgMemberships: memberships,
         activeOrganizationId: activeOrgId,
         activeOrgRole,

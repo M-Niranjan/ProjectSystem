@@ -5,6 +5,7 @@ import { authenticateToken } from '../middleware/auth';
 const router = Router();
 
 router.get('/conversation/:contactId', authenticateToken, MessageController.getConversation);
+router.get('/conversations/:conversationId/messages', authenticateToken, MessageController.getConversationMessages);
 router.post('/', authenticateToken, MessageController.sendMessage);
 router.get('/unread', authenticateToken, MessageController.getUnread);
 

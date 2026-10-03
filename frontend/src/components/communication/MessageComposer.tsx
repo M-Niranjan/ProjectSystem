@@ -1,20 +1,19 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-  Send,
   Paperclip,
   Smile,
   X,
-  FileText,
-  AtSign,
-  Sparkles,
-  CornerDownLeft,
   UploadCloud,
-  CheckCircle2
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, ContactItem } from '../../store/useCommunicationStore';
 import EmojiPickerPopover from './EmojiPickerPopover';
-import { uploadAttachmentToSupabase } from '../../services/supabase';
+import { uploadChatAttachment } from '../../services/firebase';
 
 interface MessageComposerProps {
   onSendMessage: (content: string, file?: { name: string; url: string; size: number }) => void;
@@ -25,6 +24,9 @@ interface MessageComposerProps {
   contacts: ContactItem[];
   placeholder?: string;
   onTyping?: () => void;
+  orgId?: string;
+  convId?: string;
+  enterToSend?: boolean;
 }
 
 export default function MessageComposer({
@@ -34,21 +36,38 @@ export default function MessageComposer({
   editingMessage,
   onClearEdit,
   contacts,
-  placeholder = 'Type message... (Press Ctrl+Enter or Enter to send)',
+  placeholder = 'Type a message... (Press Enter to send)',
   onTyping,
+  orgId = 'default-org',
+  convId = 'general',
+  enterToSend = true,
 }: MessageComposerProps) {
   const [text, setText] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; url: string; size: number } | null>(null);
   const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
   const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   // User Mention dropdown state
   const [showMentionMenu, setShowMentionMenu] = useState(false);
   const [mentionQuery, setMentionQuery] = useState('');
 
+  // Voice Recording state (Requirement 22: Record, Stop, Preview, Send, Play, Pause, Seek)
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
+  const [audioPreviewUrl, setAudioPreviewUrl] = useState<string | null>(null);
+  const [isPlayingPreview, setIsPlayingPreview] = useState(false);
+  const [previewCurrentTime, setPreviewCurrentTime] = useState(0);
+  const [previewDuration, setPreviewDuration] = useState(0);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<any>(null);
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   // Populate text when editing an existing message
   useEffect(() => {
@@ -63,9 +82,21 @@ export default function MessageComposer({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const scrollH = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 44), 130)}px`;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 36), 110)}px`;
     }
   }, [text]);
+
+  // Clean up audio preview URL on unmount or reset
+  useEffect(() => {
+    return () => {
+      if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+        URL.revokeObjectURL(audioPreviewUrl);
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, [audioPreviewUrl]);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const val = e.target.value;
@@ -83,50 +114,61 @@ export default function MessageComposer({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleFormSubmit();
+    if (e.key === 'Enter') {
+      if (enterToSend) {
+        if (!e.shiftKey) {
+          e.preventDefault();
+          handleFormSubmit();
+        }
+      } else {
+        if (e.ctrlKey || e.metaKey) {
+          e.preventDefault();
+          handleFormSubmit();
+        }
+      }
     } else if (e.key === 'Escape') {
       if (onClearReply) onClearReply();
       if (onClearEdit) onClearEdit();
       setShowEmojiPicker(false);
       setShowMentionMenu(false);
+      handleDiscardVoice();
     }
   };
 
   const handleFileSelect = async (file: File) => {
     if (!file) return;
 
-    setUploadProgress(15);
-    try {
-      // Simulate/Attempt Supabase upload
-      const res = await uploadAttachmentToSupabase(file, 'chat');
-      setUploadProgress(100);
+    // Check size limit: 25MB
+    const MAX_SIZE = 25 * 1024 * 1024;
+    if (file.size > MAX_SIZE) {
+      alert(`File is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 25MB.`);
+      return;
+    }
 
-      if (res && res.url) {
-        setAttachedFile({
-          name: file.name,
-          url: res.url,
-          size: file.size,
-        });
-      } else {
-        // Fallback local blob URL
-        const fakeUrl = URL.createObjectURL(file);
-        setAttachedFile({
-          name: file.name,
-          url: fakeUrl,
-          size: file.size,
-        });
-      }
-    } catch (err) {
-      const fakeUrl = URL.createObjectURL(file);
+    setIsUploading(true);
+    setUploadProgress(10);
+    try {
+      const uploaded = await uploadChatAttachment(file, orgId, convId, (pct) => {
+        setUploadProgress(pct);
+      });
+
+      setAttachedFile({
+        name: uploaded.name,
+        url: uploaded.url,
+        size: uploaded.size,
+      });
+    } catch (err: any) {
+      console.error('File upload error:', err);
+      // Fallback local blob URL
+      const localUrl = URL.createObjectURL(file);
       setAttachedFile({
         name: file.name,
-        url: fakeUrl,
+        url: localUrl,
         size: file.size,
       });
     } finally {
-      setTimeout(() => setUploadProgress(null), 600);
+      setIsUploading(false);
+      setTimeout(() => setUploadProgress(null), 500);
     }
   };
 
@@ -149,6 +191,13 @@ export default function MessageComposer({
   };
 
   const handleFormSubmit = () => {
+    if (isUploading) return;
+
+    if (audioBlob) {
+      handleSendVoice();
+      return;
+    }
+
     if (!text.trim() && !attachedFile) return;
 
     onSendMessage(text, attachedFile || undefined);
@@ -162,11 +211,134 @@ export default function MessageComposer({
 
   const insertMention = (memberName: string) => {
     const words = text.split(/\s+/);
-    words.pop(); // remove incomplete @query
+    words.pop();
     const newText = [...words, `@${memberName} `].join(' ');
     setText(newText);
     setShowMentionMenu(false);
     textareaRef.current?.focus();
+  };
+
+  // ==========================================
+  // VOICE MESSAGE FUNCTIONS (Requirement 22)
+  // ==========================================
+  const handleStartRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert('Voice recording is not supported in this browser environment.');
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = () => {
+        const mimeType = mediaRecorder.mimeType || 'audio/webm';
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        setAudioBlob(blob);
+        const url = URL.createObjectURL(blob);
+        setAudioPreviewUrl(url);
+
+        // Stop all audio tracks
+        stream.getTracks().forEach((track) => track.stop());
+      };
+
+      mediaRecorder.start(200);
+      setIsRecording(true);
+      setRecordingSeconds(0);
+
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+    } catch (err: any) {
+      console.warn('Microphone access denied or error:', err);
+      alert('Could not access microphone. Please check your browser permissions.');
+    }
+  };
+
+  const handleStopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    }
+  };
+
+  const handleDiscardVoice = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+    }
+    if (recordingTimerRef.current) {
+      clearInterval(recordingTimerRef.current);
+      recordingTimerRef.current = null;
+    }
+    setIsRecording(false);
+    setRecordingSeconds(0);
+    setAudioBlob(null);
+    if (audioPreviewUrl && audioPreviewUrl.startsWith('blob:')) {
+      URL.revokeObjectURL(audioPreviewUrl);
+    }
+    setAudioPreviewUrl(null);
+    setIsPlayingPreview(false);
+  };
+
+  const handleSendVoice = async () => {
+    if (!audioBlob) return;
+
+    try {
+      const fileName = `Voice_Note_${new Date().toISOString().replace(/[:.]/g, '-')}.webm`;
+      const audioFile = new File([audioBlob], fileName, { type: audioBlob.type || 'audio/webm' });
+
+      setIsUploading(true);
+      const uploaded = await uploadChatAttachment(audioFile, orgId, convId);
+
+      onSendMessage('', {
+        name: uploaded.name,
+        url: uploaded.url,
+        size: uploaded.size,
+      });
+
+      handleDiscardVoice();
+    } catch (e) {
+      console.error('Failed to upload voice note:', e);
+      if (audioPreviewUrl) {
+        onSendMessage('', {
+          name: 'Voice_Note.webm',
+          url: audioPreviewUrl,
+          size: audioBlob.size,
+        });
+      }
+      handleDiscardVoice();
+    } finally {
+      setIsUploading(false);
+    }
+  };
+
+  const togglePreviewPlay = () => {
+    if (!previewAudioRef.current) return;
+    if (isPlayingPreview) {
+      previewAudioRef.current.pause();
+      setIsPlayingPreview(false);
+    } else {
+      previewAudioRef.current.play();
+      setIsPlayingPreview(true);
+    }
+  };
+
+  const formatSeconds = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const secs = Math.floor(sec % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   const filteredContacts = contacts.filter((c) =>
@@ -178,15 +350,15 @@ export default function MessageComposer({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`p-2.5 sm:p-4 border-t border-slate-200/50 dark:border-white/10 flex-shrink-0 bg-white/70 dark:bg-slate-900/80 backdrop-blur-xl relative transition-all ${
-        isDraggingOver ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''
+      className={`px-3 py-2 border-t border-[#202c33] shrink-0 bg-[#202c33] relative transition-all select-none ${
+        isDraggingOver ? 'ring-1 ring-[#00a884] bg-[#00a884]/10' : ''
       }`}
     >
       {/* Drag & Drop Overlay */}
       {isDraggingOver && (
-        <div className="absolute inset-0 bg-blue-600/90 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-white z-50">
-          <UploadCloud className="w-10 h-10 animate-bounce mb-2" />
-          <p className="font-black text-sm uppercase tracking-wider">Drop file to attach</p>
+        <div className="absolute inset-0 bg-[#00a884]/95 backdrop-blur-md rounded-lg flex flex-col items-center justify-center text-white z-50">
+          <UploadCloud className="w-8 h-8 animate-bounce mb-1" />
+          <p className="font-bold text-xs uppercase tracking-wider">Drop file to attach</p>
         </div>
       )}
 
@@ -197,20 +369,20 @@ export default function MessageComposer({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-2 px-3.5 py-2 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center justify-between text-xs text-blue-600 dark:text-blue-400 font-bold"
+            className="mb-1.5 px-3 py-1.5 bg-[#2a3942] border border-[#00a884]/40 rounded-lg flex items-center justify-between text-xs text-[#00a884] font-medium"
           >
             <div className="flex items-center gap-2 truncate">
-              <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-blue-500/20 rounded-md">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#00a884]/20 rounded text-[#00a884]">
                 Replying to {replyToMessage.sender.name}
               </span>
-              <span className="truncate italic text-slate-700 dark:text-slate-300 font-normal">
+              <span className="truncate italic text-[#d1d7db] font-normal">
                 "{replyToMessage.content}"
               </span>
             </div>
             <button
               type="button"
               onClick={onClearReply}
-              className="p-1 hover:bg-blue-500/20 rounded-lg cursor-pointer transition-colors"
+              className="p-1 hover:bg-[#202c33] rounded cursor-pointer transition-colors text-[#8696a0] hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -225,20 +397,20 @@ export default function MessageComposer({
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             exit={{ opacity: 0, height: 0 }}
-            className="mb-2 px-3.5 py-2 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center justify-between text-xs text-amber-600 dark:text-amber-400 font-bold"
+            className="mb-1.5 px-3 py-1.5 bg-[#2a3942] border border-amber-500/40 rounded-lg flex items-center justify-between text-xs text-amber-400 font-medium"
           >
             <div className="flex items-center gap-2">
-              <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-amber-500/20 rounded-md">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-amber-500/20 rounded">
                 Editing Message
               </span>
-              <span className="text-[11px] text-slate-600 dark:text-slate-300 font-normal">
+              <span className="text-[11px] text-[#8696a0] font-normal">
                 (Press Esc to cancel)
               </span>
             </div>
             <button
               type="button"
               onClick={onClearEdit}
-              className="p-1 hover:bg-amber-500/20 rounded-lg cursor-pointer transition-colors"
+              className="p-1 hover:bg-[#202c33] rounded cursor-pointer transition-colors text-[#8696a0] hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -248,18 +420,19 @@ export default function MessageComposer({
 
       {/* Attached File Preview Chip */}
       {attachedFile && (
-        <div className="mb-2 px-3 py-1.5 bg-blue-500/10 border border-blue-500/20 rounded-xl flex items-center justify-between text-xs font-bold text-blue-600 dark:text-blue-400 w-fit">
+        <div className="mb-1.5 px-2.5 py-1 bg-[#2a3942] border border-[#00a884]/30 rounded-lg flex items-center justify-between text-xs font-semibold text-[#00a884] w-fit">
           <div className="flex items-center gap-2">
-            <Paperclip className="w-4 h-4" />
-            <span className="truncate max-w-[220px]">{attachedFile.name}</span>
-            <span className="text-[10px] opacity-75 font-mono">
+            <Paperclip className="w-3.5 h-3.5" />
+            <span className="truncate max-w-[220px] text-[#d1d7db]">{attachedFile.name}</span>
+            <span className="text-[10px] text-[#8696a0] font-mono">
               ({(attachedFile.size / 1024).toFixed(1)} KB)
             </span>
           </div>
           <button
             type="button"
             onClick={() => setAttachedFile(null)}
-            className="ml-2 p-0.5 hover:bg-blue-500/20 rounded-full cursor-pointer text-slate-400 hover:text-red-500"
+            className="ml-2 p-0.5 hover:bg-[#202c33] rounded cursor-pointer text-[#8696a0] hover:text-rose-400"
+            title="Remove file"
           >
             <X className="w-3.5 h-3.5" />
           </button>
@@ -268,9 +441,9 @@ export default function MessageComposer({
 
       {/* Upload Progress Bar */}
       {uploadProgress !== null && (
-        <div className="mb-2 w-full bg-slate-200 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden">
+        <div className="mb-1.5 w-full bg-[#111b21] rounded-full h-1 overflow-hidden">
           <div
-            className="bg-blue-600 h-full transition-all duration-300"
+            className="bg-[#00a884] h-full transition-all duration-300"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
@@ -278,8 +451,8 @@ export default function MessageComposer({
 
       {/* @Mention Suggestion Dropdown */}
       {showMentionMenu && filteredContacts.length > 0 && (
-        <div className="absolute left-4 bottom-20 w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border border-slate-200/80 dark:border-white/15 rounded-2xl p-2 shadow-2xl z-50 max-h-40 overflow-y-auto space-y-1">
-          <p className="text-[10px] font-black uppercase text-slate-400 px-2 py-1 tracking-wider">
+        <div className="absolute left-4 bottom-14 w-60 bg-[#202c33] border border-[#2a3942] rounded-xl p-1.5 shadow-2xl z-50 max-h-40 overflow-y-auto space-y-0.5">
+          <p className="text-[10px] font-bold uppercase text-[#8696a0] px-2 py-0.5 tracking-wider">
             Mention Teammate
           </p>
           {filteredContacts.map((c) => (
@@ -287,9 +460,9 @@ export default function MessageComposer({
               key={c.id}
               type="button"
               onClick={() => insertMention(c.name)}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-xl hover:bg-blue-500/10 text-xs font-bold text-slate-800 dark:text-slate-200 cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#2a3942] text-xs font-medium text-[#d1d7db] cursor-pointer transition-colors text-left"
             >
-              <span className="w-5 h-5 rounded-full bg-blue-500 text-white font-black text-[9px] flex items-center justify-center">
+              <span className="w-4 h-4 rounded-full bg-[#00a884] text-[#111b21] font-black text-[9px] flex items-center justify-center">
                 {c.name.charAt(0)}
               </span>
               <span>{c.name}</span>
@@ -306,72 +479,187 @@ export default function MessageComposer({
         className="hidden"
       />
 
-      {/* Main Input Box */}
-      <div className="flex gap-1.5 sm:gap-2.5 items-end">
-        {/* File Attachment HD Badge Button */}
-        <button
-          type="button"
-          onClick={() => fileInputRef.current?.click()}
-          className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
-            attachedFile
-              ? 'bg-blue-500/20 border-blue-500/40 text-blue-500 shadow-md shadow-blue-500/10'
-              : 'bg-slate-100/80 dark:bg-white/5 border-slate-200/80 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400'
-          }`}
-          title="Attach Document or Image (or Drag & Drop)"
-        >
-          <Paperclip className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-        </button>
+      {/* MODE 1: Active Voice Recording Mode */}
+      {isRecording ? (
+        <div className="flex items-center justify-between gap-3 px-2 py-1 bg-[#111b21] border border-[#2a3942] rounded-xl animate-pulse">
+          <div className="flex items-center gap-3">
+            <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+            <span className="text-xs font-mono font-bold text-rose-400">
+              {formatSeconds(recordingSeconds)}
+            </span>
+            <span className="text-xs text-[#8696a0]">Recording voice note...</span>
+          </div>
 
-        {/* Text Area Input */}
-        <div className="flex-1 relative">
-          <textarea
-            ref={textareaRef}
-            rows={1}
-            value={text}
-            onChange={handleTextChange}
-            onKeyDown={handleKeyDown}
-            placeholder={placeholder}
-            className="w-full px-3.5 sm:px-4 py-2.5 sm:py-3 min-h-[44px] bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-blue-500/60 focus:ring-2 focus:ring-blue-500/15 transition-all font-medium text-xs sm:text-sm leading-relaxed resize-none max-h-32 placeholder:text-slate-400 placeholder:leading-relaxed"
-          />
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleDiscardVoice}
+              className="p-1.5 rounded-lg text-[#8696a0] hover:text-rose-400 hover:bg-[#202c33] transition-colors cursor-pointer"
+              title="Discard recording"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleStopRecording}
+              className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
+              title="Stop & preview"
+            >
+              <Square className="w-3.5 h-3.5 fill-current" />
+              <span>Done</span>
+            </button>
+          </div>
         </div>
+      ) : audioPreviewUrl ? (
+        /* MODE 2: Voice Note Preview & Send Mode */
+        <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-[#111b21] border border-[#00a884]/40 rounded-xl">
+          <audio
+            ref={previewAudioRef}
+            src={audioPreviewUrl}
+            onTimeUpdate={() => setPreviewCurrentTime(previewAudioRef.current?.currentTime || 0)}
+            onLoadedMetadata={() => setPreviewDuration(previewAudioRef.current?.duration || 0)}
+            onEnded={() => setIsPlayingPreview(false)}
+            className="hidden"
+          />
 
-        {/* Emoji HD Badge Button */}
-        <div className="relative">
+          <div className="flex items-center gap-2.5 flex-1 min-w-0">
+            <button
+              type="button"
+              onClick={togglePreviewPlay}
+              className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-transform active:scale-95"
+              title={isPlayingPreview ? 'Pause' : 'Play'}
+            >
+              {isPlayingPreview ? (
+                <Pause className="w-4 h-4 fill-current" />
+              ) : (
+                <Play className="w-4 h-4 fill-current ml-0.5" />
+              )}
+            </button>
+
+            {/* Seek Bar / Progress Waveform */}
+            <div className="flex-1 flex flex-col justify-center">
+              <input
+                type="range"
+                min={0}
+                max={previewDuration || 1}
+                step={0.1}
+                value={previewCurrentTime}
+                onChange={(e) => {
+                  const val = parseFloat(e.target.value);
+                  setPreviewCurrentTime(val);
+                  if (previewAudioRef.current) previewAudioRef.current.currentTime = val;
+                }}
+                className="w-full h-1 bg-[#202c33] rounded-lg accent-[#00a884] cursor-pointer"
+              />
+              <div className="flex justify-between text-[10px] text-[#8696a0] font-mono mt-0.5">
+                <span>{formatSeconds(previewCurrentTime)}</span>
+                <span>{formatSeconds(previewDuration || recordingSeconds)}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              type="button"
+              onClick={handleDiscardVoice}
+              className="p-1.5 rounded-lg text-[#8696a0] hover:text-rose-400 hover:bg-[#202c33] transition-colors cursor-pointer"
+              title="Delete voice note"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              onClick={handleSendVoice}
+              disabled={isUploading}
+              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-tr from-[#00a884] to-[#02b992] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105 active:scale-95 transition-all"
+              title="Send voice message"
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+              <span>Send</span>
+            </button>
+          </div>
+        </div>
+      ) : (
+        /* MODE 3: Normal Text & Attachment Composer */
+        <div className="flex gap-1.5 sm:gap-2 items-center">
+          {/* Emoji Button */}
+          <div className="relative shrink-0">
+            <button
+              type="button"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer hover:bg-[#2a3942] text-[#8696a0] hover:text-[#d1d7db]"
+              title="Insert Emoji"
+            >
+              <Smile className="w-4.5 h-4.5" />
+            </button>
+
+            {/* Emoji Popover */}
+            <AnimatePresence>
+              {showEmojiPicker && (
+                <EmojiPickerPopover
+                  onSelectEmoji={(emoji) => setText((prev) => prev + emoji)}
+                  onClose={() => setShowEmojiPicker(false)}
+                />
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* File Attachment Button */}
           <button
             type="button"
-            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-            className={`w-9 h-9 sm:w-10 sm:h-10 rounded-2xl border flex items-center justify-center flex-shrink-0 transition-all cursor-pointer hover:scale-105 ${
-              showEmojiPicker
-                ? 'bg-blue-500/20 border-blue-500/40 text-blue-500 shadow-md shadow-blue-500/10'
-                : 'bg-slate-100/80 dark:bg-white/5 border-slate-200/80 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400'
+            onClick={() => fileInputRef.current?.click()}
+            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer hover:bg-[#2a3942] ${
+              attachedFile ? 'text-[#00a884]' : 'text-[#8696a0] hover:text-[#d1d7db]'
             }`}
-            title="Insert Emoji"
+            title="Attach Document or Image (or Drag & Drop)"
           >
-            <Smile className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
+            <Paperclip className="w-4.5 h-4.5" />
           </button>
 
-          {/* Emoji Popover */}
-          <AnimatePresence>
-            {showEmojiPicker && (
-              <EmojiPickerPopover
-                onSelectEmoji={(emoji) => setText((prev) => prev + emoji)}
-                onClose={() => setShowEmojiPicker(false)}
-              />
-            )}
-          </AnimatePresence>
-        </div>
+          {/* Text Area Input */}
+          <div className="flex-1 relative flex items-center">
+            <textarea
+              ref={textareaRef}
+              rows={1}
+              value={text}
+              onChange={handleTextChange}
+              onKeyDown={handleKeyDown}
+              placeholder={placeholder}
+              className="w-full px-3 py-1.5 min-h-[36px] max-h-28 bg-[#2a3942] border border-transparent focus:border-[#00a884]/50 rounded-lg text-[#d1d7db] outline-none transition-all font-normal text-xs sm:text-[13px] leading-snug resize-none placeholder:text-[#8696a0]"
+            />
+          </div>
 
-        {/* Send HD Gradient Button */}
-        <button
-          type="button"
-          onClick={handleFormSubmit}
-          disabled={!text.trim() && !attachedFile}
-          className="w-9 h-9 sm:w-10 sm:h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white shadow-md shadow-blue-500/20 flex items-center justify-center flex-shrink-0 cursor-pointer disabled:opacity-40 hover:scale-105 transition-all"
-          title="Send message (Enter)"
-        >
-          <Send className="w-4 h-4 sm:w-4.5 sm:h-4.5" />
-        </button>
-      </div>
+          {/* Mic or Send Button */}
+          {text.trim() || attachedFile ? (
+            <button
+              type="button"
+              onClick={handleFormSubmit}
+              disabled={isUploading}
+              className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-[#00a884] to-[#02b992] hover:from-[#029072] hover:to-[#00a884] text-white shadow-[0_2px_10px_rgba(0,168,132,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+              title="Send message"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="w-4 h-4 text-white fill-white ml-0.5"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              </svg>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleStartRecording}
+              className="w-8.5 h-8.5 rounded-full hover:bg-[#2a3942] text-[#8696a0] hover:text-[#00a884] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
+              title="Record voice message"
+            >
+              <Mic className="w-4.5 h-4.5" />
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
