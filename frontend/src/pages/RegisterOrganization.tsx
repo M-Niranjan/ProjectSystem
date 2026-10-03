@@ -197,12 +197,12 @@ export default function RegisterOrganization() {
   };
 
   return (
-    <div className="min-h-screen relative flex items-center justify-center p-4 login-bg-executive-titanium text-slate-900 dark:text-white transition-colors duration-300 overflow-y-auto">
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center login-bg-executive-titanium text-slate-900 dark:text-white transition-colors duration-300 overflow-y-auto overflow-x-hidden overscroll-none touch-pan-y select-none">
       {/* Executive Titanium Architectural Blueprint Grid Overlay (Identical to Login Page) */}
       <div className="blueprint-grid-overlay" aria-hidden="true" />
 
-      {/* Top Navbar / Brand Header */}
-      <div className="fixed top-0 left-0 right-0 p-4 sm:p-6 flex items-center justify-between z-20">
+      {/* Top Navbar / Brand Header - Sticky and Stationary */}
+      <div className="sticky top-0 left-0 right-0 w-full p-4 sm:p-6 flex items-center justify-between z-20 shrink-0 backdrop-blur-md bg-white/70 dark:bg-[#080a10]/70 border-b border-slate-200/50 dark:border-white/5">
         <Link to="/login" className="flex items-center gap-2.5 group">
           <div className="flex items-end gap-1 h-6">
             <div className="w-1.5 h-3 rounded-xs bg-blue-400 shadow-sm" />
@@ -231,8 +231,8 @@ export default function RegisterOrganization() {
         </button>
       </div>
 
-      {/* Main Card Container */}
-      <div className="relative z-10 w-full max-w-xl mt-20 mb-10 sm:my-16">
+      {/* Main Card Container - Fixed, Centered, Stationary */}
+      <div className="relative z-10 w-full max-w-xl mx-auto px-4 py-8 sm:py-12 shrink-0">
         <AnimatePresence mode="wait">
           {!createdOrg ? (
             /* Registration Form View */

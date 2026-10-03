@@ -15,6 +15,8 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh';
 // 1. USER MANAGEMENT VIEW
 // ==========================================
 export function UserManagementView() {
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'admin';
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -404,12 +406,14 @@ export function UserManagementView() {
           </p>
         </div>
 
-        <button
-          onClick={handleOpenCreate}
-          className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0"
-        >
-          <Plus className="w-4 h-4" /> Create New User
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleOpenCreate}
+            className="flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/20 cursor-pointer transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+          >
+            <Plus className="w-4 h-4" /> Create New User
+          </button>
+        )}
       </div>
 
       {/* Filter Bar */}
@@ -572,22 +576,24 @@ export function UserManagementView() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button
-                      onClick={() => handleOpenEdit(u)}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-500/10 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
-                      title="Edit User Role & Details"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteUser(u)}
-                      className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 dark:bg-white/5 dark:hover:bg-rose-500/10 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
-                      title="Delete User"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
+                  {isAdmin && (
+                    <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        onClick={() => handleOpenEdit(u)}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-500/10 text-slate-500 hover:text-blue-600 transition-colors cursor-pointer"
+                        title="Edit User Role & Details"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteUser(u)}
+                        className="p-2 rounded-xl bg-slate-100 hover:bg-rose-50 dark:bg-white/5 dark:hover:bg-rose-500/10 text-slate-500 hover:text-rose-600 transition-colors cursor-pointer"
+                        title="Delete User"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Middle Row: Designation & Department */}
@@ -725,24 +731,30 @@ export function UserManagementView() {
                       </button>
                     </td>
 
-                    <td className="p-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <div className="flex items-center justify-end gap-1">
-                        <button
-                          onClick={() => handleOpenEdit(u)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                          title="Edit User Role & Details"
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteUser(u)}
-                          className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
-                          title="Delete User"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
+                    {isAdmin ? (
+                      <td className="p-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                        <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={() => handleOpenEdit(u)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                            title="Edit User Role & Details"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(u)}
+                            className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-white/10 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    ) : (
+                      <td className="p-4 text-right whitespace-nowrap text-slate-400 font-medium text-[11px]">
+                        Member
+                      </td>
+                    )}
                   </tr>
                 );
               })}

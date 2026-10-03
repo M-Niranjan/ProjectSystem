@@ -109,6 +109,7 @@ export default function Sidebar() {
     // Team section
     { name: 'Team Leaders', view: 'teams', icon: Users, section: 'Team' },
     { name: 'Employees', view: 'users', icon: Network },
+    { name: 'Chat', view: 'messages', icon: MessageSquare },
     { name: 'Invitations', view: 'teams', icon: UserPlus },
 
     // Organization section
@@ -129,10 +130,11 @@ export default function Sidebar() {
     { name: 'Projects', view: 'projects', icon: FolderGit2 },
     { name: 'Tasks', view: 'tasks', icon: CheckSquare },
     { name: 'Teams', view: 'teams', icon: Users },
+    { name: 'Employees', view: 'users', icon: Network },
+    { name: 'Chat', view: 'messages', icon: MessageSquare },
     { name: 'Task Reviews', view: 'reviews', icon: Award },
     { name: 'Time Tracking', view: 'time-tracking', icon: Clock },
     { name: 'Calendar', view: 'calendar', icon: Calendar },
-    { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
@@ -144,10 +146,11 @@ export default function Sidebar() {
     { name: 'Dashboard', view: 'dashboard', icon: LayoutDashboard },
     { name: 'My Tasks', view: 'my-tasks', icon: CheckSquare },
     { name: 'My Projects', view: 'my-projects', icon: FolderGit2 },
+    { name: 'Employees', view: 'users', icon: Network },
+    { name: 'Chat', view: 'messages', icon: MessageSquare },
     { name: 'My Performance', view: 'performance', icon: BarChart3 },
     { name: 'Time Tracking', view: 'time-tracking', icon: Clock },
     { name: 'Calendar', view: 'calendar', icon: Calendar },
-    { name: 'Communication', view: 'messages', icon: MessageSquare },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
     { name: 'Profile', view: 'profile', icon: User },

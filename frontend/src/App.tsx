@@ -330,9 +330,9 @@ function AppContent() {
                     <Route path="/documents" element={<Documents />} />
                     <Route path="/workspace-activity" element={<WorkspaceActivity />} />
 
-                    {/* Admin Specific Views (Restricted to ROLE_ADMIN) */}
-                    <Route path="/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><UserManagementView /></RoleGuard>} />
-                    <Route path="/admin/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><UserManagementView /></RoleGuard>} />
+                    {/* User / Employee Directory (Available to all organization members) */}
+                    <Route path="/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
+                    <Route path="/admin/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
                     <Route path="/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
                     <Route path="/admin/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
                     <Route path="/organization" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><OrganizationSettingsView /></RoleGuard>} />

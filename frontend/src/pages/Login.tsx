@@ -294,8 +294,8 @@ export default function Login() {
   };
 
   return (
-    <div className="fixed inset-0 w-full h-full flex flex-col items-center p-3 sm:p-4 login-bg-executive-titanium text-slate-900 dark:text-white overflow-y-auto overscroll-contain">
-      {/* Option 2: Executive Titanium Architectural Blueprint Grid Overlay */}
+    <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center login-bg-executive-titanium text-slate-900 dark:text-white overflow-y-auto overflow-x-hidden overscroll-none touch-pan-y select-none">
+      {/* Option 2: Executive Titanium Architectural Blueprint Grid Overlay - Strictly Fixed & Non-Movable */}
       <div className="blueprint-grid-overlay" aria-hidden="true" />
 
       {/* Top-Right Theme Toggle Button */}
@@ -312,7 +312,7 @@ export default function Login() {
       </div>
 
       {/* Main Content Area: Centered, Constant, Non-Movable */}
-      <div className="m-auto w-full max-w-[400px] flex flex-col items-center py-6 sm:py-8 relative z-10">
+      <div className="my-auto w-full max-w-[400px] flex flex-col items-center px-4 py-8 relative z-10 shrink-0">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-3 text-center">
           {/* Ascending 3-Bar Logo */}
