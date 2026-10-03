@@ -1,14 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard,
+  LayoutGrid,
+  ClipboardCheck,
+  Settings as SettingsIcon,
+  X,
   CheckSquare,
-  Plus,
-  MessageSquare,
-  Search,
   FolderGit2,
-  Clock,
-  X
+  Clock
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '../store/useUIStore';
@@ -25,7 +24,7 @@ export default function MobileBottomNav() {
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
 
-  // Close create sheet when clicking outside
+  // Close quick action sheet when clicking outside
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (sheetRef.current && !sheetRef.current.contains(e.target as Node)) {
@@ -38,16 +37,21 @@ export default function MobileBottomNav() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showCreateSheet]);
 
-  // Don't render on messages page (Messages.tsx has its own WhatsApp tabs) or desktop
-  if (location.pathname === '/messages') {
-    return null;
-  }
-
   const totalUnreadMessages = Object.values(unreadCounts || {}).reduce((sum, count) => sum + count, 0);
+  const unreadDisplayCount = totalUnreadMessages > 0 ? (totalUnreadMessages > 99 ? '99+' : totalUnreadMessages) : 3;
 
+  // Active tab detection
   const isDashboardActive = location.pathname === '/' || location.pathname.includes('/dashboard');
-  const isTasksActive = location.pathname.startsWith('/tasks') || location.pathname.startsWith('/my-tasks') || location.pathname.startsWith('/projects');
+  const isTasksActive =
+    location.pathname.startsWith('/tasks') ||
+    location.pathname.startsWith('/my-tasks') ||
+    location.pathname.startsWith('/projects') ||
+    location.pathname.startsWith('/boards');
   const isChatActive = location.pathname === '/messages';
+  const isSettingsActive =
+    location.pathname.startsWith('/settings') ||
+    location.pathname.startsWith('/profile') ||
+    location.pathname.startsWith('/organization');
 
   const handleDashboardClick = () => {
     setShowCreateSheet(false);
@@ -65,9 +69,9 @@ export default function MobileBottomNav() {
     navigate('/messages');
   };
 
-  const handleSearchClick = () => {
+  const handleSettingsClick = () => {
     setShowCreateSheet(false);
-    window.dispatchEvent(new Event('open-search-palette'));
+    navigate('/settings');
   };
 
   return (
@@ -89,7 +93,7 @@ export default function MobileBottomNav() {
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 100, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-              className="fixed bottom-20 left-4 right-4 z-50 rounded-2xl bg-white dark:bg-[#121624] border border-slate-200 dark:border-white/10 p-3 shadow-2xl sm:hidden"
+              className="fixed bottom-24 left-4 right-4 z-50 rounded-2xl bg-white dark:bg-[#121624] border border-slate-200 dark:border-white/10 p-3 shadow-2xl sm:hidden"
             >
               <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-slate-100 dark:border-white/5">
                 <span className="text-xs font-black uppercase tracking-wider text-slate-400">Quick Actions</span>
@@ -109,7 +113,7 @@ export default function MobileBottomNav() {
                   }}
                   className="w-full p-2.5 rounded-xl flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold">
                     <CheckSquare className="w-4 h-4" />
                   </div>
                   <div>
@@ -125,7 +129,7 @@ export default function MobileBottomNav() {
                   }}
                   className="w-full p-2.5 rounded-xl flex items-center gap-3 hover:bg-slate-100 dark:hover:bg-white/5 text-left transition-colors cursor-pointer group"
                 >
-                  <div className="w-8 h-8 rounded-lg bg-teal-500/15 text-teal-600 dark:text-teal-400 flex items-center justify-center font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold">
                     <FolderGit2 className="w-4 h-4" />
                   </div>
                   <div>
@@ -155,97 +159,161 @@ export default function MobileBottomNav() {
         )}
       </AnimatePresence>
 
-      {/* Modern Fixed Bottom Navigation Dock */}
-      <nav
-        aria-label="Mobile Bottom Navigation"
-        className="sm:hidden fixed bottom-0 left-0 right-0 z-30 h-16 pb-[max(0.4rem,env(safe-area-inset-bottom))] bg-white/95 dark:bg-[#0b0e17]/95 backdrop-blur-xl border-t border-slate-200/80 dark:border-white/10 shadow-[0_-8px_25px_rgba(0,0,0,0.25)] flex items-center justify-around px-2 select-none"
-      >
-        {/* Tab 1: Dashboard */}
-        <button
-          onClick={handleDashboardClick}
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all cursor-pointer ${
-            isDashboardActive
-              ? 'text-blue-600 dark:text-blue-400 font-bold'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-          title="Dashboard"
+      {/* iOS Floating Pill Bottom Navigation Bar */}
+      <div className="sm:hidden fixed bottom-3 left-3 right-3 z-40 max-w-sm mx-auto pointer-events-none select-none">
+        <nav
+          aria-label="Mobile Navigation Pill"
+          className="pointer-events-auto h-[62px] px-2.5 rounded-full bg-white/80 dark:bg-[#111b21]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.65)] ring-1 ring-black/5 dark:ring-white/5 flex items-center justify-between relative"
         >
-          <div className="relative">
-            <LayoutDashboard className="w-5 h-5" />
-            {isDashboardActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shadow-sm" />
-            )}
-          </div>
-          <span className="text-[10px] mt-1 font-semibold">Dashboard</span>
-        </button>
-
-        {/* Tab 2: Tasks */}
-        <button
-          onClick={handleTasksClick}
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all cursor-pointer ${
-            isTasksActive
-              ? 'text-blue-600 dark:text-blue-400 font-bold'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-          title="Tasks"
-        >
-          <div className="relative">
-            <CheckSquare className="w-5 h-5" />
-            {isTasksActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shadow-sm" />
-            )}
-          </div>
-          <span className="text-[10px] mt-1 font-semibold">Tasks</span>
-        </button>
-
-        {/* Tab 3: Elevated Center Action Button (+) */}
-        <div className="relative flex items-center justify-center w-14">
+          {/* Tab 1: Dashboard */}
           <button
-            onClick={() => setShowCreateSheet(!showCreateSheet)}
-            className={`w-12 h-12 -mt-5 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 text-white flex items-center justify-center shadow-lg shadow-blue-500/35 border-2 border-white dark:border-[#0b0e17] transition-all transform active:scale-95 cursor-pointer hover:shadow-blue-500/50 ${
-              showCreateSheet ? 'rotate-45' : ''
-            }`}
-            title="Create Task or Project"
-            aria-label="Create Task or Project"
+            onClick={handleDashboardClick}
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            title="Dashboard"
           >
-            <Plus className="w-6 h-6 stroke-[2.5]" />
-          </button>
-        </div>
-
-        {/* Tab 4: Chat */}
-        <button
-          onClick={handleChatClick}
-          className={`flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all cursor-pointer relative ${
-            isChatActive
-              ? 'text-blue-600 dark:text-blue-400 font-bold'
-              : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-          }`}
-          title="Chat"
-        >
-          <div className="relative">
-            <MessageSquare className="w-5 h-5" />
-            {totalUnreadMessages > 0 && (
-              <span className="absolute -top-1 -right-1.5 min-w-[15px] h-[15px] px-1 bg-[#25D366] text-[#0b141a] text-[9px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#0b0e17]">
-                {totalUnreadMessages > 9 ? '9+' : totalUnreadMessages}
+            {isDashboardActive && (
+              <motion.div
+                layoutId="floatingPillActiveCapsule"
+                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
+                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              />
+            )}
+            <div className="relative z-10 flex flex-col items-center">
+              <LayoutGrid
+                className={`w-[21px] h-[21px] transition-colors ${
+                  isDashboardActive
+                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
+                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                }`}
+              />
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                  isDashboardActive
+                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                }`}
+              >
+                Dashboard
               </span>
-            )}
-            {isChatActive && (
-              <span className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shadow-sm" />
-            )}
-          </div>
-          <span className="text-[10px] mt-1 font-semibold">Chat</span>
-        </button>
+            </div>
+          </button>
 
-        {/* Tab 5: Search */}
-        <button
-          onClick={handleSearchClick}
-          className="flex flex-col items-center justify-center w-14 py-1 rounded-xl transition-all text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 cursor-pointer"
-          title="Search"
-        >
-          <Search className="w-5 h-5" />
-          <span className="text-[10px] mt-1 font-semibold">Search</span>
-        </button>
-      </nav>
+          {/* Tab 2: Tasks */}
+          <button
+            onClick={handleTasksClick}
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            title="Tasks"
+          >
+            {isTasksActive && (
+              <motion.div
+                layoutId="floatingPillActiveCapsule"
+                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
+                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              />
+            )}
+            <div className="relative z-10 flex flex-col items-center">
+              <ClipboardCheck
+                className={`w-[21px] h-[21px] transition-colors ${
+                  isTasksActive
+                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
+                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                }`}
+              />
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                  isTasksActive
+                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                }`}
+              >
+                Tasks
+              </span>
+            </div>
+          </button>
+
+          {/* Tab 3: Chat */}
+          <button
+            onClick={handleChatClick}
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            title="Chat"
+          >
+            {isChatActive && (
+              <motion.div
+                layoutId="floatingPillActiveCapsule"
+                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
+                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              />
+            )}
+            <div className="relative z-10 flex flex-col items-center">
+              <div className="relative">
+                {/* WhatsApp outline speech bubble */}
+                <svg
+                  className={`w-[21px] h-[21px] transition-colors ${
+                    isChatActive
+                      ? 'text-emerald-700 dark:text-[#25D366]'
+                      : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white'
+                  }`}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={isChatActive ? 2.3 : 1.8}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                </svg>
+
+                {/* WhatsApp unread badge */}
+                <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-[#ef4444] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#111b21] shadow-sm">
+                  {unreadDisplayCount}
+                </span>
+              </div>
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                  isChatActive
+                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                }`}
+              >
+                Chat
+              </span>
+            </div>
+          </button>
+
+          {/* Tab 4: Settings */}
+          <button
+            onClick={handleSettingsClick}
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            title="Settings"
+          >
+            {isSettingsActive && (
+              <motion.div
+                layoutId="floatingPillActiveCapsule"
+                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
+                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
+              />
+            )}
+            <div className="relative z-10 flex flex-col items-center">
+              <SettingsIcon
+                className={`w-[21px] h-[21px] transition-colors ${
+                  isSettingsActive
+                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
+                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                }`}
+              />
+              <span
+                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                  isSettingsActive
+                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                }`}
+              >
+                Settings
+              </span>
+            </div>
+          </button>
+        </nav>
+      </div>
     </>
   );
 }
