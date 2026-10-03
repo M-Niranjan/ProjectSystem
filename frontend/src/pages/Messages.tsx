@@ -209,6 +209,40 @@ export default function Messages() {
   const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'dms' | 'teams' | 'channels'>('all');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
+  // Lock document scroll and rubber-banding on mobile so page is 100% constant / immoveable
+  useEffect(() => {
+    const prevBodyOverflow = document.body.style.overflow;
+    const prevBodyOverscroll = document.body.style.overscrollBehavior;
+    const prevHtmlOverflow = document.documentElement.style.overflow;
+    const prevHtmlOverscroll = document.documentElement.style.overscrollBehavior;
+
+    document.body.style.overflow = 'hidden';
+    document.body.style.overscrollBehavior = 'none';
+    document.documentElement.style.overflow = 'hidden';
+    document.documentElement.style.overscrollBehavior = 'none';
+
+    return () => {
+      document.body.style.overflow = prevBodyOverflow;
+      document.body.style.overscrollBehavior = prevBodyOverscroll;
+      document.documentElement.style.overflow = prevHtmlOverflow;
+      document.documentElement.style.overscrollBehavior = prevHtmlOverscroll;
+    };
+  }, []);
+
+  // Sync mobile chat open state with document class so MobileBottomNav knows to hide during active chat
+  useEffect(() => {
+    if (mobileView === 'chat') {
+      document.body.classList.add('mobile-chat-open');
+    } else {
+      document.body.classList.remove('mobile-chat-open');
+    }
+    window.dispatchEvent(new Event('mobile-chat-state-changed'));
+    return () => {
+      document.body.classList.remove('mobile-chat-open');
+      window.dispatchEvent(new Event('mobile-chat-state-changed'));
+    };
+  }, [mobileView]);
+
   // Network Offline Banner State (Requirement 39)
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
 
@@ -1791,7 +1825,7 @@ export default function Messages() {
   }, [allConversations]);
 
   return (
-    <div className="h-full w-full flex bg-[#111b21] text-[#e9edef] rounded-2xl border border-[#202c33] overflow-hidden relative shadow-2xl select-none font-sans">
+    <div className="h-full w-full flex bg-[#111b21] text-[#e9edef] rounded-none sm:rounded-2xl border-0 sm:border border-[#202c33] overflow-hidden relative shadow-2xl select-none font-sans overscroll-none">
       
       {/* Offline Alert Banner (Requirement 39) */}
       <AnimatePresence>
@@ -2099,25 +2133,45 @@ export default function Messages() {
       >
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           
-          {/* Mobile WhatsApp Header (md:hidden) */}
-          <div className="md:hidden px-4 pt-4 pb-2 bg-[#111b21] flex items-center justify-between shrink-0 select-none">
-            <h1 className="text-2xl font-bold text-[#e9edef] tracking-tight">
-              WhatsApp
+          {/* Mobile Chat Header (md:hidden) */}
+          <div className="md:hidden px-4 pt-3.5 pb-2.5 bg-[#111b21] border-b border-[#202c33]/80 flex items-center justify-between shrink-0 select-none">
+            <h1 className="text-xl font-bold text-[#e9edef] tracking-tight">
+              Chat
             </h1>
-            <div className="flex items-center gap-4 text-[#e9edef]">
+            <div className="flex items-center gap-3.5 text-[#e9edef]">
+              <button
+                onClick={() => {
+                  const target = contacts.find((c) => c.id !== currentUid && c.id !== AI_ASSISTANT_ID);
+                  if (target) {
+                    setActiveCall({
+                      type: 'audio',
+                      contactName: target.name,
+                      contactAvatar: target.profilePhoto,
+                      status: 'ringing',
+                      duration: 0
+                    });
+                  } else {
+                    showToast('No contacts available for call');
+                  }
+                }}
+                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
+                title="Start Voice Call"
+              >
+                <Phone className="w-5 h-5 stroke-[1.8]" />
+              </button>
               <button
                 onClick={() => setIsDocumentPickerOpen(true)}
-                className="p-1 text-[#e9edef] hover:text-[#00a884] transition-colors cursor-pointer"
+                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
                 title="Camera / Send Media"
               >
-                <Camera className="w-5.5 h-5.5 stroke-[1.8]" />
+                <Camera className="w-5 h-5 stroke-[1.8]" />
               </button>
               <button
                 onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
-                className="p-1 text-[#e9edef] hover:text-[#00a884] transition-colors cursor-pointer"
+                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
                 title="More options"
               >
-                <MoreVertical className="w-5.5 h-5.5" />
+                <MoreVertical className="w-5 h-5" />
               </button>
             </div>
           </div>
@@ -2280,7 +2334,7 @@ export default function Messages() {
           </div>
 
           {/* Dynamic Scrollable Conversation List (Requirement 3: Most recent chat moves to top) */}
-          <div className="flex-1 overflow-y-auto divide-y divide-[#202c33]/60 custom-scroll-area">
+          <div className="flex-1 overflow-y-auto overscroll-contain divide-y divide-[#202c33]/60 custom-scroll-area pb-24">
             {unifiedSortedList.map((item) => {
               const isSelected = selectedConversationId === item.convId;
 
@@ -2422,96 +2476,11 @@ export default function Messages() {
                 setIsAddContactModalOpen(true);
               }
             }}
-            className="md:hidden absolute bottom-18 right-4 w-14 h-14 rounded-2xl bg-[#00a884] hover:bg-[#25D366] text-[#0b141a] shadow-2xl flex items-center justify-center cursor-pointer transition-transform active:scale-95 z-20"
+            className="md:hidden absolute bottom-22 right-4 w-13 h-13 rounded-2xl bg-[#00a884] hover:bg-[#25D366] text-[#0b141a] shadow-[0_8px_25px_rgba(0,168,132,0.45)] flex items-center justify-center cursor-pointer transition-transform active:scale-95 z-30"
             title="New Chat"
           >
             <MessageSquarePlus className="w-6 h-6 stroke-[2.5]" />
           </button>
-
-          {/* Mobile WhatsApp Bottom Navigation (md:hidden) */}
-          <div className="md:hidden border-t border-[#202c33] bg-[#111b21] py-2 px-3 flex items-center justify-around shrink-0 z-30 select-none">
-            <button
-              onClick={() => { setChatFilter('all'); setNavRailTab('chats'); }}
-              className="flex flex-col items-center gap-1 cursor-pointer"
-            >
-              <div className={`px-4 py-1 rounded-full relative transition-all ${
-                navRailTab === 'chats' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
-              }`}>
-                <MessageSquare className="w-5 h-5" />
-                {totalUnreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
-                    {totalUnreadCount}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[11px] ${navRailTab === 'chats' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
-                Chats
-              </span>
-            </button>
-
-            <button
-              onClick={() => { setChatFilter('teams'); setNavRailTab('teams'); }}
-              className="flex flex-col items-center gap-1 cursor-pointer"
-            >
-              <div className={`px-4 py-1 rounded-full relative transition-all ${
-                navRailTab === 'teams' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
-              }`}>
-                <Users className="w-5 h-5" />
-                {teamUnreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
-                    {teamUnreadCount}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[11px] ${navRailTab === 'teams' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
-                Groups
-              </span>
-            </button>
-
-            <button
-              onClick={() => { setChatFilter('channels'); setNavRailTab('channels'); }}
-              className="flex flex-col items-center gap-1 cursor-pointer"
-            >
-              <div className={`px-4 py-1 rounded-full relative transition-all ${
-                navRailTab === 'channels' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
-              }`}>
-                <Hash className="w-5 h-5" />
-                {channelUnreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
-                    {channelUnreadCount}
-                  </span>
-                )}
-              </div>
-              <span className={`text-[11px] ${navRailTab === 'channels' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
-                Channels
-              </span>
-            </button>
-
-            <button
-              onClick={() => {
-                const target = contacts.find((c) => c.id !== currentUid && c.id !== AI_ASSISTANT_ID);
-                if (target) {
-                  setActiveCall({
-                    type: 'audio',
-                    contactName: target.name,
-                    contactAvatar: target.profilePhoto,
-                    status: 'ringing',
-                    duration: 0
-                  });
-                } else {
-                  showToast('No contacts available for call');
-                }
-              }}
-              className="flex flex-col items-center gap-1 cursor-pointer text-[#8696a0] hover:text-[#e9edef]"
-            >
-              <div className="px-4 py-1 rounded-full">
-                <Phone className="w-5 h-5" />
-              </div>
-              <span className="text-[11px] text-[#8696a0]">
-                Calls
-              </span>
-            </button>
-          </div>
         </div>
       </div>
 

@@ -282,7 +282,7 @@ function AppContent() {
   const isMessagesPage = location.pathname === '/messages';
 
   return (
-    <div className={`relative ${isMessagesPage ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'}`}>
+    <div className={`relative ${isMessagesPage ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'}`}>
       {/* Pure Uniform Background Layer */}
       <div className="animated-bg" />
 
@@ -293,7 +293,7 @@ function AppContent() {
 
         {/* Content Wrapper */}
         <div 
-          className={`flex-1 flex flex-col ${isMessagesPage ? 'h-screen max-h-screen overflow-hidden' : 'min-h-screen overflow-x-hidden'} max-w-full transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
+          className={`flex-1 flex flex-col ${isMessagesPage ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'} max-w-full transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
         >
           {/* Header Frosted Navbar */}
           <Navbar />
@@ -303,7 +303,7 @@ function AppContent() {
 
           <main className={`flex-1 min-w-0 max-w-full print:p-0 print:m-0 print:pt-0 print:max-w-none ${
             isMessagesPage
-              ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-1 sm:p-2 overflow-hidden'
+              ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-0 sm:p-2 overflow-hidden overscroll-none'
               : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 pb-20 sm:pb-8 w-full max-w-7xl mx-auto'
           }`}>
             <ErrorBoundary>

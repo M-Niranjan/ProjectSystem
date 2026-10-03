@@ -53,6 +53,23 @@ export default function MobileBottomNav() {
     location.pathname.startsWith('/profile') ||
     location.pathname.startsWith('/organization');
 
+  const [isInMobileChat, setIsInMobileChat] = useState(() =>
+    typeof document !== 'undefined' && document.body.classList.contains('mobile-chat-open')
+  );
+
+  useEffect(() => {
+    const handleChatState = () => {
+      setIsInMobileChat(document.body.classList.contains('mobile-chat-open'));
+    };
+    window.addEventListener('mobile-chat-state-changed', handleChatState);
+    return () => window.removeEventListener('mobile-chat-state-changed', handleChatState);
+  }, []);
+
+  // When active chat conversation is open on mobile, hide the bottom pill dock so it doesn't block the message composer
+  if (isChatActive && isInMobileChat) {
+    return null;
+  }
+
   const handleDashboardClick = () => {
     setShowCreateSheet(false);
     const target = getDashboardPathForRole(user?.role) || '/dashboard';

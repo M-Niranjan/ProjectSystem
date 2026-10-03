@@ -575,7 +575,7 @@ export default function Documents() {
   const [historyIndex, setHistoryIndex] = useState<number>(-1);
   const historyIndexRef = useRef<number>(-1);
   const isHistoryNavigatingRef = useRef<boolean>(false);
-  const historyDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const historyDebounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastSavedContentRef = useRef<string>('');
   const lastSavedTitleRef = useRef<string>('');
 

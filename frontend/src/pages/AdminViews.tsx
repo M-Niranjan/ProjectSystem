@@ -16,7 +16,7 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh';
 // ==========================================
 export function UserManagementView() {
   const { user } = useAuthStore();
-  const isAdmin = user?.role === 'ROLE_ADMIN' || user?.role === 'admin';
+  const isAdmin = (user?.role as any) === 'ROLE_ADMIN' || (user?.role as any) === 'admin';
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
