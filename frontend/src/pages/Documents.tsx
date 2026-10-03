@@ -43,8 +43,18 @@ import {
   FileCheck,
   AlignLeft,
   AlignCenter,
+  AlignRight,
+  AlignJustify,
   Printer,
-  Minus
+  Minus,
+  Undo2,
+  Redo2,
+  Save,
+  RotateCcw,
+  Highlighter,
+  RemoveFormatting,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '../hooks/useScrollLock';
@@ -555,8 +565,97 @@ export default function Documents() {
   const [editProject, setEditProject] = useState('Core Platform');
   const [editStatus, setEditStatus] = useState<'Draft' | 'Published'>('Draft');
   const [isAutosaving, setIsAutosaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [editorViewMode, setEditorViewMode] = useState<'edit' | 'preview'>('edit');
+  const [isZenMode, setIsZenMode] = useState(false);
   const editorRef = useRef<HTMLDivElement>(null);
+
+  // Undo / Redo & Save Tracking
+  const [history, setHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState<number>(-1);
+  const historyIndexRef = useRef<number>(-1);
+  const isHistoryNavigatingRef = useRef<boolean>(false);
+  const historyDebounceTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedContentRef = useRef<string>('');
+  const lastSavedTitleRef = useRef<string>('');
+
+  // Push snapshot into history stack
+  const pushToHistory = (newHtml: string) => {
+    if (isHistoryNavigatingRef.current) return;
+    setHistory((prev) => {
+      const idx = historyIndexRef.current;
+      if (prev.length > 0 && prev[idx] === newHtml) return prev;
+
+      const updated = idx >= 0 ? prev.slice(0, idx + 1) : [];
+      updated.push(newHtml);
+      if (updated.length > 50) {
+        updated.shift();
+      }
+      const newIdx = updated.length - 1;
+      historyIndexRef.current = newIdx;
+      setHistoryIndex(newIdx);
+      return updated;
+    });
+  };
+
+  // Undo action
+  const handleUndo = () => {
+    if (historyIndexRef.current <= 0) return;
+    isHistoryNavigatingRef.current = true;
+    const targetIdx = historyIndexRef.current - 1;
+    const prevHtml = history[targetIdx];
+    historyIndexRef.current = targetIdx;
+    setHistoryIndex(targetIdx);
+    setEditContent(prevHtml);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = prevHtml;
+    }
+    setHasUnsavedChanges(
+      prevHtml !== lastSavedContentRef.current || editTitle !== lastSavedTitleRef.current
+    );
+    setTimeout(() => {
+      isHistoryNavigatingRef.current = false;
+    }, 50);
+  };
+
+  // Redo action
+  const handleRedo = () => {
+    if (historyIndexRef.current >= history.length - 1) return;
+    isHistoryNavigatingRef.current = true;
+    const targetIdx = historyIndexRef.current + 1;
+    const nextHtml = history[targetIdx];
+    historyIndexRef.current = targetIdx;
+    setHistoryIndex(targetIdx);
+    setEditContent(nextHtml);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = nextHtml;
+    }
+    setHasUnsavedChanges(
+      nextHtml !== lastSavedContentRef.current || editTitle !== lastSavedTitleRef.current
+    );
+    setTimeout(() => {
+      isHistoryNavigatingRef.current = false;
+    }, 50);
+  };
+
+  // Revert changes to last saved version
+  const handleRevertChanges = () => {
+    if (!hasUnsavedChanges) return;
+    isHistoryNavigatingRef.current = true;
+    const savedHtml = lastSavedContentRef.current;
+    const savedTitle = lastSavedTitleRef.current;
+    setEditContent(savedHtml);
+    setEditTitle(savedTitle);
+    if (editorRef.current) {
+      editorRef.current.innerHTML = savedHtml;
+    }
+    setHasUnsavedChanges(false);
+    setTimeout(() => {
+      isHistoryNavigatingRef.current = false;
+      pushToHistory(savedHtml);
+    }, 50);
+    showToast('Reverted to last saved version.', 'info');
+  };
 
   // Quick Template Dropdown menu state
   const [isTemplateMenuOpen, setIsTemplateMenuOpen] = useState(false);
@@ -626,10 +725,28 @@ export default function Documents() {
   }, [activeView, selectedDocId]);
 
   // Handle input in WYSIWYG editor
-  const handleEditorInput = () => {
+  const handleEditorInput = (immediateHistory = false) => {
     if (!editorRef.current) return;
     const currentHtml = editorRef.current.innerHTML;
     setEditContent(currentHtml);
+
+    setHasUnsavedChanges(
+      currentHtml !== lastSavedContentRef.current || editTitle !== lastSavedTitleRef.current
+    );
+
+    if (isHistoryNavigatingRef.current) return;
+
+    if (historyDebounceTimerRef.current) {
+      clearTimeout(historyDebounceTimerRef.current);
+    }
+
+    if (immediateHistory) {
+      pushToHistory(currentHtml);
+    } else {
+      historyDebounceTimerRef.current = setTimeout(() => {
+        pushToHistory(currentHtml);
+      }, 400);
+    }
   };
 
   // Handle interactive checkboxes inside the editor canvas
@@ -646,11 +763,11 @@ export default function Documents() {
         const sibling = checkbox.nextElementSibling;
         if (sibling) sibling.classList.remove('line-through', 'text-slate-400');
       }
-      handleEditorInput();
+      handleEditorInput(true);
     }
   };
 
-  // Immediate save helper (called on < Hub, Done, and Ctrl+S)
+  // Immediate save helper (called on Save button, Hub back, and Ctrl+S)
   const saveCurrentDoc = (showNotification = false) => {
     if (!selectedDocId) return;
     const currentDoc = items.find((it) => it.id === selectedDocId);
@@ -670,26 +787,51 @@ export default function Documents() {
     };
 
     setEditContent(latestHtml);
+    lastSavedContentRef.current = latestHtml;
+    lastSavedTitleRef.current = cleanTitle;
+    setHasUnsavedChanges(false);
+
     const nextList = items.map((it) => (it.id === selectedDocId ? updated : it));
     persistItems(nextList);
     if (showNotification) {
-      showToast('Document saved!', 'success');
+      showToast('Document saved successfully!', 'success');
     }
   };
 
-  // Keyboard shortcut: Ctrl+S / Cmd+S for instant smooth save
+  // Keyboard shortcuts: Ctrl+S (Save), Ctrl+Z (Undo), Ctrl+Y / Ctrl+Shift+Z (Redo), Escape (Exit Zen)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
-        if (activeView === 'editor') {
+      if (activeView !== 'editor') return;
+
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const isCmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+
+      if (isCmdOrCtrl) {
+        const key = e.key.toLowerCase();
+        if (key === 'z') {
+          e.preventDefault();
+          if (e.shiftKey) {
+            handleRedo();
+          } else {
+            handleUndo();
+          }
+        } else if (key === 'y') {
+          e.preventDefault();
+          handleRedo();
+        } else if (key === 's') {
           e.preventDefault();
           saveCurrentDoc(true);
+        }
+      } else if (e.key === 'Escape') {
+        if (isZenMode) {
+          e.preventDefault();
+          setIsZenMode(false);
         }
       }
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [activeView, selectedDocId, editTitle, editContent, editCategory, editProject, editStatus, items]);
+  }, [activeView, isZenMode, history, historyIndex, editTitle, editContent, editCategory, editProject, editStatus, items, selectedDocId, hasUnsavedChanges]);
 
   // Autosave when editing a written document
   useEffect(() => {
@@ -720,8 +862,11 @@ export default function Documents() {
       };
       const nextList = items.map((it) => (it.id === selectedDocId ? updated : it));
       persistItems(nextList);
+      lastSavedContentRef.current = editContent;
+      lastSavedTitleRef.current = editTitle.trim() || 'Untitled Workspace Document';
+      setHasUnsavedChanges(false);
       setTimeout(() => setIsAutosaving(false), 500);
-    }, 800);
+    }, 1200);
 
     return () => clearTimeout(timer);
   }, [editTitle, editContent, editCategory, editProject, editStatus, activeView, selectedDocId, items]);
@@ -733,7 +878,7 @@ export default function Documents() {
     if (!editorRef.current) return;
     editorRef.current.focus();
     document.execCommand(command, false, value);
-    handleEditorInput();
+    handleEditorInput(true);
   };
 
   const insertCustomHtml = (html: string) => {
@@ -761,7 +906,51 @@ export default function Documents() {
     } else {
       document.execCommand('insertHTML', false, html);
     }
-    handleEditorInput();
+    handleEditorInput(true);
+  };
+
+  const handleInsertCode = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const text = sel.toString();
+      insertCustomHtml(
+        `<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">${text}</code>`
+      );
+    } else {
+      insertCustomHtml(
+        `<code class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-white/10 font-mono text-xs text-blue-600 dark:text-blue-400 font-semibold">code_snippet</code> `
+      );
+    }
+  };
+
+  const handleHighlight = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0 && !sel.isCollapsed) {
+      const text = sel.toString();
+      insertCustomHtml(
+        `<mark class="bg-amber-200/90 dark:bg-amber-400/30 text-slate-900 dark:text-amber-100 px-1 py-0.5 rounded font-medium">${text}</mark>`
+      );
+    } else {
+      try {
+        document.execCommand('hiliteColor', false, '#fef08a');
+        handleEditorInput(true);
+      } catch (err) {
+        // fallback
+      }
+    }
+  };
+
+  const handleClearFormatting = () => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand('removeFormat', false, undefined);
+    document.execCommand('unlink', false, undefined);
+    handleEditorInput(true);
+    showToast('Formatting cleared for selection', 'info');
   };
 
   const insertChecklist = () => {
@@ -832,7 +1021,7 @@ export default function Documents() {
         newRow.appendChild(td);
       }
       tbody.appendChild(newRow);
-      handleEditorInput();
+      handleEditorInput(true);
       showToast('Added table row', 'info');
     } else {
       insertTable();
@@ -879,13 +1068,23 @@ export default function Documents() {
       return;
     }
     setSelectedDocId(doc.id);
+    const initialContent = ensureHumanReadableHtml(doc.content);
     setEditTitle(doc.title);
-    setEditContent(ensureHumanReadableHtml(doc.content));
+    setEditContent(initialContent);
     setEditCategory(doc.category);
     setEditProject(doc.project || 'Core Platform');
     setEditStatus(doc.status);
     setActiveView('editor');
     setEditorViewMode('edit');
+    setIsZenMode(false);
+
+    // Initialize history stack & save tracking
+    setHistory([initialContent]);
+    setHistoryIndex(0);
+    historyIndexRef.current = 0;
+    lastSavedContentRef.current = initialContent;
+    lastSavedTitleRef.current = doc.title;
+    setHasUnsavedChanges(false);
   };
 
   const handleCreateNewDoc = (template?: TemplateDoc) => {
@@ -1234,7 +1433,11 @@ ${item.content || ''}
       animate={{ x: 0, opacity: 1 }}
       exit={{ x: '-100%', opacity: 0.95 }}
       transition={{ type: 'spring', damping: 30, stiffness: 280, mass: 0.85 }}
-      className="absolute inset-0 z-30 w-full h-full flex flex-col bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-[20px_0_40px_rgba(0,0,0,0.25)]"
+      className={`${
+        isZenMode
+          ? 'fixed inset-0 z-50 w-full h-full flex flex-col bg-slate-900/98 backdrop-blur-2xl p-2 sm:p-5'
+          : 'absolute inset-0 z-30 w-full h-full flex flex-col bg-slate-50/95 dark:bg-slate-950/95 backdrop-blur-md shadow-[20px_0_40px_rgba(0,0,0,0.25)]'
+      }`}
     >
       {/* Editor Main Frame */}
       <div className="flex-1 glass-panel border border-slate-200/80 dark:border-white/10 rounded-2xl md:rounded-3xl shadow-2xl flex flex-col overflow-hidden relative">
@@ -1247,6 +1450,7 @@ ${item.content || ''}
                   onClick={() => {
                     saveCurrentDoc(true);
                     setActiveView('hub');
+                    setIsZenMode(false);
                   }}
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/20 text-slate-700 dark:text-white text-xs font-bold transition-all cursor-pointer shrink-0"
                 >
@@ -1259,7 +1463,12 @@ ${item.content || ''}
                 <input
                   type="text"
                   value={editTitle}
-                  onChange={(e) => setEditTitle(e.target.value)}
+                  onChange={(e) => {
+                    setEditTitle(e.target.value);
+                    setHasUnsavedChanges(
+                      editContent !== lastSavedContentRef.current || e.target.value !== lastSavedTitleRef.current
+                    );
+                  }}
                   placeholder="Document Title..."
                   className="w-full bg-transparent text-sm sm:text-base font-black text-slate-900 dark:text-white outline-none placeholder:text-slate-400 truncate"
                 />
@@ -1267,10 +1476,46 @@ ${item.content || ''}
 
               {/* Right Side: Metadata controls & Action buttons */}
               <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                {/* Save Button (Manual Save with Live Status) */}
+                <button
+                  onClick={() => saveCurrentDoc(true)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 ${
+                    hasUnsavedChanges
+                      ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/30'
+                      : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30'
+                  }`}
+                  title="Save Document (Ctrl+S)"
+                >
+                  {hasUnsavedChanges ? <Save className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5" />}
+                  <span>{hasUnsavedChanges ? 'Save' : 'Saved'}</span>
+                  {hasUnsavedChanges && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-amber-300 animate-pulse" />
+                  )}
+                </button>
+
+                {/* Revert Changes */}
+                <button
+                  onClick={handleRevertChanges}
+                  disabled={!hasUnsavedChanges}
+                  className={`p-1.5 sm:p-2 border border-slate-200/80 dark:border-white/10 rounded-xl transition-colors cursor-pointer ${
+                    hasUnsavedChanges
+                      ? 'hover:bg-amber-500/10 text-slate-600 dark:text-slate-300 hover:text-amber-500'
+                      : 'opacity-30 cursor-not-allowed text-slate-400'
+                  }`}
+                  title={hasUnsavedChanges ? 'Discard changes & revert to saved' : 'No unsaved changes to revert'}
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                </button>
+
+                <div className="h-4 w-px bg-slate-200 dark:bg-white/10 hidden sm:block shrink-0" />
+
                 {/* Category Dropdown */}
                 <select
                   value={editCategory}
-                  onChange={(e) => setEditCategory(e.target.value as any)}
+                  onChange={(e) => {
+                    setEditCategory(e.target.value as any);
+                    setHasUnsavedChanges(true);
+                  }}
                   className="hidden md:block text-xs font-bold px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
                 >
                   {CATEGORIES.map((c) => (
@@ -1282,7 +1527,10 @@ ${item.content || ''}
 
                 {/* Status Toggle (Draft / Published) */}
                 <button
-                  onClick={() => setEditStatus((prev) => (prev === 'Published' ? 'Draft' : 'Published'))}
+                  onClick={() => {
+                    setEditStatus((prev) => (prev === 'Published' ? 'Draft' : 'Published'));
+                    setHasUnsavedChanges(true);
+                  }}
                   className={`px-2.5 py-1 rounded-xl text-[10px] font-black uppercase tracking-wider border transition-all cursor-pointer ${
                     editStatus === 'Published'
                       ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
@@ -1321,6 +1569,19 @@ ${item.content || ''}
                   </button>
                 </div>
 
+                {/* Zen Mode / Fullscreen Toggle */}
+                <button
+                  onClick={() => setIsZenMode((prev) => !prev)}
+                  className={`p-1.5 sm:p-2 border border-slate-200/80 dark:border-white/10 rounded-xl transition-colors cursor-pointer ${
+                    isZenMode
+                      ? 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                      : 'hover:bg-slate-100 dark:hover:bg-white/10 text-slate-600 dark:text-slate-300'
+                  }`}
+                  title={isZenMode ? 'Exit Zen Mode (Esc)' : 'Zen Writing Mode (Fullscreen)'}
+                >
+                  {isZenMode ? <Minimize2 className="w-3.5 h-3.5" /> : <Maximize2 className="w-3.5 h-3.5" />}
+                </button>
+
                 {/* Copy Text */}
                 <button
                   onClick={handleCopyText}
@@ -1356,6 +1617,40 @@ ${item.content || ''}
             {/* WYSIWYG Human-Readable Formatting Toolbar (Only in Edit mode) */}
             {editorViewMode === 'edit' && (
               <div className="px-3 sm:px-6 py-2 border-t border-slate-200/40 dark:border-white/5 flex items-center gap-1 sm:gap-1.5 overflow-x-auto scrollbar-none text-slate-700 dark:text-slate-300 bg-slate-50/70 dark:bg-white/2">
+                {/* Undo & Redo History Controls */}
+                <div className="flex items-center gap-0.5 shrink-0 bg-slate-200/50 dark:bg-white/5 p-0.5 rounded-lg border border-slate-200/60 dark:border-white/10">
+                  <button
+                    type="button"
+                    disabled={historyIndex <= 0}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleUndo}
+                    className={`p-1.5 rounded-md transition-all shrink-0 ${
+                      historyIndex > 0
+                        ? 'hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 shadow-xs cursor-pointer active:scale-95'
+                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                    }`}
+                    title="Undo (Ctrl+Z)"
+                  >
+                    <Undo2 className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    disabled={historyIndex >= history.length - 1}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={handleRedo}
+                    className={`p-1.5 rounded-md transition-all shrink-0 ${
+                      historyIndex < history.length - 1
+                        ? 'hover:bg-white dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 shadow-xs cursor-pointer active:scale-95'
+                        : 'text-slate-300 dark:text-slate-600 cursor-not-allowed opacity-40'
+                    }`}
+                    title="Redo (Ctrl+Y or Ctrl+Shift+Z)"
+                  >
+                    <Redo2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                <div className="w-px h-4 bg-slate-300 dark:bg-white/10 mx-1 shrink-0" />
+
                 {/* Headings */}
                 <button
                   type="button"
@@ -1432,6 +1727,35 @@ ${item.content || ''}
                   title="Strikethrough"
                 >
                   <Strikethrough className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Code, Highlight & Clear Formatting */}
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleInsertCode}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10 shrink-0 cursor-pointer font-mono"
+                  title="Inline Code"
+                >
+                  <Code className="w-3.5 h-3.5 text-blue-500" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleHighlight}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10 shrink-0 cursor-pointer"
+                  title="Text Highlight"
+                >
+                  <Highlighter className="w-3.5 h-3.5 text-amber-500" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={handleClearFormatting}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10 shrink-0 cursor-pointer text-slate-500 hover:text-rose-500"
+                  title="Clear Formatting"
+                >
+                  <RemoveFormatting className="w-3.5 h-3.5" />
                 </button>
 
                 <div className="w-px h-4 bg-slate-300 dark:bg-white/10 mx-1 shrink-0" />
@@ -1530,6 +1854,24 @@ ${item.content || ''}
                 >
                   <AlignCenter className="w-3.5 h-3.5" />
                 </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => execFormat('justifyRight')}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10 shrink-0 cursor-pointer"
+                  title="Align Right"
+                >
+                  <AlignRight className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => execFormat('justifyFull')}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/60 dark:hover:bg-white/10 shrink-0 cursor-pointer"
+                  title="Justify Full"
+                >
+                  <AlignJustify className="w-3.5 h-3.5" />
+                </button>
               </div>
             )}
           </div>
@@ -1558,7 +1900,7 @@ ${item.content || ''}
                     }}
                     contentEditable
                     suppressContentEditableWarning
-                    onInput={handleEditorInput}
+                    onInput={() => handleEditorInput(false)}
                     onClick={handleEditorClick}
                     data-placeholder="Start typing your human-readable documentation here..."
                     className="rich-editor-canvas min-h-[550px] p-6 sm:p-12 outline-none bg-white dark:bg-slate-900/90 rounded-2xl md:rounded-3xl border border-slate-200/80 dark:border-white/10 shadow-xl text-slate-800 dark:text-slate-100 transition-all focus:ring-2 focus:ring-blue-500/20"
@@ -1588,15 +1930,30 @@ ${item.content || ''}
           <div className="h-10 px-4 sm:px-6 border-t border-slate-200/50 dark:border-white/10 bg-white/70 dark:bg-slate-900/70 backdrop-blur-xl flex items-center justify-between text-[10px] text-slate-400 font-bold shrink-0">
             <div className="flex items-center gap-2 sm:gap-3">
               <span className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${isAutosaving ? 'bg-amber-500 animate-ping' : 'bg-emerald-500'}`} />
-                {isAutosaving ? 'Autosaving...' : 'All changes saved'}
+                <span className={`w-2 h-2 rounded-full ${
+                  isAutosaving
+                    ? 'bg-amber-500 animate-ping'
+                    : hasUnsavedChanges
+                    ? 'bg-amber-500'
+                    : 'bg-emerald-500'
+                }`} />
+                {isAutosaving
+                  ? 'Autosaving...'
+                  : hasUnsavedChanges
+                  ? 'Unsaved changes (press Ctrl+S to save)'
+                  : 'All changes saved'}
               </span>
               <span>·</span>
               <span>{editWordsCount} words</span>
               <span>·</span>
               <span>{editReadingTime} min read</span>
             </div>
-            <span className="hidden sm:inline">Autosave enabled · Ctrl+S</span>
+            <div className="flex items-center gap-3">
+              {isZenMode && (
+                <span className="text-blue-500 font-bold bg-blue-500/10 px-2 py-0.5 rounded-md">Zen Mode Active (Esc to exit)</span>
+              )}
+              <span className="hidden sm:inline">Shortcuts: Ctrl+Z (Undo) · Ctrl+Y (Redo) · Ctrl+S (Save)</span>
+            </div>
           </div>
         </div>
     </motion.div>
