@@ -38,7 +38,6 @@ export default function MobileBottomNav() {
   }, [showCreateSheet]);
 
   const totalUnreadMessages = Object.values(unreadCounts || {}).reduce((sum, count) => sum + count, 0);
-  const unreadDisplayCount = totalUnreadMessages > 0 ? (totalUnreadMessages > 99 ? '99+' : totalUnreadMessages) : 3;
 
   // Active tab detection
   const isDashboardActive = location.pathname === '/' || location.pathname.includes('/dashboard');
@@ -52,6 +51,16 @@ export default function MobileBottomNav() {
     location.pathname.startsWith('/settings') ||
     location.pathname.startsWith('/profile') ||
     location.pathname.startsWith('/organization');
+
+  const activeTabIndex = isDashboardActive
+    ? 0
+    : isTasksActive
+    ? 1
+    : isChatActive
+    ? 2
+    : isSettingsActive
+    ? 3
+    : -1;
 
   const [isInMobileChat, setIsInMobileChat] = useState(() =>
     typeof document !== 'undefined' && document.body.classList.contains('mobile-chat-open')
@@ -180,21 +189,28 @@ export default function MobileBottomNav() {
       <div className="sm:hidden fixed bottom-3 left-3 right-3 z-40 max-w-sm mx-auto pointer-events-none select-none">
         <nav
           aria-label="Mobile Navigation Pill"
-          className="pointer-events-auto h-[62px] px-2.5 rounded-full bg-white/80 dark:bg-[#111b21]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.65)] ring-1 ring-black/5 dark:ring-white/5 flex items-center justify-between relative"
+          className="pointer-events-auto h-[62px] px-2 rounded-full bg-white/80 dark:bg-[#111b21]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.65)] ring-1 ring-black/5 dark:ring-white/5 flex items-center justify-between relative overflow-hidden"
         >
+          {/* Sliding Active Pill Capsule - Strictly constrained inside footer, X-axis only */}
+          {activeTabIndex !== -1 && (
+            <motion.div
+              initial={false}
+              animate={{
+                left: `${activeTabIndex * 25}%`,
+              }}
+              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+              className="absolute inset-y-1.5 w-1/4 p-1 pointer-events-none z-0"
+            >
+              <div className="w-full h-full rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm" />
+            </motion.div>
+          )}
+
           {/* Tab 1: Dashboard */}
           <button
             onClick={handleDashboardClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
             title="Dashboard"
           >
-            {isDashboardActive && (
-              <motion.div
-                layoutId="floatingPillActiveCapsule"
-                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
-                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-              />
-            )}
             <div className="relative z-10 flex flex-col items-center">
               <LayoutGrid
                 className={`w-[21px] h-[21px] transition-colors ${
@@ -218,16 +234,9 @@ export default function MobileBottomNav() {
           {/* Tab 2: Tasks */}
           <button
             onClick={handleTasksClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
             title="Tasks"
           >
-            {isTasksActive && (
-              <motion.div
-                layoutId="floatingPillActiveCapsule"
-                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
-                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-              />
-            )}
             <div className="relative z-10 flex flex-col items-center">
               <ClipboardCheck
                 className={`w-[21px] h-[21px] transition-colors ${
@@ -251,16 +260,9 @@ export default function MobileBottomNav() {
           {/* Tab 3: Chat */}
           <button
             onClick={handleChatClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
             title="Chat"
           >
-            {isChatActive && (
-              <motion.div
-                layoutId="floatingPillActiveCapsule"
-                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
-                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-              />
-            )}
             <div className="relative z-10 flex flex-col items-center">
               <div className="relative">
                 {/* WhatsApp outline speech bubble */}
@@ -277,13 +279,15 @@ export default function MobileBottomNav() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
                 </svg>
 
-                {/* WhatsApp unread badge */}
-                <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-[#ef4444] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#111b21] shadow-sm">
-                  {unreadDisplayCount}
-                </span>
+                {/* Unread badge - ONLY show when real unread messages exist */}
+                {totalUnreadMessages > 0 && (
+                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-[#ef4444] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#111b21] shadow-sm animate-pulse">
+                    {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
+                  </span>
+                )}
               </div>
               <span
                 className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
@@ -300,16 +304,9 @@ export default function MobileBottomNav() {
           {/* Tab 4: Settings */}
           <button
             onClick={handleSettingsClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all"
+            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
             title="Settings"
           >
-            {isSettingsActive && (
-              <motion.div
-                layoutId="floatingPillActiveCapsule"
-                className="absolute inset-y-1.5 inset-x-1.5 rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm"
-                transition={{ type: 'spring', damping: 24, stiffness: 320 }}
-              />
-            )}
             <div className="relative z-10 flex flex-col items-center">
               <SettingsIcon
                 className={`w-[21px] h-[21px] transition-colors ${
