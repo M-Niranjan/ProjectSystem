@@ -55,7 +55,9 @@ import {
   ZoomOut,
   Maximize2,
   Play,
-  Pause
+  Pause,
+  Camera,
+  MessageSquarePlus
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import api from '../services/api';
@@ -204,7 +206,7 @@ export default function Messages() {
 
   // Navigation rail tab & filter
   const [navRailTab, setNavRailTab] = useState<'chats' | 'teams' | 'channels' | 'calls' | 'ai' | 'starred' | 'settings'>('chats');
-  const [chatFilter, setChatFilter] = useState<'dms' | 'teams' | 'channels' | 'unread'>('dms');
+  const [chatFilter, setChatFilter] = useState<'all' | 'unread' | 'dms' | 'teams' | 'channels'>('all');
   const [mobileView, setMobileView] = useState<'list' | 'chat'>('list');
 
   // Network Offline Banner State (Requirement 39)
@@ -1809,7 +1811,7 @@ export default function Messages() {
       {/* ========================================================================= */}
       {/* ZONE 1: SLIM LEFT VERTICAL ICON RAIL (~56px - 64px)                       */}
       {/* ========================================================================= */}
-      <aside className="w-14 sm:w-16 bg-[#202c33] border-r border-[#2a3942] flex flex-col items-center justify-between py-3.5 shrink-0 z-30 h-full select-none">
+      <aside className="hidden md:flex w-14 sm:w-16 bg-[#202c33] border-r border-[#2a3942] flex-col items-center justify-between py-3.5 shrink-0 z-30 h-full select-none">
         
         {/* Top: Primary Navigation Icons */}
         <div className="flex flex-col items-center gap-3 w-full">
@@ -2087,15 +2089,41 @@ export default function Messages() {
       {/* ========================================================================= */}
       {/* ZONE 2: CHATS DIRECTORY PANEL (~340px - 380px)                            */}
       {/* ========================================================================= */}
+      {/* ========================================================================= */}
+      {/* ZONE 2: CHATS DIRECTORY PANEL (~340px - 380px)                            */}
+      {/* ========================================================================= */}
       <div
         className={`${
           mobileView === 'chat' ? 'hidden md:flex' : 'flex'
-        } w-full md:w-[340px] lg:w-[380px] border-r border-[#2a3942] bg-[#111b21] flex-col shrink-0 z-10 transition-all duration-200 h-full overflow-hidden`}
+        } w-full md:w-[340px] lg:w-[380px] border-r border-[#2a3942] bg-[#111b21] flex-col shrink-0 z-10 transition-all duration-200 h-full overflow-hidden relative`}
       >
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
           
-          {/* Header */}
-          <div className="p-3.5 sm:p-4 border-b border-[#202c33] bg-[#202c33] flex items-center justify-between shrink-0">
+          {/* Mobile WhatsApp Header (md:hidden) */}
+          <div className="md:hidden px-4 pt-4 pb-2 bg-[#111b21] flex items-center justify-between shrink-0 select-none">
+            <h1 className="text-2xl font-bold text-[#e9edef] tracking-tight">
+              WhatsApp
+            </h1>
+            <div className="flex items-center gap-4 text-[#e9edef]">
+              <button
+                onClick={() => setIsDocumentPickerOpen(true)}
+                className="p-1 text-[#e9edef] hover:text-[#00a884] transition-colors cursor-pointer"
+                title="Camera / Send Media"
+              >
+                <Camera className="w-5.5 h-5.5 stroke-[1.8]" />
+              </button>
+              <button
+                onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
+                className="p-1 text-[#e9edef] hover:text-[#00a884] transition-colors cursor-pointer"
+                title="More options"
+              >
+                <MoreVertical className="w-5.5 h-5.5" />
+              </button>
+            </div>
+          </div>
+
+          {/* Desktop Header (hidden md:flex) */}
+          <div className="hidden md:flex p-3.5 sm:p-4 border-b border-[#202c33] bg-[#202c33] items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <h2 className="font-bold text-xl text-[#e9edef] tracking-tight">
                 {chatFilter === 'channels'
@@ -2104,14 +2132,16 @@ export default function Messages() {
                   ? 'Team Chats'
                   : chatFilter === 'unread'
                   ? 'Unread Messages'
-                  : 'Direct Messages'}
+                  : chatFilter === 'dms'
+                  ? 'Direct Messages'
+                  : 'All Messages'}
               </h2>
               <span className="px-2 py-0.5 rounded-full bg-[#111b21] border border-[#2a3942] text-[11px] font-bold text-[#8696a0]">
                 {unifiedSortedList.length}
               </span>
             </div>
             
-            {/* Header Action Buttons */}
+            {/* Desktop Header Action Buttons */}
             <div className="flex items-center gap-1.5 relative">
               <button
                 onClick={() => {
@@ -2134,125 +2164,115 @@ export default function Messages() {
               >
                 <MoreVertical className="w-5 h-5" />
               </button>
-
-              {/* Header Dropdown Menu */}
-              <AnimatePresence>
-                {isHeaderMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, scale: 0.95, y: -5 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95, y: -5 }}
-                    className="absolute right-0 top-10 w-48 bg-[#202c33] border border-[#2a3942] rounded-xl shadow-2xl py-1.5 z-50 text-xs font-semibold"
-                  >
-                    <button
-                      onClick={() => {
-                        setIsCreateChannelOpen(true);
-                        setIsHeaderMenuOpen(false);
-                      }}
-                      className="w-full px-3.5 py-2 text-left hover:bg-[#2a3942] flex items-center gap-2 text-[#d1d7db]"
-                    >
-                      <Hash className="w-4 h-4 text-[#00a884]" />
-                      <span>New Project Channel</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsAddContactModalOpen(true);
-                        setIsHeaderMenuOpen(false);
-                      }}
-                      className="w-full px-3.5 py-2 text-left hover:bg-[#2a3942] flex items-center gap-2 text-[#d1d7db]"
-                    >
-                      <UserPlus className="w-4 h-4 text-[#00a884]" />
-                      <span>Start Direct Message</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        setIsDocumentPickerOpen(true);
-                        setIsHeaderMenuOpen(false);
-                      }}
-                      className="w-full px-3.5 py-2 text-left hover:bg-[#2a3942] flex items-center gap-2 text-[#d1d7db]"
-                    >
-                      <FileText className="w-4 h-4 text-[#00a884]" />
-                      <span>Send Workspace File</span>
-                    </button>
-                    <div className="w-full h-px bg-[#2a3942] my-1" />
-                    <button
-                      onClick={() => {
-                        setIsSettingsModalOpen(true);
-                        setIsHeaderMenuOpen(false);
-                      }}
-                      className="w-full px-3.5 py-2 text-left hover:bg-[#2a3942] flex items-center gap-2 text-[#8696a0]"
-                    >
-                      <Settings className="w-4 h-4" />
-                      <span>Settings</span>
-                    </button>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </div>
 
-          {/* Search Input (Requirement 23) */}
-          <div className="p-2.5 bg-[#111b21] shrink-0">
-            <div className="relative flex items-center bg-[#202c33] rounded-lg px-3 py-1.5 focus-within:ring-1 focus-within:ring-[#00a884]">
+          {/* Header Dropdown Menu (Shared by both Mobile and Desktop) */}
+          <AnimatePresence>
+            {isHeaderMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-40"
+                  onClick={() => setIsHeaderMenuOpen(false)}
+                />
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: -5 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: -5 }}
+                  className="absolute right-3 top-13 w-52 bg-[#202c33] border border-[#2a3942] rounded-2xl shadow-2xl py-1.5 z-50 text-xs font-semibold"
+                >
+                  <button
+                    onClick={() => {
+                      setIsAddContactModalOpen(true);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
+                  >
+                    <UserPlus className="w-4 h-4 text-[#00a884]" />
+                    <span>New chat</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsCreateChannelOpen(true);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
+                  >
+                    <Hash className="w-4 h-4 text-[#00a884]" />
+                    <span>New group channel</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsDocumentPickerOpen(true);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
+                  >
+                    <FileText className="w-4 h-4 text-[#00a884]" />
+                    <span>Shared files</span>
+                  </button>
+                  <div className="w-full h-px bg-[#2a3942] my-1" />
+                  <button
+                    onClick={() => {
+                      setIsSettingsModalOpen(true);
+                      setIsHeaderMenuOpen(false);
+                    }}
+                    className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#8696a0] hover:text-[#d1d7db] cursor-pointer"
+                  >
+                    <Settings className="w-4 h-4" />
+                    <span>Settings</span>
+                  </button>
+                </motion.div>
+              </>
+            )}
+          </AnimatePresence>
+
+          {/* Search Input (WhatsApp Pill Style) */}
+          <div className="px-3 py-2 bg-[#111b21] shrink-0">
+            <div className="relative flex items-center bg-[#202c33] rounded-full px-4 py-2 focus-within:ring-1 focus-within:ring-[#00a884]">
               <Search className="w-4 h-4 text-[#8696a0] mr-2.5 shrink-0" />
               <input
                 type="text"
-                placeholder="Search or start a new chat"
+                placeholder="Search unread chats"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-transparent text-xs font-medium outline-none text-[#d1d7db] placeholder:text-[#8696a0]"
+                className="w-full bg-transparent text-xs font-normal outline-none text-[#e9edef] placeholder:text-[#8696a0]"
               />
               {searchQuery && (
-                <button onClick={() => setSearchQuery('')} className="text-[#8696a0] hover:text-white">
+                <button onClick={() => setSearchQuery('')} className="text-[#8696a0] hover:text-white cursor-pointer">
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
           </div>
 
-          {/* Filter Chips Bar */}
-          <div className="px-2.5 pb-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 border-b border-[#202c33]">
-            {(['dms', 'teams', 'channels', 'unread'] as const).map((filterKey) => (
+          {/* Filter Chips Bar (WhatsApp Dark Mode Pill Chips) */}
+          <div className="px-3 pb-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 border-b border-[#202c33]/80">
+            {[
+              { id: 'all', label: 'All', count: 0 },
+              { id: 'unread', label: 'Unread', count: totalUnreadCount },
+              { id: 'dms', label: 'Direct', count: dmUnreadCount },
+              { id: 'teams', label: 'Groups', count: teamUnreadCount },
+              { id: 'channels', label: 'Channels', count: channelUnreadCount },
+            ].map((f) => (
               <button
-                key={filterKey}
+                key={f.id}
                 onClick={() => {
-                  setChatFilter(filterKey);
-                  if (filterKey === 'dms') setNavRailTab('chats');
-                  if (filterKey === 'teams') setNavRailTab('teams');
-                  if (filterKey === 'channels') setNavRailTab('channels');
+                  setChatFilter(f.id as any);
+                  if (f.id === 'dms') setNavRailTab('chats');
+                  if (f.id === 'teams') setNavRailTab('teams');
+                  if (f.id === 'channels') setNavRailTab('channels');
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
-                  chatFilter === filterKey
-                    ? 'bg-[#0a332c] text-[#00a884] border border-[#00a884]/40 font-bold'
+                  chatFilter === f.id
+                    ? 'bg-[#103629] text-[#25D366] border border-[#25D366]/40 font-bold'
                     : 'bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]'
                 }`}
               >
-                {filterKey === 'dms' && <MessageSquare className="w-3.5 h-3.5" />}
-                {filterKey === 'teams' && <Users className="w-3.5 h-3.5" />}
-                {filterKey === 'channels' && <Hash className="w-3.5 h-3.5" />}
-                {filterKey === 'unread' && <AlertCircle className="w-3.5 h-3.5" />}
-                <span>
-                  {filterKey === 'dms'
-                    ? 'Direct Messages'
-                    : filterKey === 'teams'
-                    ? 'Team Chats'
-                    : filterKey === 'channels'
-                    ? 'Team Channels'
-                    : `Unread (${totalUnreadCount})`}
-                </span>
-                {filterKey === 'dms' && dmUnreadCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-[#00a884] text-[#111b21] text-[9px] font-black flex items-center justify-center">
-                    {dmUnreadCount}
-                  </span>
-                )}
-                {filterKey === 'teams' && teamUnreadCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-[#00a884] text-[#111b21] text-[9px] font-black flex items-center justify-center">
-                    {teamUnreadCount}
-                  </span>
-                )}
-                {filterKey === 'channels' && channelUnreadCount > 0 && (
-                  <span className="w-4 h-4 rounded-full bg-[#00a884] text-[#111b21] text-[9px] font-black flex items-center justify-center">
-                    {channelUnreadCount}
+                <span>{f.label}</span>
+                {f.count > 0 && (
+                  <span className={`text-[11px] font-black ${chatFilter === f.id ? 'text-[#25D366]' : 'text-[#8696a0]'}`}>
+                    {f.count}
                   </span>
                 )}
               </button>
@@ -2357,7 +2377,7 @@ export default function Messages() {
                         <span className="truncate">{item.previewText}</span>
                       </p>
                       {item.unreadCount > 0 && (
-                        <span className="ml-2 px-1.5 py-0.5 bg-[#00a884] text-[#111b21] text-[10px] font-black rounded-full shrink-0">
+                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-[#25D366] text-[#0b141a] text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-xs">
                           {item.unreadCount}
                         </span>
                       )}
@@ -2391,6 +2411,106 @@ export default function Messages() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Floating Action Button (Mobile WhatsApp Style) */}
+          <button
+            onClick={() => {
+              if (chatFilter === 'channels') {
+                setIsCreateChannelOpen(true);
+              } else {
+                setIsAddContactModalOpen(true);
+              }
+            }}
+            className="md:hidden absolute bottom-18 right-4 w-14 h-14 rounded-2xl bg-[#00a884] hover:bg-[#25D366] text-[#0b141a] shadow-2xl flex items-center justify-center cursor-pointer transition-transform active:scale-95 z-20"
+            title="New Chat"
+          >
+            <MessageSquarePlus className="w-6 h-6 stroke-[2.5]" />
+          </button>
+
+          {/* Mobile WhatsApp Bottom Navigation (md:hidden) */}
+          <div className="md:hidden border-t border-[#202c33] bg-[#111b21] py-2 px-3 flex items-center justify-around shrink-0 z-30 select-none">
+            <button
+              onClick={() => { setChatFilter('all'); setNavRailTab('chats'); }}
+              className="flex flex-col items-center gap-1 cursor-pointer"
+            >
+              <div className={`px-4 py-1 rounded-full relative transition-all ${
+                navRailTab === 'chats' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
+              }`}>
+                <MessageSquare className="w-5 h-5" />
+                {totalUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
+                    {totalUnreadCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[11px] ${navRailTab === 'chats' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
+                Chats
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setChatFilter('teams'); setNavRailTab('teams'); }}
+              className="flex flex-col items-center gap-1 cursor-pointer"
+            >
+              <div className={`px-4 py-1 rounded-full relative transition-all ${
+                navRailTab === 'teams' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
+              }`}>
+                <Users className="w-5 h-5" />
+                {teamUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
+                    {teamUnreadCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[11px] ${navRailTab === 'teams' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
+                Groups
+              </span>
+            </button>
+
+            <button
+              onClick={() => { setChatFilter('channels'); setNavRailTab('channels'); }}
+              className="flex flex-col items-center gap-1 cursor-pointer"
+            >
+              <div className={`px-4 py-1 rounded-full relative transition-all ${
+                navRailTab === 'channels' ? 'bg-[#103629] text-[#25D366]' : 'text-[#8696a0]'
+              }`}>
+                <Hash className="w-5 h-5" />
+                {channelUnreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#25D366] text-[#0b141a] text-[10px] font-black rounded-full">
+                    {channelUnreadCount}
+                  </span>
+                )}
+              </div>
+              <span className={`text-[11px] ${navRailTab === 'channels' ? 'font-bold text-[#e9edef]' : 'text-[#8696a0]'}`}>
+                Channels
+              </span>
+            </button>
+
+            <button
+              onClick={() => {
+                const target = contacts.find((c) => c.id !== currentUid && c.id !== AI_ASSISTANT_ID);
+                if (target) {
+                  setActiveCall({
+                    type: 'audio',
+                    contactName: target.name,
+                    contactAvatar: target.profilePhoto,
+                    status: 'ringing',
+                    duration: 0
+                  });
+                } else {
+                  showToast('No contacts available for call');
+                }
+              }}
+              className="flex flex-col items-center gap-1 cursor-pointer text-[#8696a0] hover:text-[#e9edef]"
+            >
+              <div className="px-4 py-1 rounded-full">
+                <Phone className="w-5 h-5" />
+              </div>
+              <span className="text-[11px] text-[#8696a0]">
+                Calls
+              </span>
+            </button>
           </div>
         </div>
       </div>
@@ -2482,14 +2602,16 @@ export default function Messages() {
             {/* Active Chat Header */}
             <div className="h-15 border-b border-[#2a3942] px-4 sm:px-5 flex items-center justify-between shrink-0 bg-[#202c33] z-10">
               <div className="flex items-center gap-3 min-w-0">
-                {/* Mobile Back Button (Requirement 35) */}
+                {/* Mobile Back Button (WhatsApp Style) */}
                 <button
-                  onClick={() => setMobileView('list')}
-                  className="flex items-center gap-1 p-1.5 rounded-lg bg-[#2a3942] text-[#d1d7db] md:hidden cursor-pointer"
+                  onClick={() => {
+                    setMobileView('list');
+                    setSelectedConversationId(null);
+                  }}
+                  className="p-1 -ml-1 text-[#d1d7db] hover:text-[#00a884] md:hidden cursor-pointer"
                   title="Back to conversations"
                 >
-                  <ChevronLeft className="w-5 h-5" />
-                  <span className="text-xs font-bold">Chats</span>
+                  <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
                 </button>
 
                 {/* Avatar and Channel/Team/Contact Details */}
