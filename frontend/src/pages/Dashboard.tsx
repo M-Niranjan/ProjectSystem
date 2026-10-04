@@ -1310,66 +1310,197 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
             </div>
           )}
 
-          {/* My Tasks & Workflow Table */}
-          <div className="bg-white dark:bg-[#0e131f]/85 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-5 shadow-xs dark:shadow-lg space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <CheckSquare className="w-4 h-4 text-blue-600 dark:text-blue-400" /> My Assigned Tasks & Deliverables
-              </h3>
+          {/* My Tasks & Workflow: Option 1 Linear Executive Obsidian */}
+          <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-blue-500/25 rounded-2xl p-5 sm:p-6 shadow-sm dark:shadow-[0_4px_24px_rgba(0,0,0,0.4)] space-y-5 relative overflow-hidden">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-blue-600/15 border border-blue-500/30 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
+                  <CheckSquare className="w-4 h-4" />
+                </div>
+                <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white tracking-tight">
+                  My Assigned Tasks & Deliverables
+                </h3>
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 border border-slate-200 dark:border-slate-700/60 tracking-wider">
+                  {activeCount} ACTIVE
+                </span>
+              </div>
               <button
                 onClick={() => setView('my-tasks')}
-                className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                className="group text-xs font-semibold text-blue-600 dark:text-blue-400 hover:text-blue-500 transition-colors flex items-center gap-1 cursor-pointer self-start sm:self-auto"
               >
-                View All Tasks →
+                <span>View All Tasks</span>
+                <span className="transition-transform group-hover:translate-x-1">→</span>
               </button>
             </div>
 
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/50">
+            {/* Task Cards List */}
+            <div className="space-y-3.5">
               {myTasks.length === 0 ? (
-                <p className="text-xs text-slate-400 py-8 text-center">No tasks assigned currently.</p>
+                <div className="py-12 text-center text-slate-400 space-y-2 bg-slate-50/50 dark:bg-[#12192b]/40 rounded-xl border border-dashed border-slate-200 dark:border-slate-800">
+                  <CheckSquare className="w-8 h-8 mx-auto text-slate-400/60 mb-2" />
+                  <p className="text-xs font-semibold text-slate-600 dark:text-slate-300">No tasks assigned currently</p>
+                  <p className="text-[11px] text-slate-400">New assignments from project leads will appear here.</p>
+                </div>
               ) : (
-                myTasks.map(t => (
-                  <div key={t.id} className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/10 dark:text-blue-400 dark:border-blue-500/20 uppercase">
-                          {t.project?.name || 'Project Workspace'}
-                        </span>
-                        <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
-                          t.status === 'CODE_REVIEW'
-                            ? 'bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30'
-                            : t.status === 'COMPLETED'
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30'
-                            : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-500/15 dark:text-blue-400 dark:border-blue-500/30'
-                        }`}>
-                          {t.status.replace(/_/g, ' ')}
-                        </span>
-                      </div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white mt-1.5">{t.title}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 line-clamp-1">{t.description}</p>
-                    </div>
+                myTasks.map(t => {
+                  const isReview = t.status === 'CODE_REVIEW';
+                  const isCompleted = t.status === 'COMPLETED';
+                  const isProgress = t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED';
+                  const isHighPriority = t.priority === 'HIGH' || t.priority === 'URGENT';
 
-                    <div className="flex items-center gap-3 shrink-0">
-                      {t.status === 'IN_PROGRESS' || t.status === 'ACCEPTED' || t.status === 'TODO' || t.status === 'TO_DO' ? (
-                        <button
-                          onClick={() => handleSubmitForReview(t.id)}
-                          style={{ backgroundColor: '#2563eb', boxShadow: '0 4px 14px 0 rgba(37, 99, 235, 0.35)' }}
-                          className="px-4 py-2 hover:brightness-110 text-white rounded-xl text-xs font-semibold shadow cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
-                        >
-                          Submit for Review <ArrowRight className="w-3.5 h-3.5" />
-                        </button>
-                      ) : t.status === 'CODE_REVIEW' ? (
-                        <span className="text-[10px] font-bold px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-500/15 dark:text-amber-300 rounded-xl dark:border-amber-500/30">
-                          ⏳ Pending Team Lead Review
-                        </span>
-                      ) : (
-                        <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 px-2.5 py-1 rounded-full">
-                          ✓ Deliverable Passed
-                        </span>
-                      )}
+                  return (
+                    <div
+                      key={t.id}
+                      onClick={() => setView('my-tasks')}
+                      className={`relative overflow-hidden rounded-xl border transition-all duration-200 group bg-slate-50/70 dark:bg-[#12192b]/85 hover:shadow-lg p-4 sm:p-5 cursor-pointer ${
+                        isReview
+                          ? 'border-amber-500/30 hover:border-amber-500/50 dark:border-amber-500/25'
+                          : isCompleted
+                          ? 'border-emerald-500/30 hover:border-emerald-500/50 dark:border-emerald-500/25'
+                          : 'border-slate-200 dark:border-slate-800 hover:border-blue-500/40 dark:hover:border-blue-500/40'
+                      }`}
+                    >
+                      {/* Left Accent Glow Rail */}
+                      <div
+                        className={`absolute left-0 top-0 bottom-0 w-1.5 rounded-l-xl ${
+                          isReview
+                            ? 'bg-amber-500 shadow-[0_0_12px_rgba(245,158,11,0.5)]'
+                            : isCompleted
+                            ? 'bg-emerald-500 shadow-[0_0_12px_rgba(16,185,129,0.5)]'
+                            : isProgress
+                            ? 'bg-blue-500 shadow-[0_0_12px_rgba(59,130,246,0.5)]'
+                            : 'bg-slate-400'
+                        }`}
+                      />
+
+                      {/* Top Badges & Priority Row */}
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {/* Project Tag */}
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 uppercase tracking-wider">
+                            <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                            <span>{t.project?.name || 'Project Workspace'}</span>
+                          </span>
+
+                          {/* Stage / Status Tag */}
+                          <span
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${
+                              isReview
+                                ? 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20'
+                                : isCompleted
+                                ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/20'
+                                : 'bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20'
+                            }`}
+                          >
+                            {t.status.replace(/_/g, ' ')}
+                          </span>
+                        </div>
+
+                        {/* Priority Pill */}
+                        <div className="flex items-center gap-1.5">
+                          {isHighPriority ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 uppercase tracking-wider">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                              <span>High Prio</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-[10px] font-bold bg-slate-500/10 text-slate-600 dark:text-slate-400 border border-slate-500/20 uppercase tracking-wider">
+                              <span>Normal</span>
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Title & Description */}
+                      <h4 className="text-sm sm:text-base font-bold text-slate-900 dark:text-slate-100 mt-2.5 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {t.title}
+                      </h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-400 mt-1 line-clamp-2 leading-relaxed">
+                        {t.description || 'No additional description provided for this deliverable milestone.'}
+                      </p>
+
+                      {/* Divider */}
+                      <div className="my-3.5 border-t border-slate-200/70 dark:border-slate-800/80" />
+
+                      {/* Metadata & Actions Bottom Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+                        <div className="flex items-center gap-3 flex-wrap">
+                          {isReview ? (
+                            <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 shadow-xs">
+                              <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                              <span>Pending Team Lead Review</span>
+                            </span>
+                          ) : isCompleted ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border border-emerald-500/30 shadow-xs">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>Deliverable Passed</span>
+                            </span>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSubmitForReview(t.id);
+                              }}
+                              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/25 cursor-pointer transition-all flex items-center gap-1.5 active:scale-95"
+                            >
+                              <span>Submit for Review</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* Due Date Indicator */}
+                          <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>
+                              {t.dueDate ? `Due ${new Date(t.dueDate).toLocaleDateString([], { month: 'short', day: 'numeric' })}` : 'Active Sprint'}
+                            </span>
+                          </span>
+                        </div>
+
+                        {/* Right Area: Reviewer Info or View Details */}
+                        <div className="flex items-center gap-2">
+                          {isReview ? (
+                            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/60 text-xs text-slate-600 dark:text-slate-300">
+                              <span className="w-5 h-5 rounded-full bg-indigo-600 text-white font-bold text-[9px] flex items-center justify-center ring-2 ring-indigo-500/30">
+                                TL
+                              </span>
+                              <span>Reviewer: Lead Arch</span>
+                            </div>
+                          ) : isCompleted ? (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setView('my-tasks');
+                              }}
+                              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-blue-600 dark:text-blue-400 hover:bg-blue-500/10 transition-colors flex items-center gap-1"
+                            >
+                              <span>View Details</span>
+                              <span>→</span>
+                            </button>
+                          ) : (
+                            <span className="text-xs text-slate-400 font-medium">In Development</span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Smooth Progress Indicator Meter */}
+                      <div className="w-full h-1.5 rounded-full bg-slate-200/80 dark:bg-slate-800 overflow-hidden mt-3.5">
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            isCompleted
+                              ? 'w-full bg-emerald-500'
+                              : isReview
+                              ? 'w-3/4 bg-gradient-to-r from-amber-500 to-amber-400'
+                              : isProgress
+                              ? 'w-1/2 bg-gradient-to-r from-blue-600 to-indigo-500'
+                              : 'w-1/4 bg-slate-400'
+                          }`}
+                        />
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
