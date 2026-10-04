@@ -1,5 +1,6 @@
 import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight, Menu, Building2, ChevronDown, User as UserIcon, LogOut } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
@@ -20,6 +21,7 @@ interface Notification {
 }
 
 export default function Navbar() {
+  const navigate = useNavigate();
   const { 
     darkMode, 
     toggleTheme, 
@@ -593,14 +595,18 @@ export default function Navbar() {
             <div className="h-5 w-px bg-slate-200 dark:bg-white/10 flex-shrink-0" />
             <button
               ref={profileButtonRef}
-              onClick={() => setShowProfileDropdown(!showProfileDropdown)}
+              onClick={() => {
+                setShowProfileDropdown(false);
+                navigate('/profile');
+                setView('profile');
+              }}
               className={`w-8.5 h-8.5 flex items-center justify-center rounded-full cursor-pointer transition-all flex-shrink-0 ${
-                showProfileDropdown || activeView === 'profile'
+                activeView === 'profile'
                   ? 'ring-2 ring-blue-500 bg-blue-500/10'
                   : 'hover:opacity-85'
               }`}
-              title="User Account & Workspace Menu"
-              aria-label="User Account & Workspace Menu"
+              title="My Profile (About)"
+              aria-label="My Profile (About)"
             >
               <img
                 src={resolveAvatar(user.profilePhoto, user.name, user.gender)}

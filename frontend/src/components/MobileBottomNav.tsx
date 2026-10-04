@@ -50,7 +50,6 @@ export default function MobileBottomNav() {
   const isChatActive = location.pathname === '/messages';
   const isSettingsActive =
     location.pathname.startsWith('/settings') ||
-    location.pathname.startsWith('/profile') ||
     location.pathname.startsWith('/organization');
 
   const activeTabIndex = isDashboardActive
