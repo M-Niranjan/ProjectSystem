@@ -14,7 +14,6 @@ import {
   MessageSquare,
   BarChart3,
   UserCircle,
-  User,
   LogOut,
   ChevronLeft,
   ChevronRight,
@@ -27,7 +26,6 @@ import {
   Building2,
   Network,
   ScrollText,
-  Settings2,
   UserPlus,
   X
 } from 'lucide-react';
@@ -138,8 +136,6 @@ export default function Sidebar() {
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
-    { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: Settings2 },
   ];
 
   const employeeMenuItems: SidebarItem[] = [
@@ -153,8 +149,6 @@ export default function Sidebar() {
     { name: 'Calendar', view: 'calendar', icon: Calendar },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
-    { name: 'Profile', view: 'profile', icon: User },
-    { name: 'Settings', view: 'settings', icon: Settings2 },
   ];
 
   const allowedItems = user?.role === 'ROLE_ADMIN'
