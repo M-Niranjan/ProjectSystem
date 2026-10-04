@@ -14,7 +14,6 @@ import {
   MessageSquare,
   BarChart3,
   UserCircle,
-  LogOut,
   ChevronLeft,
   ChevronRight,
   Sparkles,
@@ -79,7 +78,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuthStore();
-  const { sidebarExpanded, toggleSidebar, activeView, setView, setSignOutModalOpen } = useUIStore();
+  const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
 
   useEffect(() => {
@@ -157,9 +156,6 @@ export default function Sidebar() {
     ? teamLeadMenuItems
     : employeeMenuItems;
 
-  const handleLogout = () => {
-    setSignOutModalOpen(true);
-  };
 
   const isExpandedOrDrawer = sidebarExpanded;
 
@@ -308,69 +304,39 @@ export default function Sidebar() {
         })}
         </nav>
 
-        {/* Footer: User Profile & Logout - Strictly pinned and always visible above safe-area */}
-        <div className="shrink-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] space-y-2 border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
+        {/* Footer: User Profile - Non-clickable info badge */}
+        <div className="shrink-0 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))] border-t border-slate-200/50 dark:border-white/5 bg-slate-50/50 dark:bg-black/20">
           {user && (
             isExpandedOrDrawer ? (
-              <button
-                type="button"
-                onClick={() => {
-                  if (location.pathname !== '/profile') {
-                    navigate('/profile');
-                  }
-                  if (isMobileOrTablet) toggleSidebar();
-                }}
-                className={`w-full p-2 rounded-xl flex items-center gap-3 overflow-hidden border transition-all duration-200 ease-out text-left cursor-pointer group ${
-                  location.pathname === '/profile'
-                    ? 'bg-slate-100 dark:bg-white/10 text-slate-900 dark:text-white border-slate-200/80 dark:border-white/15 shadow-sm dark:shadow-black/30'
-                    : 'border-transparent bg-slate-50 dark:bg-white/5 hover:bg-slate-100/70 dark:hover:bg-white/10'
-                }`}
-                title="View My Profile"
+              <div
+                className="w-full p-2 rounded-xl flex items-center gap-3 overflow-hidden border border-transparent bg-slate-50 dark:bg-white/5 select-none"
               >
                 <img
                   src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
-                  className="w-9 h-9 rounded-lg object-cover flex-shrink-0 ring-1 ring-slate-200 dark:ring-white/10 group-hover:scale-105 transition-transform"
+                  className="w-9 h-9 rounded-lg object-cover flex-shrink-0 ring-1 ring-slate-200 dark:ring-white/10"
                 />
                 <div className="truncate flex-1">
-                  <p className={`text-[13.5px] font-bold truncate ${location.pathname === '/profile' ? 'text-slate-900 dark:text-white' : 'text-slate-900 dark:text-zinc-100'}`}>{user.name}</p>
+                  <p className="text-[13.5px] font-bold truncate text-slate-900 dark:text-zinc-100">{user.name}</p>
                   <p className="text-[10.5px] uppercase tracking-wider font-mono truncate font-semibold text-slate-500 dark:text-zinc-400">{formatRoleName(user.role)}</p>
                 </div>
-              </button>
+              </div>
             ) : (
-              <button
-                type="button"
-                onClick={() => {
-                  setView('profile');
-                  if (isMobileOrTablet) toggleSidebar();
-                }}
-                className="w-full flex justify-center group relative cursor-pointer"
-                title={`View Profile: ${user.name}`}
+              <div
+                className="w-full flex justify-center group relative select-none"
+                title={`${user.name} (${formatRoleName(user.role, 'title')})`}
               >
                 <img
                   src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                   alt="avatar"
-                  className="w-9 h-9 rounded-lg object-cover ring-1 ring-white/10 hover:ring-2 hover:ring-cyan-500 transition-all"
+                  className="w-9 h-9 rounded-lg object-cover ring-1 ring-white/10"
                 />
                 <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
                   {user.name} ({formatRoleName(user.role, 'title')})
                 </div>
-              </button>
+              </div>
             )
           )}
-          
-          <button
-            onClick={handleLogout}
-            title="Sign Out"
-            className={`w-full flex items-center ${
-              isExpandedOrDrawer ? 'gap-2.5 px-3 py-2 justify-start' : 'justify-center py-2'
-            } rounded-xl text-rose-500 hover:text-rose-400 bg-rose-500/10 hover:bg-rose-500/15 border border-rose-500/20 text-[13px] font-bold transition-all cursor-pointer group relative shadow-xs`}
-          >
-            <LogOut className="w-4 h-4 text-rose-500 flex-shrink-0" />
-            {isExpandedOrDrawer && (
-              <span>Sign Out</span>
-            )}
-          </button>
         </div>
       </motion.aside>
     </>
