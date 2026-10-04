@@ -135,7 +135,7 @@ export default function Profile() {
         {/* Quick Navigate to Settings Pill */}
         <button
           type="button"
-          onClick={() => navigate('/settings?tab=account')}
+          onClick={() => navigate('/settings?tab=account&edit=true')}
           className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-white/10 border border-slate-200/80 dark:border-white/10 text-xs font-bold text-slate-700 dark:text-slate-200 hover:text-blue-600 dark:hover:text-cyan-400 shadow-2xs hover:shadow-xs transition-all shrink-0 cursor-pointer"
           title="Edit Profile in Settings"
         >
@@ -301,7 +301,7 @@ export default function Profile() {
 
           <button
             type="button"
-            onClick={() => navigate('/settings?tab=account')}
+            onClick={() => navigate('/settings?tab=account&edit=true')}
             className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
           >
             <SettingsIcon className="w-4 h-4" />
