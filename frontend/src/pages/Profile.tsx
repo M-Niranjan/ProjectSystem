@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import {
   User,
   Mail,
@@ -12,38 +12,24 @@ import {
   ArrowRight,
   Sun,
   Moon,
-  Shield,
-  Sliders,
-  CheckCircle2,
   Briefcase,
   IdCard,
   Settings as SettingsIcon,
-  LogOut,
-  Laptop,
-  Smartphone,
-  ExternalLink,
-  ShieldCheck,
-  Palette,
-  Globe
+  LogOut
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { formatRoleName, normalizeRole } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
 
-type ProfileTab = 'info' | 'security' | 'preferences';
-
 export default function Profile() {
   const navigate = useNavigate();
   const { user, activeOrganization } = useAuthStore();
-  const { darkMode, toggleTheme, themeMode, setSignOutModalOpen } = useUIStore();
+  const { darkMode, toggleTheme, setSignOutModalOpen } = useUIStore();
 
   const role = normalizeRole(user?.role);
   const isAdmin = role === 'ROLE_ADMIN';
   const isTeamLead = role === 'ROLE_MANAGER';
-
-  // Active Tab state
-  const [activeTab, setActiveTab] = useState<ProfileTab>('info');
 
   // Display Fields
   const name = user?.name || 'Niranjan S M';
@@ -75,7 +61,7 @@ export default function Profile() {
         </button>
 
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-slate-900 dark:text-white font-heading">
-          About Profile
+          My Profile
         </h1>
 
         <div className="flex items-center gap-1">
@@ -140,399 +126,174 @@ export default function Profile() {
       </div>
 
       {/* ========================================================================= */}
-      {/* 3. HORIZONTAL TAB NAVIGATION                                              */}
+      {/* 3. PERSONAL INFORMATION CARD (About Display)                              */}
       {/* ========================================================================= */}
-      <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-white/10 px-2 pt-1">
-        {[
-          { id: 'info', label: 'Profile Information', icon: User },
-          { id: 'security', label: 'Account & Security', icon: Shield },
-          { id: 'preferences', label: 'Preferences', icon: Sliders },
-        ].map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              type="button"
-              onClick={() => setActiveTab(tab.id as ProfileTab)}
-              className={`pb-3 px-2 flex items-center gap-2 text-xs font-bold transition-all relative cursor-pointer ${
-                isActive
-                  ? 'text-blue-600 dark:text-cyan-400'
-                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-              }`}
-            >
-              <Icon className="w-4 h-4 shrink-0" />
-              <span className="truncate">{tab.label}</span>
+      <motion.div
+        initial={{ opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.16 }}
+        className="space-y-4"
+      >
+        {/* Personal Information Container Card */}
+        <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+          {/* Card Header without edit button */}
+          <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/10 pb-3.5">
+            <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <User className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                Personal Information
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                Overview of your identity and organization credentials
+              </p>
+            </div>
+          </div>
 
-              {/* Active Tab Underline Indicator */}
-              {isActive && (
-                <motion.div
-                  layoutId="profileActiveTabIndicator"
-                  className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-blue-600 dark:bg-cyan-400 rounded-full"
-                />
-              )}
-            </button>
-          );
-        })}
-      </div>
+          {/* Vertical Display Rows with Colored Pastel Squircle Badges */}
+          <div className="space-y-3 pt-1">
+            {/* 1. Full Name */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <User className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Full Name</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
+                  {name}
+                </div>
+              </div>
+            </div>
 
-      {/* ========================================================================= */}
-      {/* 4. TAB CONTENT PANELS                                                     */}
-      {/* ========================================================================= */}
-      <AnimatePresence mode="wait">
-        {/* --------------------------------------------------------------------- */}
-        {/* TAB 1: PROFILE INFORMATION (About Display)                            */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'info' && (
-          <motion.div
-            key="tab-info"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16 }}
-            className="space-y-4"
+            {/* 2. Employee ID */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                <IdCard className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee ID</span>
+              </div>
+              <div className="flex-1 min-w-0 relative">
+                <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-mono font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
+                  <span>{employeeId}</span>
+                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Email Address */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <Mail className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Email Address</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
+                  {email}
+                </div>
+              </div>
+            </div>
+
+            {/* 4. Phone Number */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                <Phone className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Phone Number</span>
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
+                  {phone}
+                </div>
+              </div>
+            </div>
+
+            {/* 5. Department */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                <Building2 className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Department</span>
+              </div>
+              <div className="flex-1 min-w-0 relative">
+                <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
+                  <span>{department}</span>
+                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            {/* 6. Job Title */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <Briefcase className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Job Title</span>
+              </div>
+              <div className="flex-1 min-w-0 relative">
+                <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
+                  <span>{designation}</span>
+                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </div>
+              </div>
+            </div>
+
+            {/* 7. Joining Date */}
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+                <Calendar className="w-4.5 h-4.5" />
+              </div>
+              <div className="w-28 sm:w-32 shrink-0">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Joining Date</span>
+              </div>
+              <div className="flex-1 min-w-0 relative">
+                <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
+                  <span>{joiningDate}</span>
+                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Change Profile CTA -> Directs to Settings */}
+        <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 shadow-xs space-y-3">
+          <div className="flex items-start gap-3">
+            <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
+              <SettingsIcon className="w-4.5 h-4.5" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
+                Need to change your profile information?
+              </h4>
+              <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
+                Personal credentials, phone number, password updates, and workspace configuration are managed in Settings.
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/settings?tab=account')}
+            className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
           >
-            {/* Personal Information Container Card */}
-            <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              {/* Card Header without edit button */}
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/10 pb-3.5">
-                <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    Personal Information
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Overview of your identity and organization credentials
-                  </p>
-                </div>
-              </div>
-
-              {/* Vertical Display Rows with Colored Pastel Squircle Badges */}
-              <div className="space-y-3 pt-1">
-                {/* 1. Full Name */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
-                    <User className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Full Name</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
-                      {name}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 2. Employee ID */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                    <IdCard className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee ID</span>
-                  </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-mono font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
-                      <span>{employeeId}</span>
-                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. Email Address */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                    <Mail className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Email Address</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
-                      {email}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 4. Phone Number */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
-                    <Phone className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Phone Number</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-semibold text-slate-900 dark:text-white truncate">
-                      {phone}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 5. Department */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                    <Building2 className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Department</span>
-                  </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
-                      <span>{department}</span>
-                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 6. Job Title */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                    <Briefcase className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Job Title</span>
-                  </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
-                      <span>{designation}</span>
-                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </div>
-                  </div>
-                </div>
-
-                {/* 7. Joining Date */}
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
-                    <Calendar className="w-4.5 h-4.5" />
-                  </div>
-                  <div className="w-28 sm:w-32 shrink-0">
-                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Joining Date</span>
-                  </div>
-                  <div className="flex-1 min-w-0 relative">
-                    <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
-                      <span>{joiningDate}</span>
-                      <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Change Profile CTA -> Directs to Settings */}
-            <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-blue-50/70 dark:bg-blue-500/10 border border-blue-200/70 dark:border-blue-500/20 shadow-xs space-y-3">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-blue-600 text-white flex items-center justify-center shrink-0 shadow-xs mt-0.5">
-                  <SettingsIcon className="w-4.5 h-4.5" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">
-                    Need to change your profile information?
-                  </h4>
-                  <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 mt-0.5 leading-relaxed">
-                    Personal credentials, phone number, password updates, and workspace configuration are managed in Settings.
-                  </p>
-                </div>
-              </div>
-
-              <button
-                type="button"
-                onClick={() => navigate('/settings?tab=account')}
-                className="w-full py-3 px-5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs sm:text-sm shadow-md shadow-blue-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-              >
-                <SettingsIcon className="w-4 h-4" />
-                <span>Go to Settings to Edit Profile</span>
-                <ArrowRight className="w-4 h-4 ml-0.5" />
-              </button>
-            </div>
-          </motion.div>
-        )}
-
-        {/* --------------------------------------------------------------------- */}
-        {/* TAB 2: ACCOUNT & SECURITY                                             */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'security' && (
-          <motion.div
-            key="tab-security"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16 }}
-            className="space-y-4"
-          >
-            <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/10 pb-3.5">
-                <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                  <ShieldCheck className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    Security & Credentials Overview
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Your account security safeguards and active sessions
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-3 pt-1">
-                {/* Password status */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
-                      <Lock className="w-4 h-4" />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Account Password</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Protected • Encrypted</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    Active
-                  </span>
-                </div>
-
-                {/* 2FA Status */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Two-Factor Authentication</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Configured in Security Settings</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
-                    Available
-                  </span>
-                </div>
-
-                {/* Active Session */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-9 h-9 rounded-xl bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
-                      <Laptop className="w-4 h-4" />
-                    </div>
-                    <div className="truncate">
-                      <p className="text-xs font-bold text-slate-800 dark:text-slate-200">Current Device Session</p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Windows 11 / Chrome • 192.168.1.45</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shrink-0">
-                    Online
-                  </span>
-                </div>
-              </div>
-
-              {/* Security CTA */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings?tab=security')}
-                  className="w-full py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-                >
-                  <Shield className="w-4 h-4" />
-                  <span>Manage Security & Passwords in Settings</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
-        {/* --------------------------------------------------------------------- */}
-        {/* TAB 3: PREFERENCES                                                    */}
-        {/* --------------------------------------------------------------------- */}
-        {activeTab === 'preferences' && (
-          <motion.div
-            key="tab-preferences"
-            initial={{ opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -6 }}
-            transition={{ duration: 0.16 }}
-            className="space-y-4"
-          >
-            <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
-              <div className="flex items-center gap-3 border-b border-slate-100 dark:border-white/10 pb-3.5">
-                <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
-                  <Sliders className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-                    System & Interface Preferences
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    Your personal workspace display and regional settings
-                  </p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {/* Theme Mode */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03] flex items-center justify-between">
-                  <div>
-                    <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Theme Mode</span>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
-                      {darkMode ? 'Dark Mode' : 'Light Mode'}
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={toggleTheme}
-                    className="p-2 rounded-lg bg-slate-200/60 dark:bg-white/10 text-slate-700 dark:text-slate-200 hover:text-blue-600 cursor-pointer"
-                  >
-                    {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-600" />}
-                  </button>
-                </div>
-
-                {/* System Language */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03]">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Language</span>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    English (US)
-                  </span>
-                </div>
-
-                {/* Time Zone */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03]">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Time Zone</span>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    Asia/Kolkata (IST +5:30)
-                  </span>
-                </div>
-
-                {/* Default Dashboard */}
-                <div className="p-3.5 rounded-xl border border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.03]">
-                  <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 block">Default View</span>
-                  <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
-                    Overview
-                  </span>
-                </div>
-              </div>
-
-              {/* Preferences CTA */}
-              <div className="pt-2">
-                <button
-                  type="button"
-                  onClick={() => navigate('/settings?tab=appearance')}
-                  className="w-full py-3 px-4 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100 font-bold text-xs shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-                >
-                  <Palette className="w-4 h-4" />
-                  <span>Customize Preferences in Settings</span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            <SettingsIcon className="w-4 h-4" />
+            <span>Go to Settings to Edit Profile</span>
+            <ArrowRight className="w-4 h-4 ml-0.5" />
+          </button>
+        </div>
+      </motion.div>
 
       {/* ========================================================================= */}
-      {/* 5. SIGN OUT ACTION                                                        */}
+      {/* 4. SIGN OUT ACTION                                                        */}
       {/* ========================================================================= */}
       <div className="pt-2">
         <button
