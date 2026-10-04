@@ -40,6 +40,7 @@ interface User {
   email: string;
   name: string;
   role: 'ROLE_ADMIN' | 'ROLE_MANAGER' | 'ROLE_EMPLOYEE';
+  employeeId?: string;
   designation?: string;
   department?: string;
   experience?: number;
