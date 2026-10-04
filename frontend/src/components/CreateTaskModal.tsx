@@ -8,12 +8,14 @@ import { useScrollLock } from '../hooks/useScrollLock';
 import LuxurySelect from './common/LuxurySelect';
 
 export default function CreateTaskModal() {
-  const { taskModalOpen, setTaskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask } = useUIStore();
+  const { taskModalOpen, setTaskModalOpen, selectedProjectId, preselectedStatus, isTaskEditMode, editingTask, showToast } = useUIStore();
 
   // Lock background scroll when Create Task modal is open
   useScrollLock(taskModalOpen);
 
   const [title, setTitle] = useState('');
+  const [titleError, setTitleError] = useState<string | null>(null);
+  const [shakeTitle, setShakeTitle] = useState(false);
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('TO_DO');
   const [priority, setPriority] = useState('MEDIUM');
@@ -113,7 +115,16 @@ export default function CreateTaskModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim() || !activeProjectId) return;
+    if (!title.trim()) {
+      setTitleError('Task title is required');
+      setShakeTitle(true);
+      setTimeout(() => setShakeTitle(false), 450);
+      return;
+    }
+    if (!activeProjectId) {
+      showToast('Please select a project for this task', 'warning');
+      return;
+    }
 
     setLoading(true);
     const payload = {
@@ -207,17 +218,47 @@ export default function CreateTaskModal() {
               <CheckSquare className="w-5 h-5 text-blue-500" /> {isTaskEditMode ? 'Edit Task Parameters' : 'Create Workspace Task'}
             </h2>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} noValidate className="space-y-4">
               <div className="space-y-1">
-                <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Task Title</label>
+                <div className="flex justify-between items-center">
+                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Task Title</label>
+                  <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400">Required</span>
+                </div>
                 <input
                   type="text"
-                  required
                   placeholder="e.g. Integrate Auth Token verification"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
+                  onChange={(e) => {
+                    setTitle(e.target.value);
+                    if (titleError) setTitleError(null);
+                  }}
+                  className={`w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 rounded-xl text-slate-900 dark:text-white outline-none font-semibold text-xs transition-all duration-200 ${
+                    titleError
+                      ? 'border border-rose-500/80 ring-2 ring-rose-500/25 dark:ring-rose-500/35 bg-rose-50/20 dark:bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.18)]'
+                      : 'border border-slate-200 dark:border-white/10 focus:border-blue-500'
+                  } ${shakeTitle ? 'animate-shake' : ''}`}
                 />
+                <AnimatePresence>
+                  {titleError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                      className="mt-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between shadow-xs"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                        </span>
+                        <span className="text-[11px] font-medium">{titleError}</span>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-600 dark:text-rose-300">
+                        Required
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className="space-y-1">

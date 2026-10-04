@@ -26,12 +26,14 @@ const CURRENCIES: CurrencyOption[] = [
 ];
 
 export default function CreateProjectModal() {
-  const { projectModalOpen, setProjectModalOpen } = useUIStore();
+  const { projectModalOpen, setProjectModalOpen, showToast } = useUIStore();
 
   // Lock background scroll when Create Project modal is open
   useScrollLock(projectModalOpen);
 
   const [name, setName] = useState('');
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [shakeName, setShakeName] = useState(false);
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState('ACTIVE');
   const [priority, setPriority] = useState('MEDIUM');
@@ -65,7 +67,12 @@ export default function CreateProjectModal() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      setNameError('Project name is required');
+      setShakeName(true);
+      setTimeout(() => setShakeName(false), 450);
+      return;
+    }
 
     setLoading(true);
     const payload = {
@@ -117,6 +124,8 @@ export default function CreateProjectModal() {
 
   const resetForm = () => {
     setName('');
+    setNameError(null);
+    setShakeName(false);
     setDescription('');
     setStatus('ACTIVE');
     setPriority('MEDIUM');
@@ -159,17 +168,47 @@ export default function CreateProjectModal() {
                 <Folder className="w-5 h-5 text-blue-500" /> Initialize New Project Workspace
               </h2>
 
-              <form onSubmit={handleSubmit} className="space-y-4">
+              <form onSubmit={handleSubmit} noValidate className="space-y-4">
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Project Name</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">Project Name</label>
+                    <span className="text-[9px] font-semibold text-rose-500 dark:text-rose-400">Required</span>
+                  </div>
                   <input
                     type="text"
-                    required
                     placeholder="e.g. Notion Sync Engine"
                     value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white outline-none focus:border-blue-500 transition-all font-semibold text-xs"
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (nameError) setNameError(null);
+                    }}
+                    className={`w-full px-4 py-2.5 bg-slate-50 dark:bg-white/5 rounded-xl text-slate-900 dark:text-white outline-none font-semibold text-xs transition-all duration-200 ${
+                      nameError
+                        ? 'border border-rose-500/80 ring-2 ring-rose-500/25 dark:ring-rose-500/35 bg-rose-50/20 dark:bg-rose-950/20 shadow-[0_0_15px_rgba(244,63,94,0.18)]'
+                        : 'border border-slate-200 dark:border-white/10 focus:border-blue-500'
+                    } ${shakeName ? 'animate-shake' : ''}`}
                   />
+                  <AnimatePresence>
+                    {nameError && (
+                      <motion.div
+                        initial={{ opacity: 0, y: -4, scale: 0.96 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                        className="mt-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 dark:bg-rose-500/15 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-semibold flex items-center justify-between shadow-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className="relative flex h-2 w-2 shrink-0">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                          </span>
+                          <span className="text-[11px] font-medium">{nameError}</span>
+                        </div>
+                        <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-600 dark:text-rose-300">
+                          Required
+                        </span>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <div className="space-y-1">

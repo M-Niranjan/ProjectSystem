@@ -5,7 +5,8 @@ import {
   Clock, ShieldCheck, Filter, Search, RefreshCw, Plus, 
   CheckCircle2, Sparkles, MessageSquare, ArrowRight, 
   Trash2, Calendar, FileText, Check, X, ShieldAlert,
-  KeyRound, FolderGit2, Shield, Layers, UploadCloud
+  KeyRound, FolderGit2, Shield, Layers, UploadCloud,
+  AlertCircle
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -31,6 +32,8 @@ export default function WorkspaceActivity() {
   const [search, setSearch] = useState('');
   const [selectedAction, setSelectedAction] = useState<string>('ALL');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [shakeError, setShakeError] = useState(false);
 
   // Lock background scroll when activity modal is open
   useScrollLock(isAddModalOpen);
@@ -80,7 +83,9 @@ export default function WorkspaceActivity() {
   const handleAddActivity = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newDetails.trim()) {
-      showToast('Please enter an activity description before saving.', 'error');
+      setFormError('Activity description is required before saving & verifying.');
+      setShakeError(true);
+      setTimeout(() => setShakeError(false), 450);
       return;
     }
 
@@ -99,6 +104,7 @@ export default function WorkspaceActivity() {
     localStorage.setItem('workspace_activities_stream', JSON.stringify(updated));
     showToast('Workspace activity logged and verified successfully.', 'success');
     setNewDetails('');
+    setFormError(null);
     setIsAddModalOpen(false);
   };
 
@@ -212,7 +218,11 @@ export default function WorkspaceActivity() {
 
         <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={() => {
+              setFormError(null);
+              setShakeError(false);
+              setIsAddModalOpen(true);
+            }}
             className="flex items-center gap-1.5 px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-bold shadow-xs hover:shadow transition-all cursor-pointer"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
@@ -449,7 +459,11 @@ export default function WorkspaceActivity() {
         <div className="fixed inset-0 z-[99999] flex items-center justify-center p-4 touch-none overscroll-contain modal-dialog-root">
           {/* Backdrop */}
           <div
-            onClick={() => setIsAddModalOpen(false)}
+            onClick={() => {
+              setIsAddModalOpen(false);
+              setFormError(null);
+              setShakeError(false);
+            }}
             className="absolute inset-0 bg-slate-950/70 backdrop-blur-sm cursor-pointer"
           />
 
@@ -467,14 +481,18 @@ export default function WorkspaceActivity() {
               </h3>
               <button
                 type="button"
-                onClick={() => setIsAddModalOpen(false)}
+                onClick={() => {
+                  setIsAddModalOpen(false);
+                  setFormError(null);
+                  setShakeError(false);
+                }}
                 className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
                 <X className="w-4 h-4" />
               </button>
             </div>
 
-            <form onSubmit={handleAddActivity} className="space-y-4 mt-4">
+            <form onSubmit={handleAddActivity} noValidate className="space-y-4 mt-4">
               <div>
                 <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">
                   Action Type
@@ -511,23 +529,65 @@ export default function WorkspaceActivity() {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold uppercase text-slate-400 mb-1.5">
-                  Activity Description
-                </label>
-                <textarea
-                  rows={3}
-                  value={newDetails}
-                  onChange={(e) => setNewDetails(e.target.value)}
-                  placeholder="Describe what was accomplished, updated or milestone marked..."
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl text-xs font-medium text-slate-900 dark:text-white outline-none focus:border-blue-500 resize-none transition-all"
-                />
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-bold uppercase text-slate-400">
+                    Activity Description
+                  </label>
+                  <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+                    Required
+                  </span>
+                </div>
+                <div className="relative">
+                  <textarea
+                    rows={3}
+                    value={newDetails}
+                    onChange={(e) => {
+                      setNewDetails(e.target.value);
+                      if (formError) setFormError(null);
+                    }}
+                    placeholder="Describe what was accomplished, updated or milestone marked..."
+                    className={`w-full px-3.5 py-2.5 bg-slate-50 dark:bg-white/5 rounded-xl text-xs font-medium text-slate-900 dark:text-white outline-none resize-none transition-all duration-200 ${
+                      formError
+                        ? 'border border-rose-500/80 ring-2 ring-rose-500/25 dark:ring-rose-500/35 bg-rose-50/20 dark:bg-rose-950/20 shadow-[0_0_16px_rgba(244,63,94,0.18)]'
+                        : 'border border-slate-200 dark:border-white/10 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20'
+                    } ${shakeError ? 'animate-shake' : ''}`}
+                  />
+                </div>
+
+                {/* Unique Custom Validation Signal Pill */}
+                <AnimatePresence>
+                  {formError && (
+                    <motion.div
+                      initial={{ opacity: 0, y: -6, scale: 0.96 }}
+                      animate={{ opacity: 1, y: 0, scale: 1 }}
+                      exit={{ opacity: 0, y: -4, scale: 0.96 }}
+                      transition={{ type: 'spring', stiffness: 500, damping: 28 }}
+                      className="mt-2.5 px-3 py-2 rounded-xl bg-gradient-to-r from-rose-500/15 via-rose-500/10 to-amber-500/10 border border-rose-500/30 dark:border-rose-500/40 shadow-lg shadow-rose-500/10 flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2 text-rose-600 dark:text-rose-400 font-medium">
+                        <span className="relative flex h-2 w-2 shrink-0">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-rose-500" />
+                        </span>
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span className="text-[11px] font-semibold">{formError}</span>
+                      </div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-700 dark:text-rose-300 shrink-0">
+                        Action Required
+                      </span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className="pt-2 flex items-center justify-end gap-2.5">
                 <button
                   type="button"
-                  onClick={() => setIsAddModalOpen(false)}
+                  onClick={() => {
+                    setIsAddModalOpen(false);
+                    setFormError(null);
+                    setShakeError(false);
+                  }}
                   className="px-4 py-2.5 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
                 >
                   Cancel
