@@ -99,7 +99,7 @@ export default function MyPerformance() {
     useLiveRefresh(fetchEmployeeStats);
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0">
       {/* Header */}
       <div>
         <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-2">

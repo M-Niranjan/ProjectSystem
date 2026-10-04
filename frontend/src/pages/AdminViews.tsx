@@ -391,7 +391,7 @@ export function UserManagementView() {
   });
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -1163,7 +1163,7 @@ export function RolesPermissionsView() {
   };
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">
@@ -1432,7 +1432,7 @@ export function OrganizationSettingsView() {
   });
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0 max-w-5xl">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0 max-w-5xl">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
@@ -2042,7 +2042,7 @@ export function AuditLogsView() {
   });
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black tracking-tight text-slate-800 dark:text-white flex items-center gap-3">

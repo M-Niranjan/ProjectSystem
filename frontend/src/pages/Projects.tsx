@@ -238,14 +238,14 @@ export default function Projects() {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)] pb-28 sm:pb-20 lg:pb-12">
+    <div className="flex flex-col min-h-[calc(100vh-100px)] pb-20 lg:pb-12">
       {/* Title Header */}
-      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/10 dark:border-white/5">
+      <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 sm:pb-4 border-b border-slate-200/10 dark:border-white/5">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-800 dark:text-white">
+          <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-800 dark:text-white">
             Projects Portfolio
           </h1>
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
+          <p className="text-xs sm:text-sm font-semibold text-slate-500 dark:text-slate-400 mt-1">
             Build, edit, and assign members to your enterprise workspaces.
           </p>
         </div>
@@ -259,7 +259,7 @@ export default function Projects() {
       </div>
 
       {/* Main Content */}
-      <div className="mt-6 space-y-6">
+      <div className="mt-4 sm:mt-5 space-y-4 sm:space-y-6">
         {/* Filters & View Switches bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/5 border border-slate-200/50 dark:border-white/5 p-3 rounded-2xl backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-3">

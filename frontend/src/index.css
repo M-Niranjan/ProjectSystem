@@ -488,11 +488,11 @@ input:-webkit-autofill:active,
 
 /* Main content container with guaranteed clearance below fixed header navbar */
 .main-workspace-frame {
-  padding-top: 84px !important;
+  padding-top: 64px !important;
 }
 @media (min-width: 640px) {
   .main-workspace-frame {
-    padding-top: 92px !important;
+    padding-top: 72px !important;
   }
 }
 

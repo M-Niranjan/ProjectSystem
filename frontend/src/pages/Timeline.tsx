@@ -473,7 +473,7 @@ export default function Timeline() {
   }, [tasks]);
 
   return (
-    <div className="space-y-5 w-full min-w-0 pb-20">
+    <div className="space-y-4 sm:space-y-5 w-full min-w-0 pb-20">
       {/* HEADER SECTION */}
       <div className="flex flex-col gap-3 sm:gap-4 w-full min-w-0">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">

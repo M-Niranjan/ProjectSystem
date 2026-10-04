@@ -470,7 +470,7 @@ export default function StepVerificationDashboard() {
   );
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-4 sm:space-y-6 pb-20 w-full min-w-0">
       
       {/* ========================================================================= */}
       {/* TOP COMMAND HEADER */}

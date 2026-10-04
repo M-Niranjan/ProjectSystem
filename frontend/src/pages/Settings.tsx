@@ -813,11 +813,11 @@ export default function Settings() {
   const currentCategoryMeta = SETTINGS_CATEGORIES.find((c) => c.id === activeCategory);
 
   return (
-    <div className="w-full max-w-2xl mx-auto space-y-4 pb-28 sm:pb-20 lg:pb-12 min-w-0 transition-colors duration-200">
+    <div className="w-full max-w-2xl mx-auto pb-28 sm:pb-20 lg:pb-12 min-w-0 transition-colors duration-200">
       {/* ========================================================================= */}
       {/* 1. TOP APP BAR                                                            */}
       {/* ========================================================================= */}
-      <div className="flex items-center justify-between pt-1 pb-2 px-1">
+      <div className="flex items-center justify-between pb-1.5 sm:pb-2 px-0.5">
         <button
           type="button"
           onClick={() => {
@@ -827,7 +827,7 @@ export default function Settings() {
               navigate(-1);
             }
           }}
-          className="p-2 -ml-2 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+          className="p-1.5 rounded-xl text-slate-800 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
           title="Go Back"
         >
           <ArrowLeft className="w-5 h-5" />
@@ -842,7 +842,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={toggleTheme}
-            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
+            className="p-1.5 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors cursor-pointer"
             title={darkMode ? 'Switch to Light Theme' : 'Switch to Dark Theme'}
           >
             {darkMode ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-blue-600" />}
@@ -855,26 +855,26 @@ export default function Settings() {
       {/* ========================================================================= */}
       {!activeCategory && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
+          initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -8 }}
+          exit={{ opacity: 0, y: -6 }}
           transition={{ duration: 0.18 }}
-          className="space-y-3"
+          className="space-y-2.5 sm:space-y-3 mt-1 sm:mt-1.5"
         >
           {/* Top Hero Profile Card */}
           <button
             type="button"
             onClick={() => handleSelectCategory('account')}
-            className="w-full text-left p-4.5 sm:p-5 rounded-3xl bg-gradient-to-r from-blue-500/12 via-indigo-500/10 to-purple-500/15 dark:from-blue-900/35 dark:via-indigo-900/30 dark:to-purple-900/35 border border-blue-500/20 dark:border-white/10 shadow-xs hover:shadow-md hover:border-blue-500/35 dark:hover:border-white/20 transition-all flex items-center justify-between gap-4 cursor-pointer group"
+            className="w-full text-left p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-blue-500/12 via-indigo-500/10 to-purple-500/15 dark:from-blue-900/35 dark:via-indigo-900/30 dark:to-purple-900/35 border border-blue-500/20 dark:border-white/10 shadow-xs hover:shadow-md hover:border-blue-500/35 dark:hover:border-white/20 transition-all flex items-center justify-between gap-3.5 cursor-pointer group"
           >
-            <div className="flex items-center gap-4 min-w-0">
+            <div className="flex items-center gap-3.5 min-w-0">
               {/* Avatar with camera badge */}
               <div className="relative shrink-0">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-xl flex items-center justify-center shadow-md ring-2 ring-white dark:ring-[#0e1322]">
+                <div className="w-13 h-13 sm:w-14 sm:h-14 rounded-full bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-black text-lg sm:text-xl flex items-center justify-center shadow-md ring-2 ring-white dark:ring-[#0e1322]">
                   {avatarInitial}
                 </div>
-                <div className="absolute -bottom-1 -right-1 w-5.5 h-5.5 rounded-full bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/20 shadow-xs flex items-center justify-center text-slate-600 dark:text-slate-300">
-                  <Camera className="w-3 h-3" />
+                <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/20 shadow-xs flex items-center justify-center text-slate-600 dark:text-slate-300">
+                  <Camera className="w-2.5 h-2.5" />
                 </div>
               </div>
 
@@ -896,7 +896,7 @@ export default function Settings() {
           </button>
 
           {/* List of Category Cards */}
-          <div className="space-y-2.5 pt-1">
+          <div className="space-y-2 sm:space-y-2.5">
             {SETTINGS_CATEGORIES.map((cat) => {
               const Icon = cat.icon;
               return (
@@ -945,14 +945,14 @@ export default function Settings() {
       {/* ========================================================================= */}
       {activeCategory && (
         <motion.div
-          initial={{ opacity: 0, x: 12 }}
+          initial={{ opacity: 0, x: 10 }}
           animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: -12 }}
+          exit={{ opacity: 0, x: -10 }}
           transition={{ duration: 0.18 }}
-          className="space-y-4"
+          className="space-y-3 sm:space-y-3.5 mt-1 sm:mt-1.5"
         >
           {/* Sub-Header Actions Banner */}
-          <div className="flex items-center justify-between p-3.5 rounded-2xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-xs">
+          <div className="flex items-center justify-between p-3 rounded-2xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-xs">
             <button
               type="button"
               onClick={handleBackToMenu}
