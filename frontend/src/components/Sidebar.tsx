@@ -309,7 +309,7 @@ export default function Sidebar() {
           {user && (
             isExpandedOrDrawer ? (
               <div
-                className="w-full p-2 rounded-xl flex items-center gap-3 overflow-hidden border border-transparent bg-slate-50 dark:bg-white/5 select-none"
+                className="w-full p-2 rounded-xl flex items-center gap-3 overflow-hidden border border-transparent bg-slate-50 dark:bg-white/5 select-none cursor-default"
               >
                 <img
                   src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
@@ -323,7 +323,7 @@ export default function Sidebar() {
               </div>
             ) : (
               <div
-                className="w-full flex justify-center group relative select-none"
+                className="w-full flex justify-center group relative select-none cursor-default"
                 title={`${user.name} (${formatRoleName(user.role, 'title')})`}
               >
                 <img
