@@ -2008,11 +2008,11 @@ ${item.content || ''}
                 </div>
 
                 {/* PRIMARY ACTIONS: WRITE DOCUMENT, TEMPLATES, & UPLOAD FILE */}
-                <div className="flex items-center gap-2 sm:gap-2.5 shrink-0 flex-wrap sm:flex-nowrap">
+                <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto shrink-0">
                   {/* 1. WRITE DOCUMENT (Blue Gradient) */}
                   <button
                     onClick={() => handleCreateNewDoc()}
-                    className="h-10 px-4 shrink-0 inline-flex items-center justify-center gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/25 transition-all cursor-pointer active:scale-95 whitespace-nowrap leading-none"
+                    className="h-10 px-3 sm:px-4 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-500 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl text-xs font-bold shadow-md shadow-blue-500/25 transition-all cursor-pointer active:scale-95 whitespace-nowrap leading-none"
                   >
                     <Edit3 className="w-4 h-4 shrink-0" />
                     <span>Write Document</span>
@@ -2073,7 +2073,7 @@ ${item.content || ''}
                   {/* 3. UPLOAD FILE (Action Button) */}
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="h-10 px-4 shrink-0 inline-flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs whitespace-nowrap leading-none"
+                    className="h-10 px-3 sm:px-4 w-full sm:w-auto inline-flex items-center justify-center gap-1.5 sm:gap-2 bg-slate-100 hover:bg-slate-200 dark:bg-white/10 dark:hover:bg-white/15 text-slate-800 dark:text-white border border-slate-200/80 dark:border-white/10 rounded-xl text-xs font-bold transition-all cursor-pointer active:scale-95 shadow-xs whitespace-nowrap leading-none"
                   >
                     <Upload className="w-4 h-4 text-blue-500 shrink-0" />
                     <span>Upload File</span>
@@ -2100,12 +2100,12 @@ ${item.content || ''}
                   )}
                 </div>
 
-                {/* Controls: Category, Sort Dropdown & Display Mode */}
-                <div className="flex items-center gap-2 justify-end shrink-0 flex-wrap">
+                {/* Controls: Category, Sort Dropdown & Display Mode (Aligned in 1 row on mobile) */}
+                <div className="grid grid-cols-[1fr_1fr_auto] sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0">
                   <select
                     value={navCategory}
                     onChange={(e) => setNavCategory(e.target.value as any)}
-                    className="text-xs font-bold px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                    className="w-full min-w-0 text-xs font-bold px-2 sm:px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer truncate"
                   >
                     <option value="all" className="dark:bg-slate-900">All Items ({counts.total})</option>
                     <option value="my" className="dark:bg-slate-900">My Docs ({counts.written})</option>
@@ -2116,7 +2116,7 @@ ${item.content || ''}
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="text-xs font-bold px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
+                    className="w-full min-w-0 text-xs font-bold px-2 sm:px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer truncate"
                   >
                     <option value="newest" className="dark:bg-slate-900">Newest First</option>
                     <option value="oldest" className="dark:bg-slate-900">Oldest First</option>
@@ -2124,7 +2124,7 @@ ${item.content || ''}
                     <option value="size" className="dark:bg-slate-900">Size</option>
                   </select>
 
-                  <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-white/10">
+                  <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-white/10 shrink-0">
                     <button
                       onClick={() => setDisplayMode('grid')}
                       className={`p-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer ${
@@ -2151,9 +2151,8 @@ ${item.content || ''}
                 </div>
               </div>
 
-
             {/* Smart Filter Tabs Row */}
-            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1">
+            <div className="flex items-center gap-2 overflow-x-auto scrollbar-none pt-1 -mx-4 px-4 sm:mx-0 sm:px-0">
               <div className="flex items-center gap-1 shrink-0 bg-slate-200/60 dark:bg-white/5 p-1 rounded-xl border border-slate-200/60 dark:border-white/5 relative">
                 {[
                   { id: 'all', label: 'All Items', count: counts.total },
