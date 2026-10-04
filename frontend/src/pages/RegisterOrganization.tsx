@@ -204,11 +204,11 @@ export default function RegisterOrganization() {
       {/* Top Navbar / Brand Header - Sticky and Stationary */}
       <div className="sticky top-0 left-0 right-0 w-full p-4 sm:p-6 flex items-center justify-between z-20 shrink-0 backdrop-blur-md bg-white/70 dark:bg-[#080a10]/70 border-b border-slate-200/50 dark:border-white/5">
         <Link to="/login" className="flex items-center gap-2.5 group">
-          <div className="flex items-end gap-1 h-6">
-            <div className="w-1.5 h-3 rounded-xs bg-blue-400 shadow-sm" />
-            <div className="w-1.5 h-4.5 rounded-xs bg-blue-500 shadow-sm" />
-            <div className="w-1.5 h-6 rounded-xs bg-blue-600 shadow-sm" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="TaskFlow Logo"
+            className="w-7 h-7 object-contain drop-shadow-sm group-hover:scale-105 transition-transform"
+          />
           <div className="flex flex-col">
             <span className="font-black text-sm tracking-tight text-slate-900 dark:text-white flex items-center gap-1.5">
               Task<span className="text-blue-600 dark:text-blue-400">Flow</span>

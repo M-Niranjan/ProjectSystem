@@ -314,20 +314,12 @@ export default function Login() {
       {/* Main Content Area: Centered, Constant, Non-Movable */}
       <div className="my-auto w-full max-w-[400px] flex flex-col items-center px-4 py-8 relative z-10 shrink-0">
         {/* Brand Header */}
-        <div className="flex flex-col items-center mb-3 text-center">
-          {/* Ascending 3-Bar Logo */}
-          <div className="flex items-end gap-1.5 h-8 mb-1.5">
-            <div className="w-2.5 h-4 rounded-sm bg-blue-400 shadow-sm" />
-            <div className="w-2.5 h-6 rounded-sm bg-blue-500 shadow-sm" />
-            <div className="w-2.5 h-8 rounded-sm bg-blue-600 shadow-sm" />
-          </div>
-
-          <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 dark:text-white">
-            Task<span className="text-blue-600 dark:text-blue-400">Flow</span>
-          </h1>
-          <p className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-            Project Management System
-          </p>
+        <div className="flex flex-col items-center mb-4 text-center">
+          <img
+            src={darkMode ? "/logo-with-text-dark.png" : "/logo-with-text.png"}
+            alt="Project Management System"
+            className="h-14 sm:h-16 w-auto object-contain drop-shadow-xl hover:scale-102 transition-transform"
+          />
         </div>
 
         {/* Option 1: Obsidian Minimalist Glass Auth Card - Firmly Fixed & Constant */}

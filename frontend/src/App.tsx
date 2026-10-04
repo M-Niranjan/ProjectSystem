@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
@@ -242,15 +242,49 @@ function AppContent() {
     }
   }, [activeView]);
 
-  if (loading) {
+  const [showSplash, setShowSplash] = useState(true);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowSplash(false);
+    }, 1100);
+    return () => clearTimeout(timer);
+  }, []);
+
+  if (loading || showSplash) {
     return (
-      <div className="min-h-screen bg-slate-900 flex flex-col items-center justify-center text-white select-none">
+      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#07090e] text-white select-none overflow-hidden">
+        {/* Background ambient lighting */}
+        <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-12 -left-12 pointer-events-none" />
+        <div className="absolute w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -bottom-12 -right-12 pointer-events-none" />
+
         <motion.div
-          animate={{ scale: [1, 1.2, 1], rotate: [0, 180, 360] }}
-          transition={{ repeat: Infinity, duration: 2, ease: "easeInOut" }}
-          className="w-12 h-12 border-4 border-blue-500/30 border-t-blue-500 rounded-full mb-4"
-        ></motion.div>
-        <p className="text-xs font-black tracking-widest text-slate-400 uppercase animate-pulse">Initializing Prologue Workspace...</p>
+          initial={{ opacity: 0, scale: 0.92, y: 12 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+          className="flex flex-col items-center px-6 relative z-10"
+        >
+          <img
+            src="/logo-with-text-dark.png"
+            alt="Project Management System"
+            className="w-auto h-16 sm:h-20 max-w-[85vw] object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.6)]"
+          />
+
+          {/* Luxury Progress Shimmer Bar */}
+          <div className="mt-8 w-48 h-1 bg-white/10 rounded-full overflow-hidden relative">
+            <motion.div
+              initial={{ x: '-100%' }}
+              animate={{ x: '100%' }}
+              transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
+              className="w-1/2 h-full bg-gradient-to-r from-transparent via-[#38bdf8] to-transparent"
+            />
+          </div>
+
+          <p className="mt-4 text-[11px] font-mono tracking-widest text-slate-400 uppercase font-semibold">
+            Loading Workspace...
+          </p>
+        </motion.div>
       </div>
     );
   }

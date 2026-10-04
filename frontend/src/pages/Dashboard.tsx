@@ -188,9 +188,6 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
           (e: any) => e.role !== 'ROLE_ADMIN' && !e.role?.includes('ADMIN') && e.name !== 'Niranjan'
         );
         setEmployeeDirectory(assignableStaff);
-        if (assignableStaff.length > 0 && !newTaskAssigneeId) {
-          setNewTaskAssigneeId((assignableStaff[0].id || assignableStaff[0].uid).toString());
-        }
 
         // 3. Organization Projects
         const projectsRes = await api.get('/api/projects');
@@ -303,6 +300,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       setFormSuccess('Task successfully assigned!');
       setNewTaskTitle('');
       setNewTaskDesc('');
+      setNewTaskAssigneeId('');
       loadDashboardData();
       window.dispatchEvent(new Event('task-status-updated'));
     } catch (err) {
@@ -1102,7 +1100,11 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                         <button
                           type="button"
                           onClick={() => {
-                            setNewTaskAssigneeId((emp.id || emp.uid).toString());
+                            if (isSelectedForAssign) {
+                              setNewTaskAssigneeId('');
+                            } else {
+                              setNewTaskAssigneeId((emp.id || emp.uid).toString());
+                            }
                           }}
                           className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shadow-xs cursor-pointer flex items-center gap-1.5 shrink-0 active:scale-95 ${
                             isSelectedForAssign
@@ -1174,7 +1176,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   <LuxurySelect
                     value={newTaskAssigneeId}
                     onChange={(val) => setNewTaskAssigneeId(val)}
-                    placeholder="Assignee"
+                    placeholder="Select Assignee..."
                     options={displayTeammates.map(emp => ({
                       value: String(emp.id || emp.uid),
                       label: emp.name,

@@ -132,11 +132,11 @@ export default function AcceptInvitation() {
       <div className="relative z-10 w-full max-w-md flex flex-col items-center my-auto">
         {/* Brand Header */}
         <div className="flex flex-col items-center mb-6 text-center">
-          <div className="flex items-end gap-1.5 h-12 mb-3">
-            <div className="w-3.5 h-6 rounded-md bg-blue-400 shadow-sm" />
-            <div className="w-3.5 h-9 rounded-md bg-blue-500 shadow-sm" />
-            <div className="w-3.5 h-12 rounded-md bg-blue-600 shadow-sm" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="TaskFlow Logo"
+            className="w-16 h-16 object-contain drop-shadow-lg mb-3.5 transition-transform hover:scale-105"
+          />
 
           <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 dark:text-white">
             Task<span className="text-blue-600 dark:text-blue-400">Flow</span>

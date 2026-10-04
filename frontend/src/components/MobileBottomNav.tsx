@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   LayoutGrid,
+  List,
   ClipboardCheck,
   Settings as SettingsIcon,
   X,
@@ -186,106 +187,95 @@ export default function MobileBottomNav() {
       </AnimatePresence>
 
       {/* iOS / Android Floating Pill Bottom Navigation Bar */}
-      <div className="sm:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] left-3 right-3 z-40 max-w-sm mx-auto pointer-events-none select-none">
+      <div className="sm:hidden fixed bottom-[max(0.85rem,env(safe-area-inset-bottom,0.85rem))] left-3.5 right-3.5 z-40 max-w-sm mx-auto pointer-events-none select-none">
         <nav
           aria-label="Mobile Navigation Pill"
-          className="pointer-events-auto h-[62px] px-2 rounded-full bg-white/80 dark:bg-[#111b21]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.65)] ring-1 ring-black/5 dark:ring-white/5 flex items-center justify-between relative overflow-hidden"
+          className="pointer-events-auto h-[64px] p-1.5 rounded-full bg-slate-900/85 dark:bg-[#0a0f1d]/90 backdrop-blur-2xl border border-white/15 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.5)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.7)] flex items-center relative overflow-hidden select-none"
         >
-          {/* Sliding Active Pill Capsule - Reduced size, white glassmorphism with specular shine */}
-          {activeTabIndex !== -1 && (
-            <motion.div
-              initial={false}
-              animate={{
-                left: `${activeTabIndex * 25}%`,
-              }}
-              transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-              className="absolute inset-y-2 w-1/4 px-1.5 py-0.5 pointer-events-none z-0 flex items-center justify-center"
-            >
-              <div className="w-full h-full rounded-2xl bg-gradient-to-b from-white/35 via-white/20 to-white/10 dark:from-white/25 dark:via-white/15 dark:to-white/5 backdrop-blur-md border border-white/45 dark:border-white/30 shadow-[0_4px_16px_rgba(255,255,255,0.12)] relative overflow-hidden">
-                {/* Specular glass shine highlight across top */}
-                <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/50 to-transparent rounded-t-2xl pointer-events-none" />
-              </div>
-            </motion.div>
-          )}
+          {/* Inner Unified 4-Tab Track */}
+          <div className="relative w-full h-full flex items-center">
+            {/* Sliding Active Capsule - Option 3: Concentric Squircle (rounded-[22px]) */}
+            {activeTabIndex !== -1 && (
+              <motion.div
+                initial={false}
+                animate={{
+                  left: `${activeTabIndex * 25}%`,
+                }}
+                transition={{ type: 'spring', damping: 28, stiffness: 350 }}
+                className="absolute inset-y-0 w-1/4 pointer-events-none z-0 p-[2px]"
+              >
+                <div className="w-full h-full rounded-[22px] bg-gradient-to-b from-white/[0.15] to-white/[0.04] backdrop-blur-md border border-white/20 shadow-[0_2px_10px_rgba(0,0,0,0.25),inset_0_1px_1px_rgba(255,255,255,0.22)]" />
+              </motion.div>
+            )}
 
-          {/* Tab 1: Dashboard */}
-          <button
-            onClick={handleDashboardClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
-            title="Dashboard"
-          >
-            <div className="relative z-10 flex flex-col items-center">
+            {/* Tab 1: Dashboard */}
+            <button
+              onClick={handleDashboardClick}
+              className="relative z-10 w-1/4 h-full flex flex-col items-center justify-center cursor-pointer outline-none focus:outline-none select-none active:scale-95 transition-transform"
+            >
               <LayoutGrid
-                className={`w-[21px] h-[21px] transition-colors ${
+                className={`w-[22px] h-[22px] transition-colors ${
                   isDashboardActive
-                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
-                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-white stroke-[2.2]'
+                    : 'text-slate-400 dark:text-slate-400 group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                className={`text-[11px] mt-1 tracking-tight transition-colors ${
                   isDashboardActive
-                    ? 'text-slate-900 dark:text-white font-bold'
-                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                    ? 'text-white font-medium'
+                    : 'text-slate-400 dark:text-slate-400 font-normal'
                 }`}
               >
                 Dashboard
               </span>
-            </div>
-          </button>
+            </button>
 
-          {/* Tab 2: Tasks */}
-          <button
-            onClick={handleTasksClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
-            title="Tasks"
-          >
-            <div className="relative z-10 flex flex-col items-center">
-              <ClipboardCheck
-                className={`w-[21px] h-[21px] transition-colors ${
+            {/* Tab 2: Tasks */}
+            <button
+              onClick={handleTasksClick}
+              className="relative z-10 w-1/4 h-full flex flex-col items-center justify-center cursor-pointer outline-none focus:outline-none select-none active:scale-95 transition-transform"
+            >
+              <List
+                className={`w-[22px] h-[22px] transition-colors ${
                   isTasksActive
-                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
-                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-white stroke-[2.2]'
+                    : 'text-slate-400 dark:text-slate-400 group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                className={`text-[11px] mt-1 tracking-tight transition-colors ${
                   isTasksActive
-                    ? 'text-slate-900 dark:text-white font-bold'
-                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                    ? 'text-white font-medium'
+                    : 'text-slate-400 dark:text-slate-400 font-normal'
                 }`}
               >
                 Tasks
               </span>
-            </div>
-          </button>
+            </button>
 
-          {/* Tab 3: Chat */}
-          <button
-            onClick={handleChatClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
-            title="Chat"
-          >
-            <div className="relative z-10 flex flex-col items-center">
+            {/* Tab 3: Chat */}
+            <button
+              onClick={handleChatClick}
+              className="relative z-10 w-1/4 h-full flex flex-col items-center justify-center cursor-pointer outline-none focus:outline-none select-none active:scale-95 transition-transform"
+            >
               <div className="relative">
-                {/* Fixed Clean WhatsApp outline speech bubble */}
                 <svg
-                  className={`w-[21px] h-[21px] transition-colors ${
+                  className={`w-[22px] h-[22px] transition-colors ${
                     isChatActive
-                      ? 'text-slate-900 dark:text-white drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
-                      : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                      ? 'text-white'
+                      : 'text-slate-400 dark:text-slate-400 group-hover:text-white'
                   }`}
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
-                  strokeWidth={isChatActive ? 2.3 : 1.8}
+                  strokeWidth={isChatActive ? 2.2 : 1.8}
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
                   <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                 </svg>
 
-                {/* Unread badge - ONLY show when real unread messages exist */}
                 {totalUnreadMessages > 0 && (
                   <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-[#ef4444] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#111b21] shadow-sm animate-pulse">
                     {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
@@ -293,42 +283,39 @@ export default function MobileBottomNav() {
                 )}
               </div>
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                className={`text-[11px] mt-1 tracking-tight transition-colors ${
                   isChatActive
-                    ? 'text-slate-900 dark:text-white font-bold'
-                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                    ? 'text-white font-medium'
+                    : 'text-slate-400 dark:text-slate-400 font-normal'
                 }`}
               >
                 Chat
               </span>
-            </div>
-          </button>
+            </button>
 
-          {/* Tab 4: Settings */}
-          <button
-            onClick={handleSettingsClick}
-            className="relative flex-1 flex flex-col items-center justify-center h-full cursor-pointer py-1 group transition-all z-10"
-            title="Settings"
-          >
-            <div className="relative z-10 flex flex-col items-center">
+            {/* Tab 4: Settings */}
+            <button
+              onClick={handleSettingsClick}
+              className="relative z-10 w-1/4 h-full flex flex-col items-center justify-center cursor-pointer outline-none focus:outline-none select-none active:scale-95 transition-transform"
+            >
               <SettingsIcon
-                className={`w-[21px] h-[21px] transition-colors ${
+                className={`w-[22px] h-[22px] transition-colors ${
                   isSettingsActive
-                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
-                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-white stroke-[2.2]'
+                    : 'text-slate-400 dark:text-slate-400 group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
-                className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
+                className={`text-[11px] mt-1 tracking-tight transition-colors ${
                   isSettingsActive
-                    ? 'text-slate-900 dark:text-white font-bold'
-                    : 'text-slate-600 dark:text-slate-400 font-medium'
+                    ? 'text-white font-medium'
+                    : 'text-slate-400 dark:text-slate-400 font-normal'
                 }`}
               >
                 Settings
               </span>
-            </div>
-          </button>
+            </button>
+          </div>
         </nav>
       </div>
     </>

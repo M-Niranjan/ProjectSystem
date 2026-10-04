@@ -82,7 +82,7 @@ export default function MessageComposer({
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
       const scrollH = textareaRef.current.scrollHeight;
-      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 36), 110)}px`;
+      textareaRef.current.style.height = `${Math.min(Math.max(scrollH, 24), 120)}px`;
     }
   }, [text]);
 
@@ -350,13 +350,13 @@ export default function MessageComposer({
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`px-3 py-2 border-t border-[#202c33] shrink-0 bg-[#202c33] relative transition-all select-none ${
+      className={`px-2.5 sm:px-3.5 py-2 sm:py-2.5 border-t border-white/[0.06] shrink-0 bg-[#0b141a]/95 sm:bg-[#111b21]/95 backdrop-blur-md relative transition-all select-none ${
         isDraggingOver ? 'ring-1 ring-[#00a884] bg-[#00a884]/10' : ''
       }`}
     >
       {/* Drag & Drop Overlay */}
       {isDraggingOver && (
-        <div className="absolute inset-0 bg-[#00a884]/95 backdrop-blur-md rounded-lg flex flex-col items-center justify-center text-white z-50">
+        <div className="absolute inset-0 bg-[#00a884]/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-white z-50">
           <UploadCloud className="w-8 h-8 animate-bounce mb-1" />
           <p className="font-bold text-xs uppercase tracking-wider">Drop file to attach</p>
         </div>
@@ -366,10 +366,10 @@ export default function MessageComposer({
       <AnimatePresence>
         {replyToMessage && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-1.5 px-3 py-1.5 bg-[#2a3942] border border-[#00a884]/40 rounded-lg flex items-center justify-between text-xs text-[#00a884] font-medium"
+            initial={{ opacity: 0, height: 0, y: 5 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: 5 }}
+            className="mb-2 px-3 py-1.5 bg-[#1f2c34]/95 backdrop-blur-xl border-l-4 border-l-[#00a884] border-y border-r border-white/10 rounded-xl flex items-center justify-between text-xs text-[#00a884] font-medium shadow-md"
           >
             <div className="flex items-center gap-2 truncate">
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#00a884]/20 rounded text-[#00a884]">
@@ -382,7 +382,7 @@ export default function MessageComposer({
             <button
               type="button"
               onClick={onClearReply}
-              className="p-1 hover:bg-[#202c33] rounded cursor-pointer transition-colors text-[#8696a0] hover:text-white"
+              className="p-1 hover:bg-white/10 rounded-full cursor-pointer transition-colors text-[#8696a0] hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -394,10 +394,10 @@ export default function MessageComposer({
       <AnimatePresence>
         {editingMessage && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="mb-1.5 px-3 py-1.5 bg-[#2a3942] border border-amber-500/40 rounded-lg flex items-center justify-between text-xs text-amber-400 font-medium"
+            initial={{ opacity: 0, height: 0, y: 5 }}
+            animate={{ opacity: 1, height: 'auto', y: 0 }}
+            exit={{ opacity: 0, height: 0, y: 5 }}
+            className="mb-2 px-3 py-1.5 bg-[#1f2c34]/95 backdrop-blur-xl border-l-4 border-l-amber-500 border-y border-r border-white/10 rounded-xl flex items-center justify-between text-xs text-amber-400 font-medium shadow-md"
           >
             <div className="flex items-center gap-2">
               <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-amber-500/20 rounded">
@@ -410,7 +410,7 @@ export default function MessageComposer({
             <button
               type="button"
               onClick={onClearEdit}
-              className="p-1 hover:bg-[#202c33] rounded cursor-pointer transition-colors text-[#8696a0] hover:text-white"
+              className="p-1 hover:bg-white/10 rounded-full cursor-pointer transition-colors text-[#8696a0] hover:text-white"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -420,7 +420,7 @@ export default function MessageComposer({
 
       {/* Attached File Preview Chip */}
       {attachedFile && (
-        <div className="mb-1.5 px-2.5 py-1 bg-[#2a3942] border border-[#00a884]/30 rounded-lg flex items-center justify-between text-xs font-semibold text-[#00a884] w-fit">
+        <div className="mb-2 px-3 py-1 bg-[#1f2c34]/95 backdrop-blur-xl border border-[#00a884]/40 rounded-full flex items-center justify-between text-xs font-semibold text-[#00a884] w-fit shadow-sm">
           <div className="flex items-center gap-2">
             <Paperclip className="w-3.5 h-3.5" />
             <span className="truncate max-w-[220px] text-[#d1d7db]">{attachedFile.name}</span>
@@ -431,7 +431,7 @@ export default function MessageComposer({
           <button
             type="button"
             onClick={() => setAttachedFile(null)}
-            className="ml-2 p-0.5 hover:bg-[#202c33] rounded cursor-pointer text-[#8696a0] hover:text-rose-400"
+            className="ml-2 p-0.5 hover:bg-white/10 rounded-full cursor-pointer text-[#8696a0] hover:text-rose-400"
             title="Remove file"
           >
             <X className="w-3.5 h-3.5" />
@@ -441,7 +441,7 @@ export default function MessageComposer({
 
       {/* Upload Progress Bar */}
       {uploadProgress !== null && (
-        <div className="mb-1.5 w-full bg-[#111b21] rounded-full h-1 overflow-hidden">
+        <div className="mb-2 w-full bg-[#111b21] rounded-full h-1 overflow-hidden">
           <div
             className="bg-[#00a884] h-full transition-all duration-300"
             style={{ width: `${uploadProgress}%` }}
@@ -451,7 +451,7 @@ export default function MessageComposer({
 
       {/* @Mention Suggestion Dropdown */}
       {showMentionMenu && filteredContacts.length > 0 && (
-        <div className="absolute left-4 bottom-14 w-60 bg-[#202c33] border border-[#2a3942] rounded-xl p-1.5 shadow-2xl z-50 max-h-40 overflow-y-auto space-y-0.5">
+        <div className="absolute left-4 bottom-16 w-60 bg-[#1f2c34] border border-white/10 rounded-2xl p-1.5 shadow-2xl z-50 max-h-40 overflow-y-auto space-y-0.5 backdrop-blur-xl">
           <p className="text-[10px] font-bold uppercase text-[#8696a0] px-2 py-0.5 tracking-wider">
             Mention Teammate
           </p>
@@ -460,9 +460,9 @@ export default function MessageComposer({
               key={c.id}
               type="button"
               onClick={() => insertMention(c.name)}
-              className="w-full flex items-center gap-2 px-2 py-1 rounded-lg hover:bg-[#2a3942] text-xs font-medium text-[#d1d7db] cursor-pointer transition-colors text-left"
+              className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 text-xs font-medium text-[#d1d7db] cursor-pointer transition-colors text-left"
             >
-              <span className="w-4 h-4 rounded-full bg-[#00a884] text-[#111b21] font-black text-[9px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-[#00a884] text-[#111b21] font-black text-[10px] flex items-center justify-center">
                 {c.name.charAt(0)}
               </span>
               <span>{c.name}</span>
@@ -481,183 +481,202 @@ export default function MessageComposer({
 
       {/* MODE 1: Active Voice Recording Mode */}
       {isRecording ? (
-        <div className="flex items-center justify-between gap-3 px-2 py-1 bg-[#111b21] border border-[#2a3942] rounded-xl animate-pulse">
-          <div className="flex items-center gap-3">
-            <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
-            <span className="text-xs font-mono font-bold text-rose-400">
-              {formatSeconds(recordingSeconds)}
-            </span>
-            <span className="text-xs text-[#8696a0]">Recording voice note...</span>
-          </div>
+        <div className="flex gap-2 items-center">
+          <div className="flex-1 flex items-center justify-between px-4 py-2 bg-[#1f2c34]/95 backdrop-blur-xl border border-rose-500/40 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] min-h-[46px]">
+            <div className="flex items-center gap-3">
+              <span className="w-3 h-3 rounded-full bg-rose-500 animate-ping" />
+              <span className="text-sm font-mono font-bold text-rose-400">
+                {formatSeconds(recordingSeconds)}
+              </span>
+              <span className="text-xs text-[#8696a0] hidden sm:inline">Recording voice note...</span>
+            </div>
 
-          <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={handleDiscardVoice}
-              className="p-1.5 rounded-lg text-[#8696a0] hover:text-rose-400 hover:bg-[#202c33] transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-[#8696a0] hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer"
               title="Discard recording"
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button
-              type="button"
-              onClick={handleStopRecording}
-              className="px-3 py-1 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
-              title="Stop & preview"
-            >
-              <Square className="w-3.5 h-3.5 fill-current" />
-              <span>Done</span>
-            </button>
           </div>
+
+          {/* Stop / Finish button */}
+          <button
+            type="button"
+            onClick={handleStopRecording}
+            className="w-11 h-11 rounded-full bg-rose-600 hover:bg-rose-700 text-white shadow-[0_4px_16px_rgba(225,29,72,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Stop & preview"
+          >
+            <Square className="w-4 h-4 fill-current" />
+          </button>
         </div>
       ) : audioPreviewUrl ? (
         /* MODE 2: Voice Note Preview & Send Mode */
-        <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-[#111b21] border border-[#00a884]/40 rounded-xl">
-          <audio
-            ref={previewAudioRef}
-            src={audioPreviewUrl}
-            onTimeUpdate={() => setPreviewCurrentTime(previewAudioRef.current?.currentTime || 0)}
-            onLoadedMetadata={() => setPreviewDuration(previewAudioRef.current?.duration || 0)}
-            onEnded={() => setIsPlayingPreview(false)}
-            className="hidden"
-          />
+        <div className="flex gap-2 items-center">
+          <div className="flex-1 flex items-center justify-between gap-3 px-3.5 py-2 bg-[#1f2c34]/95 backdrop-blur-xl border border-[#00a884]/40 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] min-h-[46px]">
+            <audio
+              ref={previewAudioRef}
+              src={audioPreviewUrl}
+              onTimeUpdate={() => setPreviewCurrentTime(previewAudioRef.current?.currentTime || 0)}
+              onLoadedMetadata={() => setPreviewDuration(previewAudioRef.current?.duration || 0)}
+              onEnded={() => setIsPlayingPreview(false)}
+              className="hidden"
+            />
 
-          <div className="flex items-center gap-2.5 flex-1 min-w-0">
-            <button
-              type="button"
-              onClick={togglePreviewPlay}
-              className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-transform active:scale-95"
-              title={isPlayingPreview ? 'Pause' : 'Play'}
-            >
-              {isPlayingPreview ? (
-                <Pause className="w-4 h-4 fill-current" />
-              ) : (
-                <Play className="w-4 h-4 fill-current ml-0.5" />
-              )}
-            </button>
+            <div className="flex items-center gap-2.5 flex-1 min-w-0">
+              <button
+                type="button"
+                onClick={togglePreviewPlay}
+                className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-transform active:scale-95"
+                title={isPlayingPreview ? 'Pause' : 'Play'}
+              >
+                {isPlayingPreview ? (
+                  <Pause className="w-4 h-4 fill-current" />
+                ) : (
+                  <Play className="w-4 h-4 fill-current ml-0.5" />
+                )}
+              </button>
 
-            {/* Seek Bar / Progress Waveform */}
-            <div className="flex-1 flex flex-col justify-center">
-              <input
-                type="range"
-                min={0}
-                max={previewDuration || 1}
-                step={0.1}
-                value={previewCurrentTime}
-                onChange={(e) => {
-                  const val = parseFloat(e.target.value);
-                  setPreviewCurrentTime(val);
-                  if (previewAudioRef.current) previewAudioRef.current.currentTime = val;
-                }}
-                className="w-full h-1 bg-[#202c33] rounded-lg accent-[#00a884] cursor-pointer"
-              />
-              <div className="flex justify-between text-[10px] text-[#8696a0] font-mono mt-0.5">
-                <span>{formatSeconds(previewCurrentTime)}</span>
-                <span>{formatSeconds(previewDuration || recordingSeconds)}</span>
+              {/* Seek Bar / Progress Waveform */}
+              <div className="flex-1 flex flex-col justify-center">
+                <input
+                  type="range"
+                  min={0}
+                  max={previewDuration || 1}
+                  step={0.1}
+                  value={previewCurrentTime}
+                  onChange={(e) => {
+                    const val = parseFloat(e.target.value);
+                    setPreviewCurrentTime(val);
+                    if (previewAudioRef.current) previewAudioRef.current.currentTime = val;
+                  }}
+                  className="w-full h-1 bg-[#202c33] rounded-lg accent-[#00a884] cursor-pointer"
+                />
+                <div className="flex justify-between text-[10px] text-[#8696a0] font-mono mt-0.5">
+                  <span>{formatSeconds(previewCurrentTime)}</span>
+                  <span>{formatSeconds(previewDuration || recordingSeconds)}</span>
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="flex items-center gap-2 shrink-0">
             <button
               type="button"
               onClick={handleDiscardVoice}
-              className="p-1.5 rounded-lg text-[#8696a0] hover:text-rose-400 hover:bg-[#202c33] transition-colors cursor-pointer"
+              className="p-1.5 rounded-full text-[#8696a0] hover:text-rose-400 hover:bg-white/5 transition-colors cursor-pointer shrink-0"
               title="Delete voice note"
             >
               <Trash2 className="w-4 h-4" />
             </button>
-            <button
-              type="button"
-              onClick={handleSendVoice}
-              disabled={isUploading}
-              className="px-3.5 py-1.5 rounded-xl bg-gradient-to-tr from-[#00a884] to-[#02b992] text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md hover:scale-105 active:scale-95 transition-all"
-              title="Send voice message"
-            >
-              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current">
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-              <span>Send</span>
-            </button>
           </div>
+
+          {/* Elevated Circular Send Button */}
+          <button
+            type="button"
+            onClick={handleSendVoice}
+            disabled={isUploading}
+            className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
+            title="Send voice message"
+          >
+            <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current ml-0.5">
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+            </svg>
+          </button>
         </div>
       ) : (
-        /* MODE 3: Normal Text & Attachment Composer */
-        <div className="flex gap-1.5 sm:gap-2 items-center">
-          {/* Emoji Button */}
-          <div className="relative shrink-0">
+        /* MODE 3: Normal Text & Attachment Composer - VARIANT 1 WHATSAPP GLASS PILL */
+        <div className="flex gap-2 items-end">
+          {/* WhatsApp Floating Stadium Capsule */}
+          <div className="flex-1 flex items-end bg-[#1f2c34]/95 backdrop-blur-xl border border-white/10 hover:border-white/15 focus-within:border-[#00a884]/60 focus-within:ring-1 focus-within:ring-[#00a884]/30 rounded-[24px] sm:rounded-full px-2 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all min-h-[46px]">
+            {/* Emoji Button */}
+            <div className="relative shrink-0 mb-0.5">
+              <button
+                type="button"
+                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                className="w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer hover:bg-white/5 active:scale-95 text-[#8696a0] hover:text-[#d1d7db]"
+                title="Insert Emoji"
+              >
+                <Smile className="w-5 h-5" />
+              </button>
+
+              {/* Emoji Popover */}
+              <AnimatePresence>
+                {showEmojiPicker && (
+                  <EmojiPickerPopover
+                    onSelectEmoji={(emoji) => setText((prev) => prev + emoji)}
+                    onClose={() => setShowEmojiPicker(false)}
+                  />
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* File Attachment Button */}
             <button
               type="button"
-              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-              className="w-8 h-8 rounded-full flex items-center justify-center transition-colors cursor-pointer hover:bg-[#2a3942] text-[#8696a0] hover:text-[#d1d7db]"
-              title="Insert Emoji"
+              onClick={() => fileInputRef.current?.click()}
+              className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mb-0.5 transition-all cursor-pointer hover:bg-white/5 active:scale-95 ${
+                attachedFile ? 'text-[#00a884]' : 'text-[#8696a0] hover:text-[#d1d7db]'
+              }`}
+              title="Attach Document or Image (or Drag & Drop)"
             >
-              <Smile className="w-4.5 h-4.5" />
+              <Paperclip className="w-5 h-5 -rotate-45" />
             </button>
 
-            {/* Emoji Popover */}
-            <AnimatePresence>
-              {showEmojiPicker && (
-                <EmojiPickerPopover
-                  onSelectEmoji={(emoji) => setText((prev) => prev + emoji)}
-                  onClose={() => setShowEmojiPicker(false)}
-                />
+            {/* Text Area Input */}
+            <div className="flex-1 relative flex items-center min-w-0 my-auto py-1">
+              <textarea
+                ref={textareaRef}
+                rows={1}
+                value={text}
+                onChange={handleTextChange}
+                onKeyDown={handleKeyDown}
+                placeholder={placeholder}
+                className="w-full bg-transparent border-0 outline-none text-[#e9edef] placeholder:text-[#8696a0] font-normal text-sm sm:text-[15px] leading-5 resize-none px-2 py-1 max-h-32 min-h-[24px]"
+              />
+            </div>
+          </div>
+
+          {/* Elevated Circular Action Button (Mic or Send) */}
+          <div className="shrink-0 mb-0.5">
+            <AnimatePresence mode="wait">
+              {text.trim() || attachedFile ? (
+                <motion.button
+                  key="send-btn"
+                  initial={{ scale: 0.8, rotate: -20, opacity: 0 }}
+                  animate={{ scale: 1, rotate: 0, opacity: 1 }}
+                  exit={{ scale: 0.8, rotate: 20, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  type="button"
+                  onClick={handleFormSubmit}
+                  disabled={isUploading}
+                  className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
+                  title="Send message"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="w-5 h-5 text-white fill-white ml-0.5"
+                    xmlns="http://www.w3.org/2000/svg"
+                  >
+                    <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+                  </svg>
+                </motion.button>
+              ) : (
+                <motion.button
+                  key="mic-btn"
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.8, opacity: 0 }}
+                  transition={{ duration: 0.15 }}
+                  type="button"
+                  onClick={handleStartRecording}
+                  className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
+                  title="Record voice message"
+                >
+                  <Mic className="w-5 h-5 stroke-[2.2]" />
+                </motion.button>
               )}
             </AnimatePresence>
           </div>
-
-          {/* File Attachment Button */}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition-colors cursor-pointer hover:bg-[#2a3942] ${
-              attachedFile ? 'text-[#00a884]' : 'text-[#8696a0] hover:text-[#d1d7db]'
-            }`}
-            title="Attach Document or Image (or Drag & Drop)"
-          >
-            <Paperclip className="w-4.5 h-4.5" />
-          </button>
-
-          {/* Text Area Input */}
-          <div className="flex-1 relative flex items-center">
-            <textarea
-              ref={textareaRef}
-              rows={1}
-              value={text}
-              onChange={handleTextChange}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-              className="w-full px-3 py-1.5 min-h-[36px] max-h-28 bg-[#2a3942] border border-transparent focus:border-[#00a884]/50 rounded-lg text-[#d1d7db] outline-none transition-all font-normal text-xs sm:text-[13px] leading-snug resize-none placeholder:text-[#8696a0]"
-            />
-          </div>
-
-          {/* Mic or Send Button */}
-          {text.trim() || attachedFile ? (
-            <button
-              type="button"
-              onClick={handleFormSubmit}
-              disabled={isUploading}
-              className="w-8.5 h-8.5 rounded-full bg-gradient-to-tr from-[#00a884] to-[#02b992] hover:from-[#029072] hover:to-[#00a884] text-white shadow-[0_2px_10px_rgba(0,168,132,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
-              title="Send message"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                className="w-4 h-4 text-white fill-white ml-0.5"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
-              </svg>
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleStartRecording}
-              className="w-8.5 h-8.5 rounded-full hover:bg-[#2a3942] text-[#8696a0] hover:text-[#00a884] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all"
-              title="Record voice message"
-            >
-              <Mic className="w-4.5 h-4.5" />
-            </button>
-          )}
         </div>
       )}
     </div>

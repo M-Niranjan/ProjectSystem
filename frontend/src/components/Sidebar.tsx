@@ -203,8 +203,8 @@ export default function Sidebar() {
           {isExpandedOrDrawer ? (
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3 overflow-hidden">
-                <div className="flex-shrink-0 flex items-center justify-center w-9 h-9 rounded-xl bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 shadow-xs">
-                  <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
+                <div className="flex-shrink-0 flex items-center justify-center w-9 h-9">
+                  <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain drop-shadow-sm hover:scale-105 transition-transform" />
                 </div>
                 <motion.div
                   initial={{ opacity: 0, x: -4 }}
@@ -243,9 +243,9 @@ export default function Sidebar() {
               <button
                 onClick={toggleSidebar}
                 title="Expand Sidebar"
-                className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600/10 hover:bg-indigo-600/20 border border-indigo-500/20 transition-colors cursor-pointer"
+                className="w-10 h-10 flex items-center justify-center rounded-xl hover:bg-slate-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
               >
-                <img src="/logo.png" alt="Logo" className="w-5.5 h-5.5 object-contain" />
+                <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain drop-shadow-sm hover:scale-105 transition-transform" />
               </button>
             </div>
           )}

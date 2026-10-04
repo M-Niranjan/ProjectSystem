@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getDashboardPathForRole } from '../services/authRoles';
 import {
   MessageSquare,
   Send,
@@ -26,6 +28,7 @@ import {
   Bell,
   BellOff,
   ChevronLeft,
+  ChevronDown,
   Sparkles,
   CheckCircle2,
   AlertCircle,
@@ -174,6 +177,7 @@ const playChime = () => {
 };
 
 export default function Messages() {
+  const navigate = useNavigate();
   const { user, activeOrganizationId, activeOrganization, logout, updateProfile } = useAuthStore();
   const { chatContactId, setChatContactId, showToast: triggerGlobalToast } = useUIStore();
 
@@ -230,19 +234,7 @@ export default function Messages() {
     };
   }, []);
 
-  // Sync mobile chat open state with document class so MobileBottomNav knows to hide during active chat
-  useEffect(() => {
-    if (mobileView === 'chat') {
-      document.body.classList.add('mobile-chat-open');
-    } else {
-      document.body.classList.remove('mobile-chat-open');
-    }
-    window.dispatchEvent(new Event('mobile-chat-state-changed'));
-    return () => {
-      document.body.classList.remove('mobile-chat-open');
-      window.dispatchEvent(new Event('mobile-chat-state-changed'));
-    };
-  }, [mobileView]);
+
 
   // Network Offline Banner State (Requirement 39)
   const [isOffline, setIsOffline] = useState(!navigator.onLine);
@@ -377,10 +369,22 @@ export default function Messages() {
   } | null>(null);
   const callTimerRef = useRef<any>(null);
 
-  // Action Menu & Search
+  // Action Menu, Dropdown Context Menu & Emoji Reaction Tray
   const [activeMessageActionId, setActiveMessageActionId] = useState<string | number | null>(null);
+  const [activeContextMenuMsgId, setActiveContextMenuMsgId] = useState<string | number | null>(null);
+  const [activeReactionTrayMsgId, setActiveReactionTrayMsgId] = useState<string | number | null>(null);
   const [showThreadSearch, setShowThreadSearch] = useState(false);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
+
+  // Close context menu & emoji tray on click outside
+  useEffect(() => {
+    const handleDocumentClick = () => {
+      setActiveContextMenuMsgId(null);
+      setActiveReactionTrayMsgId(null);
+    };
+    document.addEventListener('click', handleDocumentClick);
+    return () => document.removeEventListener('click', handleDocumentClick);
+  }, []);
 
   // Edit Profile Form State
   const [editName, setEditName] = useState(user?.name || '');
@@ -1832,6 +1836,41 @@ export default function Messages() {
 
   const hasActiveConversation = Boolean(selectedConversationId && (selectedConversationType === 'ai' || activeChannelObj || activeContactObj || activeTeamObj));
 
+  // Back navigation handler: returns to conversation directory on mobile, or back to dashboard
+  const handleBackNavigation = () => {
+    if (mobileView === 'chat' && hasActiveConversation) {
+      setMobileView('list');
+      setSelectedConversationId(null);
+    } else if (mobileView === 'chat') {
+      setMobileView('list');
+    } else if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate(getDashboardPathForRole(user?.role) || '/');
+    }
+  };
+
+  // Sync mobile chat open state with document class so MobileBottomNav knows to hide during active chat ONLY
+  useEffect(() => {
+    if (mobileView === 'chat' && hasActiveConversation) {
+      document.body.classList.add('mobile-chat-open');
+    } else {
+      document.body.classList.remove('mobile-chat-open');
+    }
+    window.dispatchEvent(new Event('mobile-chat-state-changed'));
+    return () => {
+      document.body.classList.remove('mobile-chat-open');
+      window.dispatchEvent(new Event('mobile-chat-state-changed'));
+    };
+  }, [mobileView, hasActiveConversation]);
+
+  // On mobile devices, if there is no active conversation selected, automatically ensure mobileView stays 'list'
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 768 && mobileView === 'chat' && !hasActiveConversation) {
+      setMobileView('list');
+    }
+  }, [mobileView, hasActiveConversation]);
+
   const filteredMessages = messages.filter((m) =>
     m.content.toLowerCase().includes(messageSearchQuery.toLowerCase())
   );
@@ -2431,9 +2470,19 @@ export default function Messages() {
           
           {/* Mobile Chat Header (md:hidden) */}
           <div className="md:hidden px-4 pt-3.5 pb-2.5 bg-[#111b21] border-b border-[#202c33]/80 flex items-center justify-between shrink-0 select-none">
-            <h1 className="text-xl font-bold text-[#e9edef] tracking-tight">
-              Chat
-            </h1>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleBackNavigation}
+                className="p-1.5 -ml-2 rounded-full hover:bg-[#202c33] text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer flex items-center justify-center"
+                title="Back to Dashboard"
+              >
+                <ChevronLeft className="w-5 h-5 stroke-[2.5]" />
+              </button>
+              <h1 className="text-xl font-bold text-[#e9edef] tracking-tight">
+                Chat
+              </h1>
+            </div>
             <div className="flex items-center gap-3.5 text-[#e9edef]">
               <button
                 onClick={() => {
@@ -2781,6 +2830,19 @@ export default function Messages() {
         {!hasActiveConversation ? (
           /* EMPTY STATE SCREEN */
           <div className="h-full w-full flex flex-col items-center justify-center p-6 sm:p-10 text-center bg-[#111b21] relative select-none">
+            {/* Top Navigation Bar with Back Button */}
+            <div className="absolute top-0 left-0 right-0 p-3.5 flex items-center justify-between z-20">
+              <button
+                type="button"
+                onClick={handleBackNavigation}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#202c33]/90 hover:bg-[#2a3942] border border-[#2a3942] text-[#d1d7db] hover:text-[#00a884] text-xs font-semibold shadow-md transition-all active:scale-95 cursor-pointer"
+                title="Back"
+              >
+                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                <span>Back</span>
+              </button>
+            </div>
+
             <div className="mb-6 relative">
               <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#00a884]/20 via-[#202c33] to-[#005c4b]/30 border-2 border-[#00a884]/40 flex items-center justify-center shadow-2xl shadow-[#00a884]/20">
                 <div className="w-16 h-16 rounded-full bg-[#202c33] flex items-center justify-center shadow-inner">
@@ -2845,6 +2907,16 @@ export default function Messages() {
                 </div>
               </button>
             </div>
+
+            {/* Mobile Button: View Conversations List */}
+            <button
+              type="button"
+              onClick={() => setMobileView('list')}
+              className="md:hidden -mt-4 mb-8 px-5 py-2.5 rounded-xl bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] text-xs font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+              <span>Back to Conversations List</span>
+            </button>
 
             <div className="absolute bottom-6 flex items-center gap-1.5 text-xs text-[#8696a0]">
               <Lock className="w-3.5 h-3.5 text-[#00a884]" />
@@ -3126,12 +3198,116 @@ export default function Messages() {
 
                         {/* WhatsApp Message Bubble */}
                         <div
-                          className={`px-3.5 py-2 rounded-xl text-[13.5px] leading-relaxed shadow-sm break-words relative ${
+                          className={`pl-3.5 pr-6 py-2 rounded-xl text-[13.5px] leading-relaxed shadow-sm break-words relative group/bubble ${
                             isMe
                               ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-xs'
                               : 'bg-[#202c33] text-[#e9edef] rounded-tl-xs'
                           }`}
                         >
+                          {/* WhatsApp Bubble Context Chevron (Appears on hover over message) */}
+                          {!msg.isDeleted && (
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveContextMenuMsgId(
+                                  String(activeContextMenuMsgId) === String(msg.id) ? null : msg.id
+                                );
+                                setActiveReactionTrayMsgId(null);
+                              }}
+                              className={`absolute top-1 right-1 w-5 h-5 rounded-full bg-black/25 hover:bg-black/45 text-[#8696a0] hover:text-white flex items-center justify-center transition-all cursor-pointer z-10 ${
+                                String(activeContextMenuMsgId) === String(msg.id)
+                                  ? 'opacity-100'
+                                  : 'opacity-0 group-hover:opacity-100'
+                              }`}
+                              title="Message options"
+                            >
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                          )}
+
+                          {/* WhatsApp Dropdown Context Menu ("comes down") */}
+                          {String(activeContextMenuMsgId) === String(msg.id) && !msg.isDeleted && (
+                            <div
+                              className={`absolute top-7 ${
+                                isMe ? 'right-0' : 'left-0'
+                              } z-50 w-44 py-1.5 rounded-xl bg-[#233138] border border-[#2a3942] shadow-[0_12px_28px_rgba(0,0,0,0.65)] text-[#d1d7db] text-[13px] font-normal backdrop-blur-md animate-in fade-in zoom-in-95 duration-100`}
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <button
+                                onClick={() => {
+                                  setReplyToMessage(msg);
+                                  setActiveContextMenuMsgId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-[#182229] flex items-center gap-3 cursor-pointer transition-colors"
+                              >
+                                <Reply className="w-4 h-4 text-[#8696a0]" />
+                                <span>Reply</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setActiveReactionTrayMsgId(msg.id);
+                                  setActiveContextMenuMsgId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-[#182229] flex items-center gap-3 cursor-pointer transition-colors"
+                              >
+                                <Smile className="w-4 h-4 text-[#8696a0]" />
+                                <span>React</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setForwardModalData({ isOpen: true, messageText: msg.content });
+                                  setActiveContextMenuMsgId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-[#182229] flex items-center gap-3 cursor-pointer transition-colors"
+                              >
+                                <Share2 className="w-4 h-4 text-[#8696a0]" />
+                                <span>Forward</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  handleCopyMessage(msg.content);
+                                  setActiveContextMenuMsgId(null);
+                                }}
+                                className="w-full px-3 py-2 text-left hover:bg-[#182229] flex items-center gap-3 cursor-pointer transition-colors"
+                              >
+                                <Copy className="w-4 h-4 text-[#8696a0]" />
+                                <span>Copy</span>
+                              </button>
+
+                              {isMe && (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setEditingMessage(msg);
+                                      setActiveContextMenuMsgId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-[#182229] flex items-center gap-3 cursor-pointer text-blue-400 hover:text-blue-300 transition-colors"
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                    <span>Edit</span>
+                                  </button>
+
+                                  <div className="h-px bg-[#2a3942] my-1" />
+
+                                  <button
+                                    onClick={() => {
+                                      setDeleteConfirmMsgId(msg.id);
+                                      setActiveContextMenuMsgId(null);
+                                    }}
+                                    className="w-full px-3 py-2 text-left hover:bg-rose-500/10 flex items-center gap-3 cursor-pointer text-rose-400 hover:text-rose-300 transition-colors"
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                    <span>Delete</span>
+                                  </button>
+                                </>
+                              )}
+                            </div>
+                          )}
+
                           {/* Deleted message state (Requirement 12) */}
                           {msg.isDeleted ? (
                             <div className="italic text-[#8696a0] flex items-center gap-1.5 text-xs py-0.5">
@@ -3284,65 +3460,81 @@ export default function Messages() {
                         )}
                       </div>
 
-                      {/* Hover Action Menu */}
+                      {/* WhatsApp Hover Quick Action Triggers (Image 2) */}
                       {!msg.isDeleted && (
-                        <div
-                          className={`bg-[#202c33] border border-[#2a3942] rounded-xl shadow-xl p-1 items-center gap-0.5 z-20 shrink-0 self-start mt-0.5 transition-all duration-150 ${
-                            String(activeMessageActionId) === String(msg.id)
-                              ? 'flex opacity-100 scale-100'
-                              : 'hidden group-hover:flex group-hover:opacity-100 group-hover:scale-100'
-                          }`}
-                        >
-                          {(['👍', '❤️', '😂', '🔥', '👏'] as const).map((emoji) => (
+                        <div className="relative shrink-0 self-center">
+                          {/* When hovered over the message, show the single round emoji smile button and quick reply button */}
+                          <div
+                            className={`items-center gap-1.5 transition-all duration-150 ${
+                              String(activeReactionTrayMsgId) === String(msg.id)
+                                ? 'flex opacity-100 scale-100'
+                                : 'hidden group-hover:flex group-hover:opacity-100 group-hover:scale-100'
+                            }`}
+                          >
+                            {/* Single Emoji Smile Button (WhatsApp Image 2) */}
                             <button
-                              key={emoji}
-                              onClick={() => handleToggleReaction(msg.id, emoji)}
-                              className="p-1 hover:bg-[#2a3942] rounded-lg text-xs cursor-pointer"
-                              title={`React ${emoji}`}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setActiveReactionTrayMsgId(
+                                  String(activeReactionTrayMsgId) === String(msg.id) ? null : msg.id
+                                );
+                                setActiveContextMenuMsgId(null);
+                              }}
+                              className={`w-7 h-7 rounded-full bg-[#182229]/80 hover:bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] flex items-center justify-center cursor-pointer shadow-sm transition-all active:scale-95 ${
+                                String(activeReactionTrayMsgId) === String(msg.id)
+                                  ? 'bg-[#202c33] text-white ring-1 ring-[#00a884]'
+                                  : ''
+                              }`}
+                              title="Add reaction"
                             >
-                              {emoji}
+                              <Smile className="w-4 h-4" />
                             </button>
-                          ))}
-                          <div className="w-px h-3.5 bg-[#2a3942] mx-0.5" />
-                          <button
-                            onClick={() => setReplyToMessage(msg)}
-                            className="p-1 hover:bg-[#2a3942] rounded-lg text-[#8696a0] hover:text-white cursor-pointer"
-                            title="Reply"
-                          >
-                            <Reply className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => setForwardModalData({ isOpen: true, messageText: msg.content })}
-                            className="p-1 hover:bg-[#2a3942] rounded-lg text-[#8696a0] hover:text-white cursor-pointer"
-                            title="Forward"
-                          >
-                            <Share2 className="w-3.5 h-3.5" />
-                          </button>
-                          <button
-                            onClick={() => handleCopyMessage(msg.content)}
-                            className="p-1 hover:bg-[#2a3942] rounded-lg text-[#8696a0] hover:text-white cursor-pointer"
-                            title="Copy text"
-                          >
-                            <Copy className="w-3.5 h-3.5" />
-                          </button>
-                          {isMe && (
-                            <>
-                              <button
-                                onClick={() => setEditingMessage(msg)}
-                                className="p-1 hover:bg-[#2a3942] rounded-lg text-blue-400 cursor-pointer"
-                                title="Edit message"
+
+                            {/* Quick Reply / Forward Button (WhatsApp Image 2) */}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setReplyToMessage(msg);
+                              }}
+                              className="w-7 h-7 rounded-full bg-[#182229]/80 hover:bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] flex items-center justify-center cursor-pointer shadow-sm transition-all active:scale-95"
+                              title="Reply"
+                            >
+                              <Reply className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          {/* Floating Emoji Reactions Bar (Appears when single Smile button is clicked!) */}
+                          <AnimatePresence>
+                            {String(activeReactionTrayMsgId) === String(msg.id) && (
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.85, y: 6 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.85, y: 6 }}
+                                transition={{ duration: 0.15 }}
+                                className={`absolute z-30 bottom-full mb-2 ${
+                                  isMe ? 'left-0' : 'right-0'
+                                } flex items-center gap-1 px-2.5 py-1.5 rounded-full bg-[#202c33] border border-[#2a3942] shadow-[0_8px_24px_rgba(0,0,0,0.55)] backdrop-blur-md`}
+                                onClick={(e) => e.stopPropagation()}
                               >
-                                <Edit2 className="w-3.5 h-3.5" />
-                              </button>
-                              <button
-                                onClick={() => setDeleteConfirmMsgId(msg.id)}
-                                className="p-1 hover:bg-rose-500/20 text-rose-400 rounded-lg cursor-pointer"
-                                title="Delete message"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
-                            </>
-                          )}
+                                {(['👍', '❤️', '😂', '😮', '😢', '🙏'] as const).map((emoji) => (
+                                  <button
+                                    key={emoji}
+                                    type="button"
+                                    onClick={() => {
+                                      handleToggleReaction(msg.id, emoji);
+                                      setActiveReactionTrayMsgId(null);
+                                    }}
+                                    className="w-7 h-7 rounded-full hover:bg-[#2a3942] flex items-center justify-center text-sm transition-transform hover:scale-125 cursor-pointer active:scale-90"
+                                    title={`React ${emoji}`}
+                                  >
+                                    {emoji}
+                                  </button>
+                                ))}
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
                         </div>
                       )}
                     </div>

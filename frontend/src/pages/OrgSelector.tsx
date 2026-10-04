@@ -22,7 +22,7 @@ import { resolveAvatar } from '../services/avatar';
 export default function OrgSelector() {
   const navigate = useNavigate();
   const { user, orgMemberships, setActiveOrganization, logout, fetchMyOrganizations } = useAuthStore();
-  const { setSignOutModalOpen } = useUIStore();
+  const { setSignOutModalOpen, darkMode } = useUIStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [loadingOrgId, setLoadingOrgId] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -99,20 +99,14 @@ export default function OrgSelector() {
       {/* Header bar */}
       <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between pb-6 border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-3">
-          <div className="flex items-end gap-1 h-8">
-            <div className="w-2.5 h-4 rounded-sm bg-blue-400 shadow-sm" />
-            <div className="w-2.5 h-6 rounded-sm bg-blue-500 shadow-sm" />
-            <div className="w-2.5 h-8 rounded-sm bg-blue-600 shadow-sm" />
-          </div>
-          <div>
-            <h1 className="text-lg font-black tracking-tight text-slate-900 dark:text-white flex items-center gap-2">
-              Task<span className="text-blue-600 dark:text-blue-400">Flow</span>
-              <span className="text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400">
-                Multi-Tenant
-              </span>
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400">Project Management System</p>
-          </div>
+          <img
+            src={darkMode ? "/logo-with-text-dark.png" : "/logo-with-text.png"}
+            alt="Project Management System"
+            className="h-9 sm:h-11 w-auto object-contain drop-shadow-md hover:scale-102 transition-transform"
+          />
+          <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400">
+            Multi-Tenant
+          </span>
         </div>
 
         {user && (
