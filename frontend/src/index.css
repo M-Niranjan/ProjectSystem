@@ -60,8 +60,24 @@
     --blur-glass: 20px;
   }
 
+  /* Android & Mobile Default 100% Scale Enforcement */
   html {
-    scrollbar-gutter: stable;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+    width: 100%;
+    min-height: 100%;
+  }
+
+  /* Desktop-only scrollbar reservation (avoids 17px right margin squish on mobile screens) */
+  @media (min-width: 1024px) {
+    html {
+      scrollbar-gutter: stable;
+    }
   }
 
   body {
@@ -70,8 +86,31 @@
     font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
     transition: background-color 0.25s ease, color 0.25s ease;
     overflow-x: hidden;
+    width: 100%;
+    min-height: 100%;
+    -webkit-text-size-adjust: 100%;
+    -moz-text-size-adjust: 100%;
+    -ms-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
+  /* Disable Chromium Font Boosting / Text Autosizing globally so mobile text remains at true 100% default scale */
+  *, *::before, *::after {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    max-height: 1000000rem;
+  }
+
+  /* Prevent mobile browsers from triggering 130%+ auto-zoom when tapping inputs (caused by font-size < 16px) */
+  @media screen and (max-width: 768px) {
+    input:not([type="checkbox"]):not([type="radio"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
   }
 
   body.modal-scroll-locked {
