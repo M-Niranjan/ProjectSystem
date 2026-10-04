@@ -54,12 +54,23 @@ import {
   Highlighter,
   RemoveFormatting,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Building2,
+  Layers,
+  Code2,
+  Calendar,
+  Users,
+  Smartphone,
+  Globe,
+  Cpu,
+  ArrowDownAZ,
+  History
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useScrollLock } from '../hooks/useScrollLock';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import LuxurySelect, { LuxurySelectOption } from '../components/common/LuxurySelect';
 import PremiumPdfViewerModal from '../components/common/PremiumPdfViewerModal';
 
 // ============================================================================
@@ -507,6 +518,29 @@ const CATEGORIES: DocumentItem['category'][] = [
   'Planning',
   'Meeting',
   'General'
+];
+
+const DOCUMENT_CATEGORY_OPTIONS: LuxurySelectOption[] = [
+  { value: 'Architecture', label: 'Architecture', subLabel: 'System & Infra Design', icon: <Building2 className="w-3.5 h-3.5 text-indigo-400" /> },
+  { value: 'Product', label: 'Product', subLabel: 'Specs & User Journeys', icon: <Layers className="w-3.5 h-3.5 text-purple-400" /> },
+  { value: 'Engineering', label: 'Engineering', subLabel: 'Tech Specs & APIs', icon: <Code2 className="w-3.5 h-3.5 text-emerald-400" /> },
+  { value: 'Planning', label: 'Planning', subLabel: 'Roadmaps & Sprints', icon: <Calendar className="w-3.5 h-3.5 text-amber-400" /> },
+  { value: 'Meeting', label: 'Meeting', subLabel: 'Notes & Action Items', icon: <Users className="w-3.5 h-3.5 text-rose-400" /> },
+  { value: 'General', label: 'General', subLabel: 'Company & Misc Docs', icon: <Folder className="w-3.5 h-3.5 text-blue-400" /> },
+];
+
+const DOCUMENT_PROJECT_OPTIONS: LuxurySelectOption[] = [
+  { value: 'Core Platform', label: 'Core Platform', subLabel: 'Backend API & Database', icon: <Layers className="w-3.5 h-3.5 text-blue-400" /> },
+  { value: 'Mobile App', label: 'Mobile App', subLabel: 'iOS & Android Client', icon: <Smartphone className="w-3.5 h-3.5 text-emerald-400" /> },
+  { value: 'Web Client', label: 'Web Client', subLabel: 'Next.js & React SPA', icon: <Globe className="w-3.5 h-3.5 text-indigo-400" /> },
+  { value: 'Infrastructure', label: 'Infrastructure', subLabel: 'Cloud & Kubernetes', icon: <Cpu className="w-3.5 h-3.5 text-amber-400" /> },
+];
+
+const DOCUMENT_SORT_OPTIONS: LuxurySelectOption[] = [
+  { value: 'newest', label: 'Newest First', icon: <Clock className="w-3.5 h-3.5 text-blue-400" /> },
+  { value: 'oldest', label: 'Oldest First', icon: <History className="w-3.5 h-3.5 text-slate-400" /> },
+  { value: 'title', label: 'Name (A-Z)', icon: <ArrowDownAZ className="w-3.5 h-3.5 text-emerald-400" /> },
+  { value: 'size', label: 'File Size', icon: <HardDrive className="w-3.5 h-3.5 text-purple-400" /> },
 ];
 
 export default function Documents() {
@@ -1287,6 +1321,13 @@ ${item.content || ''}
     };
   }, [nonTrashItems, trashItems]);
 
+  const navCategoryOptions: LuxurySelectOption[] = useMemo(() => [
+    { value: 'all', label: `All Items (${counts.total})`, icon: <Layers className="w-3.5 h-3.5 text-blue-400" /> },
+    { value: 'my', label: `My Docs (${counts.written})`, icon: <FileText className="w-3.5 h-3.5 text-indigo-400" /> },
+    { value: 'starred', label: `Starred (${counts.starred})`, icon: <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400" /> },
+    { value: 'trash', label: `Trash (${counts.trash})`, icon: <Trash2 className="w-3.5 h-3.5 text-rose-400" /> },
+  ], [counts.total, counts.written, counts.starred, counts.trash]);
+
   const filteredItems = useMemo(() => {
     let list = navCategory === 'trash' ? trashItems : nonTrashItems;
 
@@ -1510,20 +1551,17 @@ ${item.content || ''}
                 <div className="h-4 w-px bg-slate-200 dark:bg-white/10 hidden sm:block shrink-0" />
 
                 {/* Category Dropdown */}
-                <select
-                  value={editCategory}
-                  onChange={(e) => {
-                    setEditCategory(e.target.value as any);
-                    setHasUnsavedChanges(true);
-                  }}
-                  className="hidden md:block text-xs font-bold px-2.5 py-1.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer"
-                >
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c} className="dark:bg-slate-900">
-                      {c}
-                    </option>
-                  ))}
-                </select>
+                <div className="hidden md:block w-44">
+                  <LuxurySelect
+                    value={editCategory}
+                    onChange={(val) => {
+                      setEditCategory(val as any);
+                      setHasUnsavedChanges(true);
+                    }}
+                    options={DOCUMENT_CATEGORY_OPTIONS}
+                    buttonClassName="py-1.5 px-2.5 rounded-xl text-xs font-bold"
+                  />
+                </div>
 
                 {/* Status Toggle (Draft / Published) */}
                 <button
@@ -2102,27 +2140,23 @@ ${item.content || ''}
 
                 {/* Controls: Category, Sort Dropdown & Display Mode (Aligned in 1 row on mobile) */}
                 <div className="grid grid-cols-[1fr_1fr_auto] sm:flex sm:items-center gap-2 w-full sm:w-auto shrink-0">
-                  <select
-                    value={navCategory}
-                    onChange={(e) => setNavCategory(e.target.value as any)}
-                    className="w-full min-w-0 text-xs font-bold px-2 sm:px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer truncate"
-                  >
-                    <option value="all" className="dark:bg-slate-900">All Items ({counts.total})</option>
-                    <option value="my" className="dark:bg-slate-900">My Docs ({counts.written})</option>
-                    <option value="starred" className="dark:bg-slate-900">⭐ Starred ({counts.starred})</option>
-                    <option value="trash" className="dark:bg-slate-900">🗑️ Trash ({counts.trash})</option>
-                  </select>
+                  <div className="w-full sm:w-36 min-w-0">
+                    <LuxurySelect
+                      value={navCategory}
+                      onChange={(val) => setNavCategory(val as any)}
+                      options={navCategoryOptions}
+                      buttonClassName="w-full py-2 px-2 sm:px-2.5 rounded-xl text-xs font-bold"
+                    />
+                  </div>
 
-                  <select
-                    value={sortBy}
-                    onChange={(e) => setSortBy(e.target.value as any)}
-                    className="w-full min-w-0 text-xs font-bold px-2 sm:px-2.5 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200/80 dark:border-white/10 text-slate-700 dark:text-slate-200 outline-none cursor-pointer truncate"
-                  >
-                    <option value="newest" className="dark:bg-slate-900">Newest First</option>
-                    <option value="oldest" className="dark:bg-slate-900">Oldest First</option>
-                    <option value="title" className="dark:bg-slate-900">Name (A-Z)</option>
-                    <option value="size" className="dark:bg-slate-900">Size</option>
-                  </select>
+                  <div className="w-full sm:w-36 min-w-0">
+                    <LuxurySelect
+                      value={sortBy}
+                      onChange={(val) => setSortBy(val as any)}
+                      options={DOCUMENT_SORT_OPTIONS}
+                      buttonClassName="w-full py-2 px-2 sm:px-2.5 rounded-xl text-xs font-bold"
+                    />
+                  </div>
 
                   <div className="flex items-center p-0.5 bg-slate-100 dark:bg-slate-800/80 rounded-xl border border-slate-200/80 dark:border-white/10 shrink-0">
                     <button
@@ -2599,28 +2633,21 @@ ${item.content || ''}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Target Category</label>
-                  <select
+                  <LuxurySelect
                     value={uploadCategory}
-                    onChange={(e) => setUploadCategory(e.target.value as any)}
-                    className="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white outline-none"
-                  >
-                    {CATEGORIES.map((c) => (
-                      <option key={c} value={c} className="dark:bg-slate-900">{c}</option>
-                    ))}
-                  </select>
+                    onChange={(val) => setUploadCategory(val as any)}
+                    options={DOCUMENT_CATEGORY_OPTIONS}
+                    buttonClassName="w-full p-2.5 rounded-xl text-xs font-bold"
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black uppercase text-slate-400 mb-1">Linked Project</label>
-                  <select
+                  <LuxurySelect
                     value={uploadProject}
-                    onChange={(e) => setUploadProject(e.target.value)}
-                    className="w-full text-xs font-bold p-2.5 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-800 dark:text-white outline-none"
-                  >
-                    <option value="Core Platform" className="dark:bg-slate-900">Core Platform</option>
-                    <option value="Mobile App" className="dark:bg-slate-900">Mobile App</option>
-                    <option value="Web Client" className="dark:bg-slate-900">Web Client</option>
-                    <option value="Infrastructure" className="dark:bg-slate-900">Infrastructure</option>
-                  </select>
+                    onChange={(val) => setUploadProject(val)}
+                    options={DOCUMENT_PROJECT_OPTIONS}
+                    buttonClassName="w-full p-2.5 rounded-xl text-xs font-bold"
+                  />
                 </div>
               </div>
 

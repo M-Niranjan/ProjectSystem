@@ -228,10 +228,10 @@ export default function CreateProjectModal() {
                       value={status}
                       onChange={(val) => setStatus(val)}
                       options={[
-                        { value: 'PLANNING', label: 'Planning' },
-                        { value: 'ACTIVE', label: 'Active' },
-                        { value: 'COMPLETED', label: 'Completed' },
-                        { value: 'ARCHIVED', label: 'Archived' }
+                        { value: 'PLANNING', label: 'Planning', subLabel: 'Scoping & roadmap' },
+                        { value: 'ACTIVE', label: 'Active', subLabel: 'Live execution' },
+                        { value: 'COMPLETED', label: 'Completed', subLabel: 'Delivered project' },
+                        { value: 'ARCHIVED', label: 'Archived', subLabel: 'Read-only archive' }
                       ]}
                     />
                   </div>
@@ -242,10 +242,10 @@ export default function CreateProjectModal() {
                       value={priority}
                       onChange={(val) => setPriority(val)}
                       options={[
-                        { value: 'LOW', label: 'Low', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
-                        { value: 'MEDIUM', label: 'Medium', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
-                        { value: 'HIGH', label: 'High', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
-                        { value: 'CRITICAL', label: 'Critical', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                        { value: 'LOW', label: 'Low', subLabel: 'Standard pace', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
+                        { value: 'MEDIUM', label: 'Medium', subLabel: 'Normal delivery', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                        { value: 'HIGH', label: 'High', subLabel: 'Priority release', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                        { value: 'CRITICAL', label: 'Critical', subLabel: 'Mission critical', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
                       ]}
                     />
                   </div>

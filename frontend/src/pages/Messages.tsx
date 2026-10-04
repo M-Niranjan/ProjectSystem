@@ -92,6 +92,7 @@ import { resolveAvatar } from '../services/avatar';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { formatRoleName, normalizeRole } from '../services/authRoles';
+import LuxurySelect, { LuxurySelectOption } from '../components/common/LuxurySelect';
 import {
   useCommunicationStore,
   ChatMessage,
@@ -3682,23 +3683,27 @@ export default function Messages() {
                     </button>
                   </div>
 
-                  <select
+                  <LuxurySelect
                     value={docRecipientId}
-                    onChange={(e) => setDocRecipientId(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs font-medium text-[#d1d7db] outline-none"
-                  >
-                    {docRecipientType === 'channel'
-                      ? channels.map((c) => (
-                          <option key={c.id} value={c.id}>
-                            #{c.name}
-                          </option>
-                        ))
-                      : contacts.filter(c => c.id !== AI_ASSISTANT_ID).map((u) => (
-                          <option key={u.id} value={u.id}>
-                            {u.name} ({formatRoleName(u.role, 'title')})
-                          </option>
-                        ))}
-                  </select>
+                    onChange={(val) => setDocRecipientId(val)}
+                    options={
+                      docRecipientType === 'channel'
+                        ? channels.map((c) => ({
+                            value: c.id,
+                            label: `#${c.name}`,
+                            subLabel: c.description || 'Channel',
+                            icon: <Hash className="w-3.5 h-3.5 text-teal-400" />
+                          }))
+                        : contacts.filter(c => c.id !== AI_ASSISTANT_ID).map((u) => ({
+                            value: u.id,
+                            label: u.name,
+                            subLabel: formatRoleName(u.role, 'title'),
+                            badge: u.isOnline ? 'Online' : undefined,
+                            badgeColor: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+                          }))
+                    }
+                    buttonClassName="w-full px-3 py-2 bg-[#111b21] border-[#2a3942] rounded-xl text-xs font-medium text-[#d1d7db]"
+                  />
                 </div>
               </div>
 

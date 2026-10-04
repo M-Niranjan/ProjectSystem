@@ -65,6 +65,7 @@ import { useUIStore, AccentColor, ThemeMode, ACCENT_PRESETS } from '../store/use
 import { useScrollLock } from '../hooks/useScrollLock';
 import { formatRoleName, normalizeRole } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
+import LuxurySelect from '../components/common/LuxurySelect';
 
 // Settings Category ID Type
 type SettingsCategoryId =
@@ -191,6 +192,57 @@ const SETTINGS_CATEGORIES: SettingsCategoryCard[] = [
     iconColorLight: 'text-slate-700',
     iconColorDark: 'dark:text-slate-300',
   },
+];
+
+const DASHBOARD_OPTIONS = [
+  { value: 'Overview', label: 'Overview', subLabel: 'Project activity & metrics' },
+  { value: 'Executive', label: 'Executive', subLabel: 'High-level business KPIs' },
+  { value: 'Task Focus', label: 'Task Focus', subLabel: 'Personal assignments & queue' },
+  { value: 'Sprint Timeline', label: 'Sprint Timeline', subLabel: 'Milestones & delivery plan' },
+];
+
+const LANGUAGE_OPTIONS = [
+  { value: 'English (US)', label: 'English (US)', subLabel: 'United States' },
+  { value: 'English (UK)', label: 'English (UK)', subLabel: 'United Kingdom' },
+  { value: 'Spanish', label: 'Spanish', subLabel: 'Español' },
+  { value: 'French', label: 'French', subLabel: 'Français' },
+  { value: 'German', label: 'German', subLabel: 'Deutsch' },
+];
+
+const DATE_FORMAT_OPTIONS = [
+  { value: 'YYYY-MM-DD', label: 'YYYY-MM-DD', subLabel: 'Standard ISO' },
+  { value: 'DD/MM/YYYY', label: 'DD/MM/YYYY', subLabel: 'Day / Month / Year' },
+  { value: 'MM/DD/YYYY', label: 'MM/DD/YYYY', subLabel: 'Month / Day / Year' },
+];
+
+const TIME_FORMAT_OPTIONS = [
+  { value: '12-hour (AM/PM)', label: '12-hour (AM/PM)', subLabel: 'Standard AM/PM' },
+  { value: '24-hour', label: '24-hour', subLabel: 'Military / International' },
+];
+
+const BREAK_DURATION_OPTIONS = [
+  { value: '30 mins', label: '30 mins', subLabel: 'Quick midday break' },
+  { value: '45 mins', label: '45 mins', subLabel: 'Standard rest window' },
+  { value: '60 mins', label: '60 mins', subLabel: 'Extended lunch interval' },
+];
+
+const APPROVER_OPTIONS = [
+  { value: 'Team Leader Only', label: 'Team Leader Only', subLabel: 'Assigned direct lead' },
+  { value: 'Project Lead & Admin', label: 'Project Lead & Admin', subLabel: 'Project management tier' },
+  { value: 'Admin Only', label: 'Admin Only', subLabel: 'System administrators only' },
+];
+
+const FILE_SIZE_OPTIONS = [
+  { value: '10 MB', label: '10 MB', subLabel: 'Documents & small assets' },
+  { value: '25 MB', label: '25 MB', subLabel: 'Standard attachments' },
+  { value: '50 MB', label: '50 MB', subLabel: 'High-res images & media' },
+  { value: '100 MB', label: '100 MB', subLabel: 'Large archive bundles' },
+];
+
+const RETENTION_OPTIONS = [
+  { value: '90 Days', label: '90 Days', subLabel: 'Quarterly purge cycle' },
+  { value: '1 Year', label: '1 Year', subLabel: 'Annual archive compliance' },
+  { value: 'Indefinite', label: 'Indefinite', subLabel: 'Never auto-delete' },
 ];
 
 export default function Settings() {
@@ -1369,68 +1421,54 @@ export default function Settings() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Default Dashboard</label>
-                    <select
+                    <LuxurySelect
                       value={defaultDashboard}
-                      onChange={(e) => {
-                        setDefaultDashboard(e.target.value);
+                      onChange={(val) => {
+                        setDefaultDashboard(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="Overview">Overview</option>
-                      <option value="Executive">Executive</option>
-                      <option value="Task Focus">Task Focus</option>
-                      <option value="Sprint Timeline">Sprint Timeline</option>
-                    </select>
+                      options={DASHBOARD_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Language</label>
-                    <select
+                    <LuxurySelect
                       value={defaultLanguage}
-                      onChange={(e) => {
-                        setDefaultLanguage(e.target.value);
+                      onChange={(val) => {
+                        setDefaultLanguage(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="English (US)">English (US)</option>
-                      <option value="English (UK)">English (UK)</option>
-                      <option value="Spanish">Spanish</option>
-                      <option value="French">French</option>
-                      <option value="German">German</option>
-                    </select>
+                      options={LANGUAGE_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Date Format</label>
-                    <select
+                    <LuxurySelect
                       value={dateFormat}
-                      onChange={(e) => {
-                        setDateFormat(e.target.value);
+                      onChange={(val) => {
+                        setDateFormat(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="YYYY-MM-DD">YYYY-MM-DD</option>
-                      <option value="DD/MM/YYYY">DD/MM/YYYY</option>
-                      <option value="MM/DD/YYYY">MM/DD/YYYY</option>
-                    </select>
+                      options={DATE_FORMAT_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Time Format</label>
-                    <select
+                    <LuxurySelect
                       value={timeFormat}
-                      onChange={(e) => {
-                        setTimeFormat(e.target.value);
+                      onChange={(val) => {
+                        setTimeFormat(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="12-hour (AM/PM)">12-hour (AM/PM)</option>
-                      <option value="24-hour">24-hour (Military)</option>
-                    </select>
+                      options={TIME_FORMAT_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -1627,18 +1665,15 @@ export default function Settings() {
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Break Duration</label>
-                    <select
+                    <LuxurySelect
                       value={breakDuration}
-                      onChange={(e) => {
-                        setBreakDuration(e.target.value);
+                      onChange={(val) => {
+                        setBreakDuration(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="30 mins">30 mins</option>
-                      <option value="45 mins">45 mins</option>
-                      <option value="60 mins">60 mins</option>
-                    </select>
+                      options={BREAK_DURATION_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -1857,18 +1892,15 @@ export default function Settings() {
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Who Can Approve</label>
-                    <select
+                    <LuxurySelect
                       value={whoCanApproveTask}
-                      onChange={(e) => {
-                        setWhoCanApproveTask(e.target.value as any);
+                      onChange={(val) => {
+                        setWhoCanApproveTask(val as any);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="Team Leader Only">Team Leader Only</option>
-                      <option value="Project Lead & Admin">Project Lead & Admin</option>
-                      <option value="Admin Only">Admin Only</option>
-                    </select>
+                      options={APPROVER_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
               </div>
@@ -1955,35 +1987,28 @@ export default function Settings() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Maximum File Size</label>
-                    <select
+                    <LuxurySelect
                       value={maxFileSize}
-                      onChange={(e) => {
-                        setMaxFileSize(e.target.value);
+                      onChange={(val) => {
+                        setMaxFileSize(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="10 MB">10 MB</option>
-                      <option value="25 MB">25 MB</option>
-                      <option value="50 MB">50 MB</option>
-                      <option value="100 MB">100 MB</option>
-                    </select>
+                      options={FILE_SIZE_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
 
                   <div>
                     <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Retention Period</label>
-                    <select
+                    <LuxurySelect
                       value={documentRetention}
-                      onChange={(e) => {
-                        setDocumentRetention(e.target.value);
+                      onChange={(val) => {
+                        setDocumentRetention(val);
                         setIsDirty(true);
                       }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    >
-                      <option value="90 Days">90 Days</option>
-                      <option value="1 Year">1 Year</option>
-                      <option value="Indefinite">Indefinite</option>
-                    </select>
+                      options={RETENTION_OPTIONS}
+                      buttonClassName="w-full py-2 px-3 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white"
+                    />
                   </div>
                 </div>
 

@@ -324,10 +324,10 @@ export default function CreateTaskModal() {
                     value={priority}
                     onChange={(val) => setPriority(val)}
                     options={[
-                      { value: 'LOW', label: 'Low', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
-                      { value: 'MEDIUM', label: 'Medium', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
-                      { value: 'HIGH', label: 'High', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
-                      { value: 'CRITICAL', label: 'Critical', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
+                      { value: 'LOW', label: 'Low', subLabel: 'Minor enhancement', badge: 'LOW', badgeColor: 'bg-slate-500/20 text-slate-400' },
+                      { value: 'MEDIUM', label: 'Medium', subLabel: 'Standard ticket', badge: 'MED', badgeColor: 'bg-blue-500/20 text-blue-400' },
+                      { value: 'HIGH', label: 'High', subLabel: 'Important milestone', badge: 'HIGH', badgeColor: 'bg-amber-500/20 text-amber-400' },
+                      { value: 'CRITICAL', label: 'Critical', subLabel: 'Blocker / urgent issue', badge: 'CRIT', badgeColor: 'bg-rose-500/20 text-rose-400' }
                     ]}
                   />
                 </div>
@@ -353,12 +353,12 @@ export default function CreateTaskModal() {
                     value={status}
                     onChange={(val) => setStatus(val)}
                     options={[
-                      { value: 'BACKLOG', label: 'Backlog' },
-                      { value: 'TO_DO', label: 'To Do' },
-                      { value: 'IN_PROGRESS', label: 'In Progress' },
-                      { value: 'TESTING', label: 'Testing' },
-                      { value: 'REVIEW', label: 'Review' },
-                      { value: 'COMPLETED', label: 'Completed' }
+                      { value: 'BACKLOG', label: 'Backlog', subLabel: 'Ideation & backlog' },
+                      { value: 'TO_DO', label: 'To Do', subLabel: 'Ready for sprint queue' },
+                      { value: 'IN_PROGRESS', label: 'In Progress', subLabel: 'Active development' },
+                      { value: 'TESTING', label: 'Testing', subLabel: 'QA & validation gate' },
+                      { value: 'REVIEW', label: 'Review', subLabel: 'Peer review & audit' },
+                      { value: 'COMPLETED', label: 'Completed', subLabel: 'Delivered & verified' }
                     ]}
                   />
                 </div>

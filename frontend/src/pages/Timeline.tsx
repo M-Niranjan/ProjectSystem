@@ -570,19 +570,23 @@ export default function Timeline() {
             <span className="text-[10px] font-black uppercase text-blue-500 tracking-wider">
               {timerState === 'RUNNING' ? '🟢 Active Session Recording' : timerState === 'PAUSED' ? '🟡 Session Paused' : '⚪ Live Stopwatch Ready'}
             </span>
-            <div className="flex items-center gap-2 mt-0.5">
-              <select
-                value={timerTaskId || ''}
-                onChange={(e) => setTimerTaskId(Number(e.target.value))}
-                disabled={timerState === 'RUNNING'}
-                className="bg-transparent font-bold text-xs text-slate-800 dark:text-white outline-none cursor-pointer max-w-[160px] xs:max-w-[220px] sm:max-w-xs truncate"
-              >
-                {tasks.map(t => (
-                  <option className="dark:bg-slate-900" key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
-                ))}
-              </select>
+            <div className="flex items-center gap-2 mt-1">
+              <div className="w-52 xs:w-64 sm:w-72 max-w-[320px]">
+                <LuxurySelect
+                  value={timerTaskId || ''}
+                  onChange={(val) => setTimerTaskId(Number(val))}
+                  disabled={timerState === 'RUNNING'}
+                  options={tasks.map(t => ({
+                    value: t.id,
+                    label: t.title,
+                    subLabel: t.status ? String(t.status).replace('_', ' ') : undefined,
+                    badge: t.priority ? String(t.priority).toUpperCase() : undefined,
+                    badgeColor: t.priority === 'high' || t.priority === 'urgent' ? 'bg-rose-500/20 text-rose-400 border-rose-500/30' : undefined
+                  }))}
+                  placeholder="Select task to track..."
+                  buttonClassName="py-1 px-2.5 text-xs font-bold rounded-xl bg-slate-100/80 dark:bg-white/5 border border-slate-200/80 dark:border-white/10"
+                />
+              </div>
             </div>
           </div>
         </div>
