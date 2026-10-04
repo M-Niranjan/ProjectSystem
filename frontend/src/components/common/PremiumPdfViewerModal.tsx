@@ -210,7 +210,7 @@ export default function PremiumPdfViewerModal({
     ctx.fillRect(0, 0, width, height);
 
     // Top primary header banner
-    ctx.fillStyle = '#00a884';
+    ctx.fillStyle = '#2563eb';
     ctx.fillRect(40, 36, width - 80, 8);
 
     // Document Title
@@ -260,7 +260,7 @@ export default function PremiumPdfViewerModal({
         ctx.strokeStyle = '#cbd5e1';
         ctx.strokeRect(44, y, width - 88, 46);
 
-        ctx.fillStyle = '#00a884';
+        ctx.fillStyle = '#2563eb';
         ctx.beginPath();
         ctx.arc(68, y + 23, 7, 0, Math.PI * 2);
         ctx.fill();

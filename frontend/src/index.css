@@ -513,7 +513,7 @@ input:-webkit-autofill:active,
   border-radius: 9999px;
 }
 .custom-scroll-area::-webkit-scrollbar-thumb:hover {
-  background: #00a884;
+  background: #3b82f6;
 }
 
 /* Linear Obsidian Frosted Neon Rim Glows */

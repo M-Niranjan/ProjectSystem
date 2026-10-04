@@ -106,7 +106,7 @@ export default function ConversationDetailsPanel({
         {/* Header */}
         <div className="h-15 px-4 border-b border-[#2a3942] bg-[#202c33] flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2 font-bold text-sm text-[#e9edef]">
-            <Info className="w-4 h-4 text-[#00a884]" />
+            <Info className="w-4 h-4 text-blue-400" />
             <span>{activeTab === 'channels' ? 'Channel Info' : 'Contact Details'}</span>
           </div>
           <button
@@ -122,7 +122,7 @@ export default function ConversationDetailsPanel({
         <div className="p-4 border-b border-[#2a3942] bg-[#202c33]/40 text-center space-y-3 shrink-0">
           {activeTab === 'channels' ? (
             <div className="flex flex-col items-center">
-              <div className="w-16 h-16 rounded-full bg-[#111b21] border border-[#2a3942] text-[#00a884] flex items-center justify-center mb-2 shadow-sm">
+              <div className="w-16 h-16 rounded-full bg-[#111b21] border border-blue-500/30 text-blue-400 flex items-center justify-center mb-2 shadow-sm">
                 {channel?.isPrivate ? <Lock className="w-8 h-8 text-amber-400" /> : <Hash className="w-8 h-8" />}
               </div>
               <h3 className="text-base font-bold text-[#e9edef] tracking-tight">#{channel?.name || 'channel'}</h3>
@@ -136,7 +136,7 @@ export default function ConversationDetailsPanel({
                 <img
                   src={resolveAvatar(contact?.profilePhoto, contact?.name || 'Teammate', (contact as any)?.gender)}
                   alt="avatar"
-                  className="w-16 h-16 rounded-full object-cover ring-2 ring-[#00a884]/40 shadow-md"
+                  className="w-16 h-16 rounded-full object-cover ring-2 ring-blue-500/40 shadow-md"
                 />
                 <span
                   className={`absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-[#111b21] ${
@@ -145,13 +145,13 @@ export default function ConversationDetailsPanel({
                       : contact?.status === 'away'
                       ? 'bg-amber-400'
                       : contact?.isOnline
-                      ? 'bg-[#00a884]'
+                      ? 'bg-emerald-500'
                       : 'bg-[#8696a0]'
                   }`}
                 />
               </div>
               <h3 className="text-base font-bold text-[#e9edef] tracking-tight">{contact?.name || 'Teammate'}</h3>
-              <p className="text-xs font-semibold text-[#00a884] uppercase tracking-wider mt-0.5">
+              <p className="text-xs font-semibold text-blue-400 uppercase tracking-wider mt-0.5">
                 {formatRoleName(contact?.role, 'title') || 'Workspace Member'}
               </p>
               <p className="text-xs text-[#8696a0]">{contact?.email || ''}</p>
@@ -190,7 +190,7 @@ export default function ConversationDetailsPanel({
             onClick={() => setActiveSection('overview')}
             className={`py-1 rounded-lg transition-colors cursor-pointer ${
               activeSection === 'overview'
-                ? 'bg-[#111b21] text-[#00a884] shadow-xs'
+                ? 'bg-[#111b21] text-blue-400 shadow-xs font-bold'
                 : 'text-[#8696a0] hover:text-[#d1d7db]'
             }`}
           >
@@ -200,7 +200,7 @@ export default function ConversationDetailsPanel({
             onClick={() => setActiveSection('members')}
             className={`py-1 rounded-lg transition-colors cursor-pointer ${
               activeSection === 'members'
-                ? 'bg-[#111b21] text-[#00a884] shadow-xs'
+                ? 'bg-[#111b21] text-blue-400 shadow-xs font-bold'
                 : 'text-[#8696a0] hover:text-[#d1d7db]'
             }`}
           >
@@ -210,7 +210,7 @@ export default function ConversationDetailsPanel({
             onClick={() => setActiveSection('files')}
             className={`py-1 rounded-lg transition-colors cursor-pointer ${
               activeSection === 'files'
-                ? 'bg-[#111b21] text-[#00a884] shadow-xs'
+                ? 'bg-[#111b21] text-blue-400 shadow-xs font-bold'
                 : 'text-[#8696a0] hover:text-[#d1d7db]'
             }`}
           >
@@ -220,7 +220,7 @@ export default function ConversationDetailsPanel({
             onClick={() => setActiveSection('links')}
             className={`py-1 rounded-lg transition-colors cursor-pointer ${
               activeSection === 'links'
-                ? 'bg-[#111b21] text-[#00a884] shadow-xs'
+                ? 'bg-[#111b21] text-blue-400 shadow-xs font-bold'
                 : 'text-[#8696a0] hover:text-[#d1d7db]'
             }`}
           >
@@ -236,7 +236,7 @@ export default function ConversationDetailsPanel({
               <div className="p-3 bg-[#202c33] border border-[#2a3942] rounded-xl space-y-2">
                 <div className="flex justify-between items-center text-[#8696a0] text-[11px] font-bold">
                   <span>Topic / Purpose</span>
-                  <span className="text-[#00a884]">Encrypted</span>
+                  <span className="text-blue-400 font-semibold">Encrypted</span>
                 </div>
                 <p className="text-[#d1d7db] leading-relaxed">
                   {activeTab === 'channels'
@@ -263,7 +263,7 @@ export default function ConversationDetailsPanel({
                         : contact.status === 'away'
                         ? 'text-amber-400'
                         : contact.isOnline
-                        ? 'text-[#00a884]'
+                        ? 'text-blue-400 font-semibold'
                         : 'text-[#8696a0]'
                     }`}>
                       <span className={`w-2 h-2 rounded-full ${
@@ -271,8 +271,7 @@ export default function ConversationDetailsPanel({
                           ? 'bg-rose-500'
                           : contact.status === 'away'
                           ? 'bg-amber-400'
-                          : contact.isOnline
-                          ? 'bg-[#00a884]'
+                          : contact.isOnline ? 'bg-emerald-500'
                           : 'bg-[#8696a0]'
                       }`} />
                       {contact.status === 'busy'
@@ -287,7 +286,7 @@ export default function ConversationDetailsPanel({
                 </div>
               )}
 
-              <div className="p-3 bg-[#0a332c] border border-[#00a884]/30 rounded-xl flex items-start gap-2.5 text-[#00a884]">
+              <div className="p-3 bg-blue-950/40 border border-blue-500/30 rounded-xl flex items-start gap-2.5 text-blue-300">
                 <Shield className="w-4 h-4 shrink-0 mt-0.5" />
                 <p className="text-[11px] font-medium leading-relaxed">
                   End-to-end multi-tenant isolation. All messages and documents are protected by organization role boundaries.
@@ -306,7 +305,7 @@ export default function ConversationDetailsPanel({
                   placeholder="Search members..."
                   value={memberSearch}
                   onChange={(e) => setMemberSearch(e.target.value)}
-                  className="w-full pl-8 pr-3 py-1.5 bg-[#202c33] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-[#00a884]/50 transition-all placeholder:text-[#8696a0]"
+                  className="w-full pl-8 pr-3 py-1.5 bg-[#202c33] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-blue-500/50 transition-all placeholder:text-[#8696a0]"
                 />
               </div>
 
@@ -333,7 +332,7 @@ export default function ConversationDetailsPanel({
                                 : memberStatus === 'away'
                                 ? 'bg-amber-400'
                                 : isOnline
-                                ? 'bg-[#00a884]'
+                                ? 'bg-emerald-500'
                                 : 'bg-[#8696a0]'
                             }`}
                           />
@@ -345,7 +344,7 @@ export default function ConversationDetailsPanel({
                           </p>
                         </div>
                       </div>
-                      <span className="text-[9px] font-bold px-1.5 py-0.5 bg-[#111b21] border border-[#2a3942] text-[#00a884] rounded-md uppercase shrink-0">
+                      <span className="text-[9px] font-bold px-1.5 py-0.5 bg-[#111b21] border border-blue-500/30 text-blue-400 rounded-md uppercase shrink-0">
                         {m.role === 'ROLE_ADMIN' ? 'Admin' : m.role === 'ROLE_MANAGER' ? 'Lead' : 'Member'}
                       </span>
                     </div>
@@ -369,7 +368,7 @@ export default function ConversationDetailsPanel({
                   return (
                     <div
                       key={m.id || idx}
-                      className="p-2.5 bg-[#202c33] border border-[#2a3942] rounded-xl flex items-center justify-between gap-2 hover:border-[#00a884]/40 transition-colors"
+                      className="p-2.5 bg-[#202c33] border border-[#2a3942] rounded-xl flex items-center justify-between gap-2 hover:border-blue-500/40 transition-colors"
                     >
                       <div className="flex items-center gap-2 truncate flex-1 min-w-0">
                         <div className="w-8 h-8 rounded-lg bg-red-500/20 text-red-400 flex items-center justify-center shrink-0 border border-red-500/30">
@@ -386,7 +385,7 @@ export default function ConversationDetailsPanel({
                         {isPdf && onOpenPdf && (
                           <button
                             onClick={() => onOpenPdf({ url: m.fileUrl || '#', fileName: m.fileName || 'Document.pdf', uploadedBy: m.sender.name })}
-                            className="p-1.5 rounded-lg bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] transition-transform active:scale-95 cursor-pointer"
+                            className="p-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/25 transition-transform active:scale-95 cursor-pointer"
                             title="Open in PDF Viewer"
                           >
                             <Eye className="w-3.5 h-3.5" />
@@ -425,15 +424,15 @@ export default function ConversationDetailsPanel({
                     href={link.url}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="p-2.5 bg-[#202c33] border border-[#2a3942] hover:border-[#00a884]/40 rounded-xl flex items-center justify-between gap-2 block transition-colors group"
+                    className="p-2.5 bg-[#202c33] border border-[#2a3942] hover:border-blue-500/40 rounded-xl flex items-center justify-between gap-2 block transition-colors group"
                   >
                     <div className="truncate flex-1 min-w-0">
-                      <p className="text-xs font-bold text-[#00a884] group-hover:underline truncate">{link.url}</p>
+                      <p className="text-xs font-bold text-blue-400 group-hover:underline truncate">{link.url}</p>
                       <p className="text-[10px] text-[#8696a0] truncate mt-0.5">
                         Shared by {link.sender}
                       </p>
                     </div>
-                    <ExternalLink className="w-3.5 h-3.5 text-[#8696a0] group-hover:text-[#00a884] shrink-0" />
+                    <ExternalLink className="w-3.5 h-3.5 text-[#8696a0] group-hover:text-blue-400 shrink-0" />
                   </a>
                 ))
               )}

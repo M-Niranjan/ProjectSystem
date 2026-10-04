@@ -56,7 +56,7 @@ export default function EmojiPickerPopover({ onSelectEmoji, onClose }: EmojiPick
       {/* Header */}
       <div className="flex items-center justify-between pb-1.5 mb-1.5 border-b border-[#2a3942]">
         <div className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-md bg-[#00a884]/20 flex items-center justify-center text-[#00a884]">
+          <div className="w-5 h-5 rounded-md bg-blue-500/20 flex items-center justify-center text-blue-400">
             <Smile className="w-3.5 h-3.5" />
           </div>
           <span className="text-xs font-bold tracking-tight text-[#e9edef]">Reactions & Emojis</span>
@@ -78,7 +78,7 @@ export default function EmojiPickerPopover({ onSelectEmoji, onClose }: EmojiPick
           placeholder="Search emojis..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-8 pr-3 py-1 bg-[#111b21] border border-[#2a3942] rounded-lg text-xs font-normal outline-none focus:border-[#00a884]/50 text-[#e9edef] placeholder:text-[#8696a0]"
+          className="w-full pl-8 pr-3 py-1 bg-[#111b21] border border-[#2a3942] rounded-lg text-xs font-normal outline-none focus:border-blue-500/50 text-[#e9edef] placeholder:text-[#8696a0]"
         />
         {search && (
           <button
@@ -103,7 +103,7 @@ export default function EmojiPickerPopover({ onSelectEmoji, onClose }: EmojiPick
                 onClick={() => setActiveCategory(idx)}
                 className={`flex-1 py-1 rounded-md text-[10px] font-bold flex items-center justify-center gap-1 transition-all cursor-pointer ${
                   isActive
-                    ? 'bg-[#00a884] text-[#111b21] shadow-xs'
+                    ? 'bg-blue-600 text-white shadow-xs font-bold'
                     : 'text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#202c33]'
                 }`}
               >

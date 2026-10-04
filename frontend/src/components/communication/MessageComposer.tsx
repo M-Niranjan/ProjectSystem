@@ -351,12 +351,12 @@ export default function MessageComposer({
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`px-2.5 sm:px-3.5 py-2 sm:py-2.5 border-t border-white/[0.06] shrink-0 bg-[#0b141a]/95 sm:bg-[#111b21]/95 backdrop-blur-md relative transition-all select-none ${
-        isDraggingOver ? 'ring-1 ring-[#00a884] bg-[#00a884]/10' : ''
+        isDraggingOver ? 'ring-2 ring-blue-500 bg-blue-500/10' : ''
       }`}
     >
       {/* Drag & Drop Overlay */}
       {isDraggingOver && (
-        <div className="absolute inset-0 bg-[#00a884]/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-white z-50">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600/95 to-indigo-600/95 backdrop-blur-md rounded-2xl flex flex-col items-center justify-center text-white z-50">
           <UploadCloud className="w-8 h-8 animate-bounce mb-1" />
           <p className="font-bold text-xs uppercase tracking-wider">Drop file to attach</p>
         </div>
@@ -369,10 +369,10 @@ export default function MessageComposer({
             initial={{ opacity: 0, height: 0, y: 5 }}
             animate={{ opacity: 1, height: 'auto', y: 0 }}
             exit={{ opacity: 0, height: 0, y: 5 }}
-            className="mb-2 px-3 py-1.5 bg-[#1f2c34]/95 backdrop-blur-xl border-l-4 border-l-[#00a884] border-y border-r border-white/10 rounded-xl flex items-center justify-between text-xs text-[#00a884] font-medium shadow-md"
+            className="mb-2 px-3 py-1.5 bg-[#1f2c34]/95 backdrop-blur-xl border-l-4 border-l-blue-500 border-y border-r border-white/10 rounded-xl flex items-center justify-between text-xs text-blue-400 font-medium shadow-md"
           >
             <div className="flex items-center gap-2 truncate">
-              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-[#00a884]/20 rounded text-[#00a884]">
+              <span className="text-[10px] font-bold uppercase tracking-wider px-1.5 py-0.5 bg-blue-500/20 rounded text-blue-400">
                 Replying to {replyToMessage.sender.name}
               </span>
               <span className="truncate italic text-[#d1d7db] font-normal">
@@ -420,7 +420,7 @@ export default function MessageComposer({
 
       {/* Attached File Preview Chip */}
       {attachedFile && (
-        <div className="mb-2 px-3 py-1 bg-[#1f2c34]/95 backdrop-blur-xl border border-[#00a884]/40 rounded-full flex items-center justify-between text-xs font-semibold text-[#00a884] w-fit shadow-sm">
+        <div className="mb-2 px-3 py-1 bg-[#1f2c34]/95 backdrop-blur-xl border border-blue-500/40 rounded-full flex items-center justify-between text-xs font-semibold text-blue-400 w-fit shadow-sm">
           <div className="flex items-center gap-2">
             <Paperclip className="w-3.5 h-3.5" />
             <span className="truncate max-w-[220px] text-[#d1d7db]">{attachedFile.name}</span>
@@ -443,7 +443,7 @@ export default function MessageComposer({
       {uploadProgress !== null && (
         <div className="mb-2 w-full bg-[#111b21] rounded-full h-1 overflow-hidden">
           <div
-            className="bg-[#00a884] h-full transition-all duration-300"
+            className="bg-blue-500 h-full transition-all duration-300"
             style={{ width: `${uploadProgress}%` }}
           />
         </div>
@@ -462,7 +462,7 @@ export default function MessageComposer({
               onClick={() => insertMention(c.name)}
               className="w-full flex items-center gap-2 px-2 py-1.5 rounded-xl hover:bg-white/5 text-xs font-medium text-[#d1d7db] cursor-pointer transition-colors text-left"
             >
-              <span className="w-5 h-5 rounded-full bg-[#00a884] text-[#111b21] font-black text-[10px] flex items-center justify-center">
+              <span className="w-5 h-5 rounded-full bg-blue-600 text-white font-black text-[10px] flex items-center justify-center">
                 {c.name.charAt(0)}
               </span>
               <span>{c.name}</span>
@@ -514,7 +514,7 @@ export default function MessageComposer({
       ) : audioPreviewUrl ? (
         /* MODE 2: Voice Note Preview & Send Mode */
         <div className="flex gap-2 items-center">
-          <div className="flex-1 flex items-center justify-between gap-3 px-3.5 py-2 bg-[#1f2c34]/95 backdrop-blur-xl border border-[#00a884]/40 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] min-h-[46px]">
+          <div className="flex-1 flex items-center justify-between gap-3 px-3.5 py-2 bg-[#1f2c34]/95 backdrop-blur-xl border border-blue-500/40 rounded-full shadow-[0_2px_8px_rgba(0,0,0,0.3)] min-h-[46px]">
             <audio
               ref={previewAudioRef}
               src={audioPreviewUrl}
@@ -528,7 +528,7 @@ export default function MessageComposer({
               <button
                 type="button"
                 onClick={togglePreviewPlay}
-                className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-transform active:scale-95"
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-blue-500/25 flex items-center justify-center shrink-0 cursor-pointer shadow-sm transition-transform active:scale-95"
                 title={isPlayingPreview ? 'Pause' : 'Play'}
               >
                 {isPlayingPreview ? (
@@ -551,7 +551,7 @@ export default function MessageComposer({
                     setPreviewCurrentTime(val);
                     if (previewAudioRef.current) previewAudioRef.current.currentTime = val;
                   }}
-                  className="w-full h-1 bg-[#202c33] rounded-lg accent-[#00a884] cursor-pointer"
+                  className="w-full h-1 bg-[#202c33] rounded-lg accent-blue-500 cursor-pointer"
                 />
                 <div className="flex justify-between text-[10px] text-[#8696a0] font-mono mt-0.5">
                   <span>{formatSeconds(previewCurrentTime)}</span>
@@ -575,7 +575,7 @@ export default function MessageComposer({
             type="button"
             onClick={handleSendVoice}
             disabled={isUploading}
-            className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
+            className="w-11 h-11 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_4px_16px_rgba(59,130,246,0.4)] flex items-center justify-center shrink-0 cursor-pointer hover:scale-105 active:scale-95 transition-all duration-200"
             title="Send voice message"
           >
             <svg viewBox="0 0 24 24" className="w-5 h-5 fill-current ml-0.5">
@@ -587,7 +587,7 @@ export default function MessageComposer({
         /* MODE 3: Normal Text & Attachment Composer - VARIANT 1 WHATSAPP GLASS PILL */
         <div className="flex gap-2 items-end">
           {/* WhatsApp Floating Stadium Capsule */}
-          <div className="flex-1 flex items-end bg-[#1f2c34]/95 backdrop-blur-xl border border-white/10 hover:border-white/15 focus-within:border-[#00a884]/60 focus-within:ring-1 focus-within:ring-[#00a884]/30 rounded-[24px] sm:rounded-full px-2 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all min-h-[46px]">
+          <div className="flex-1 flex items-end bg-[#1f2c34]/95 backdrop-blur-xl border border-white/10 hover:border-white/15 focus-within:border-blue-500/60 focus-within:ring-1 focus-within:ring-blue-500/30 rounded-[24px] sm:rounded-full px-2 py-1 shadow-[0_2px_8px_rgba(0,0,0,0.3)] transition-all min-h-[46px]">
             {/* Emoji Button */}
             <div className="relative shrink-0 mb-0.5">
               <button
@@ -615,7 +615,7 @@ export default function MessageComposer({
               type="button"
               onClick={() => fileInputRef.current?.click()}
               className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 mb-0.5 transition-all cursor-pointer hover:bg-white/5 active:scale-95 ${
-                attachedFile ? 'text-[#00a884]' : 'text-[#8696a0] hover:text-[#d1d7db]'
+                attachedFile ? 'text-blue-400' : 'text-[#8696a0] hover:text-[#d1d7db]'
               }`}
               title="Attach Document or Image (or Drag & Drop)"
             >
@@ -649,7 +649,7 @@ export default function MessageComposer({
                   type="button"
                   onClick={handleFormSubmit}
                   disabled={isUploading}
-                  className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
+                  className="w-11 h-11 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_4px_16px_rgba(59,130,246,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
                   title="Send message"
                 >
                   <svg
@@ -669,7 +669,7 @@ export default function MessageComposer({
                   transition={{ duration: 0.15 }}
                   type="button"
                   onClick={handleStartRecording}
-                  className="w-11 h-11 rounded-full bg-[#00a884] hover:bg-[#02b992] text-white shadow-[0_4px_16px_rgba(0,168,132,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
+                  className="w-11 h-11 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_4px_16px_rgba(59,130,246,0.4)] flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-transform duration-150"
                   title="Record voice message"
                 >
                   <Mic className="w-5 h-5 stroke-[2.2]" />

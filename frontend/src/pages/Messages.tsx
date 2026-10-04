@@ -1978,7 +1978,7 @@ export default function Messages() {
               })
             );
           }}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#00a884]/25 hover:bg-[#00a884]/40 text-[#00a884] dark:text-[#25d366] font-bold text-xs underline decoration-dotted cursor-pointer transition-colors mx-0.5"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-blue-500/20 hover:bg-blue-500/30 text-blue-400 font-bold text-xs underline decoration-dotted cursor-pointer transition-colors mx-0.5"
           title={`Click to open Task #${taskId} details`}
         >
           <span>Task #{taskId}</span>
@@ -2193,7 +2193,7 @@ export default function Messages() {
               setSelectedUserId(null);
               setMobileView('list');
             }}
-            className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-[#00a884] via-[#005c4b] to-indigo-600 text-white flex items-center justify-center shadow-lg shadow-[#00a884]/20 hover:scale-105 active:scale-95 transition-all mb-1 cursor-pointer"
+            className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-purple-600 text-white flex items-center justify-center shadow-lg shadow-blue-500/20 hover:scale-105 active:scale-95 transition-all mb-1 cursor-pointer"
             title="Project Communication Hub"
           >
             <Layers className="w-5 h-5 text-white" />
@@ -2209,14 +2209,14 @@ export default function Messages() {
             }}
             className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all cursor-pointer ${
               navRailTab === 'chats'
-                ? 'bg-[#2a3942] text-[#00a884]'
+                ? 'bg-[#2a3942] text-blue-400'
                 : 'text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]/60'
             }`}
             title="Direct Messages"
           >
             <MessageSquare className="w-5 h-5" />
             {dmUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#00a884] text-white text-[9px] font-black rounded-full shadow-xs">
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
                 {dmUnreadCount}
               </span>
             )}
@@ -2230,14 +2230,14 @@ export default function Messages() {
             }}
             className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all cursor-pointer ${
               navRailTab === 'teams'
-                ? 'bg-[#2a3942] text-[#00a884]'
+                ? 'bg-[#2a3942] text-blue-400'
                 : 'text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]/60'
             }`}
             title="Team Chats (Departments & Teams)"
           >
             <Users className="w-5 h-5" />
             {teamUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#00a884] text-white text-[9px] font-black rounded-full shadow-xs">
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
                 {teamUnreadCount}
               </span>
             )}
@@ -2251,14 +2251,14 @@ export default function Messages() {
             }}
             className={`w-10 h-10 rounded-xl flex items-center justify-center relative transition-all cursor-pointer ${
               navRailTab === 'channels'
-                ? 'bg-[#2a3942] text-[#00a884]'
+                ? 'bg-[#2a3942] text-blue-400'
                 : 'text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]/60'
             }`}
             title="Team & Project Channels"
           >
             <Hash className="w-5 h-5" />
             {channelUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-[#00a884] text-white text-[9px] font-black rounded-full shadow-xs">
+              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
                 {channelUnreadCount}
               </span>
             )}
@@ -2269,7 +2269,7 @@ export default function Messages() {
             onClick={() => handleSelectConversation('ai', AI_ASSISTANT_ID)}
             className={`w-10 h-10 rounded-xl flex items-center justify-center transition-all cursor-pointer ${
               selectedConversationType === 'ai'
-                ? 'bg-[#2a3942] text-[#00a884]'
+                ? 'bg-[#2a3942] text-purple-400'
                 : 'text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]/60'
             }`}
             title="Project AI Assistant"
@@ -2283,7 +2283,7 @@ export default function Messages() {
           {/* Settings Button (Requirement 26) */}
           <button
             onClick={() => setIsSettingsModalOpen(true)}
-            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#8696a0] hover:text-[#00a884] hover:bg-[#2a3942]/60 transition-all cursor-pointer"
+            className="w-10 h-10 rounded-xl flex items-center justify-center text-[#8696a0] hover:text-blue-400 hover:bg-[#2a3942]/60 transition-all cursor-pointer"
             title="Communication Settings"
           >
             <Settings className="w-5 h-5" />
@@ -2299,12 +2299,12 @@ export default function Messages() {
               <img
                 src={resolveAvatar(user?.profilePhoto, user?.name || 'You', (user as any)?.gender)}
                 alt="avatar"
-                className="w-9 h-9 rounded-full object-cover ring-2 ring-[#00a884]/40 hover:ring-[#00a884] transition-all"
+                className="w-9 h-9 rounded-full object-cover ring-2 ring-blue-500/40 hover:ring-blue-500 transition-all"
               />
               <span
                 className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#202c33] ${
                   userStatus === 'online'
-                    ? 'bg-[#00a884]'
+                    ? 'bg-emerald-500'
                     : userStatus === 'away'
                     ? 'bg-amber-400'
                     : userStatus === 'busy'
@@ -2332,12 +2332,12 @@ export default function Messages() {
                       <img
                         src={resolveAvatar(user.profilePhoto, user.name, user.gender)}
                         alt="avatar"
-                        className="w-10 h-10 rounded-full object-cover ring-2 ring-[#00a884]"
+                        className="w-10 h-10 rounded-full object-cover ring-2 ring-blue-500"
                       />
                       <div className="truncate">
                         <p className="font-bold text-sm text-[#e9edef] truncate">{user.name}</p>
                         <p className="text-[11px] text-[#8696a0] truncate">{user.email}</p>
-                        <p className="text-[10px] text-[#00a884] uppercase font-bold tracking-wider">
+                        <p className="text-[10px] text-blue-400 uppercase font-bold tracking-wider">
                           {formatRoleName(user.role)} • {activeOrganization?.organizationName || 'Workspace'}
                         </p>
                       </div>
@@ -2356,10 +2356,10 @@ export default function Messages() {
                             showToast('Status set to Online');
                           }}
                           className={`px-2 py-1 rounded-lg flex items-center gap-1.5 text-[11px] ${
-                            userStatus === 'online' ? 'bg-[#0a332c] text-[#00a884] font-bold' : 'hover:bg-[#2a3942]'
+                            userStatus === 'online' ? 'bg-blue-500/20 text-blue-400 font-bold' : 'hover:bg-[#2a3942]'
                           }`}
                         >
-                          <span className="w-2 h-2 rounded-full bg-[#00a884]" />
+                          <span className="w-2 h-2 rounded-full bg-emerald-500" />
                           <span>Online</span>
                         </button>
                         <button
@@ -2412,7 +2412,7 @@ export default function Messages() {
                         }}
                         className="w-full px-2.5 py-1.5 rounded-lg hover:bg-[#2a3942] text-left flex items-center gap-2 text-[#d1d7db]"
                       >
-                        <User className="w-4 h-4 text-[#00a884]" />
+                        <User className="w-4 h-4 text-blue-400" />
                         <span>View Profile</span>
                       </button>
                       <button
@@ -2459,9 +2459,6 @@ export default function Messages() {
       {/* ========================================================================= */}
       {/* ZONE 2: CHATS DIRECTORY PANEL (~340px - 380px)                            */}
       {/* ========================================================================= */}
-      {/* ========================================================================= */}
-      {/* ZONE 2: CHATS DIRECTORY PANEL (~340px - 380px)                            */}
-      {/* ========================================================================= */}
       <div
         className={`${
           mobileView === 'chat' ? 'hidden md:flex' : 'flex'
@@ -2500,21 +2497,21 @@ export default function Messages() {
                     showToast('No contacts available for call');
                   }
                 }}
-                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
+                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
                 title="Start Voice Call"
               >
                 <Phone className="w-5 h-5 stroke-[1.8]" />
               </button>
               <button
                 onClick={() => setIsDocumentPickerOpen(true)}
-                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
+                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
                 title="Camera / Send Media"
               >
                 <Camera className="w-5 h-5 stroke-[1.8]" />
               </button>
               <button
                 onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
-                className="p-1 text-[#8696a0] hover:text-[#00a884] transition-colors cursor-pointer"
+                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
                 title="More options"
               >
                 <MoreVertical className="w-5 h-5" />
@@ -2551,7 +2548,7 @@ export default function Messages() {
                     setIsAddContactModalOpen(true);
                   }
                 }}
-                className="w-8 h-8 rounded-full bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
                 title={chatFilter === 'channels' ? 'New Channel' : 'New Direct Message'}
               >
                 <Plus className="w-5 h-5 font-black stroke-[3]" />
@@ -2588,7 +2585,7 @@ export default function Messages() {
                     }}
                     className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
                   >
-                    <UserPlus className="w-4 h-4 text-[#00a884]" />
+                    <UserPlus className="w-4 h-4 text-blue-400" />
                     <span>New chat</span>
                   </button>
                   <button
@@ -2598,7 +2595,7 @@ export default function Messages() {
                     }}
                     className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
                   >
-                    <Hash className="w-4 h-4 text-[#00a884]" />
+                    <Hash className="w-4 h-4 text-blue-400" />
                     <span>New group channel</span>
                   </button>
                   <button
@@ -2608,7 +2605,7 @@ export default function Messages() {
                     }}
                     className="w-full px-4 py-2.5 text-left hover:bg-[#2a3942] flex items-center gap-2.5 text-[#d1d7db] cursor-pointer"
                   >
-                    <FileText className="w-4 h-4 text-[#00a884]" />
+                    <FileText className="w-4 h-4 text-blue-400" />
                     <span>Shared files</span>
                   </button>
                   <div className="w-full h-px bg-[#2a3942] my-1" />
@@ -2627,9 +2624,9 @@ export default function Messages() {
             )}
           </AnimatePresence>
 
-          {/* Search Input (WhatsApp Pill Style) */}
+          {/* Search Input */}
           <div className="px-3 py-2 bg-[#111b21] shrink-0">
-            <div className="relative flex items-center bg-[#202c33] rounded-full px-4 py-2 focus-within:ring-1 focus-within:ring-[#00a884]">
+            <div className="relative flex items-center bg-[#202c33] rounded-full px-4 py-2 focus-within:ring-1 focus-within:ring-blue-500/50">
               <Search className="w-4 h-4 text-[#8696a0] mr-2.5 shrink-0" />
               <input
                 type="text"
@@ -2646,7 +2643,7 @@ export default function Messages() {
             </div>
           </div>
 
-          {/* Filter Chips Bar (WhatsApp Dark Mode Pill Chips) */}
+          {/* Filter Chips Bar */}
           <div className="px-3 pb-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0 border-b border-[#202c33]/80">
             {[
               { id: 'all', label: 'All', count: 0 },
@@ -2665,13 +2662,13 @@ export default function Messages() {
                 }}
                 className={`px-3 py-1 rounded-full text-xs font-semibold whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
                   chatFilter === f.id
-                    ? 'bg-[#103629] text-[#25D366] border border-[#25D366]/40 font-bold'
+                    ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25 border border-blue-400/30'
                     : 'bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] hover:bg-[#2a3942]'
                 }`}
               >
                 <span>{f.label}</span>
                 {f.count > 0 && (
-                  <span className={`text-[11px] font-black ${chatFilter === f.id ? 'text-[#25D366]' : 'text-[#8696a0]'}`}>
+                  <span className={`text-[11px] font-black ${chatFilter === f.id ? 'text-white' : 'text-[#8696a0]'}`}>
                     {f.count}
                   </span>
                 )}
@@ -2679,7 +2676,7 @@ export default function Messages() {
             ))}
           </div>
 
-          {/* Dynamic Scrollable Conversation List (Requirement 3: Most recent chat moves to top) */}
+          {/* Dynamic Scrollable Conversation List */}
           <div className="flex-1 overflow-y-auto overscroll-contain divide-y divide-[#202c33]/60 custom-scroll-area pb-24">
             {unifiedSortedList.map((item) => {
               const isSelected = selectedConversationId === item.convId;
@@ -2699,7 +2696,7 @@ export default function Messages() {
                         <Sparkles className="w-6 h-6 text-white" />
                       </div>
                     ) : item.type === 'channel' ? (
-                      <div className="w-12 h-12 rounded-full bg-[#202c33] border border-[#2a3942] text-[#00a884] flex items-center justify-center shrink-0">
+                      <div className="w-12 h-12 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
                         {item.isPrivate ? <Lock className="w-5 h-5 text-amber-400" /> : <Hash className="w-6 h-6" />}
                       </div>
                     ) : item.type === 'team' ? (
@@ -2721,13 +2718,13 @@ export default function Messages() {
                             : item.status === 'away'
                             ? 'bg-amber-400'
                             : item.isOnline
-                            ? 'bg-[#00a884]'
+                            ? 'bg-emerald-500'
                             : 'bg-[#8696a0]'
                         }`}
                       />
                     )}
                     {item.type === 'ai' && (
-                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-[#00a884] border-2 border-[#111b21]" />
+                      <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 border-2 border-[#111b21]" />
                     )}
                   </div>
 
@@ -2735,7 +2732,7 @@ export default function Messages() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="font-bold text-sm text-[#e9edef] truncate flex items-center gap-1.5">
-                        {item.type === 'channel' && <span className="text-[#00a884]">#</span>}
+                        {item.type === 'channel' && <span className="text-blue-400">#</span>}
                         <span>{item.name}</span>
                         {item.type === 'ai' && (
                           <span className="px-1.5 py-0.2 bg-purple-500/20 text-purple-300 text-[9px] font-black rounded-sm uppercase tracking-wider">
@@ -2767,7 +2764,7 @@ export default function Messages() {
                         <span className="truncate">{item.previewText}</span>
                       </p>
                       {item.unreadCount > 0 && (
-                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-[#25D366] text-[#0b141a] text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-xs">
+                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-blue-600 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-xs">
                           {item.unreadCount}
                         </span>
                       )}
@@ -2786,14 +2783,14 @@ export default function Messages() {
                 {searchQuery ? (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="mt-2 px-3 py-1 bg-[#202c33] hover:bg-[#2a3942] rounded-lg text-xs font-semibold text-[#00a884] cursor-pointer"
+                    className="mt-2 px-3 py-1 bg-[#202c33] hover:bg-[#2a3942] rounded-lg text-xs font-semibold text-blue-400 cursor-pointer"
                   >
                     Clear search
                   </button>
                 ) : (
                   <button
                     onClick={() => setIsAddContactModalOpen(true)}
-                    className="mt-2 px-3 py-1.5 bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] rounded-lg text-xs font-bold cursor-pointer inline-flex items-center gap-1.5"
+                    className="mt-2 px-3 py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold cursor-pointer inline-flex items-center gap-1.5 shadow-md shadow-blue-500/25"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Start Direct Message</span>
@@ -2803,7 +2800,7 @@ export default function Messages() {
             )}
           </div>
 
-          {/* Floating Action Button (Mobile WhatsApp Style) */}
+          {/* Floating Action Button */}
           <button
             onClick={() => {
               if (chatFilter === 'channels') {
@@ -2812,7 +2809,7 @@ export default function Messages() {
                 setIsAddContactModalOpen(true);
               }
             }}
-            className="md:hidden absolute bottom-22 right-4 w-13 h-13 rounded-2xl bg-[#00a884] hover:bg-[#25D366] text-[#0b141a] shadow-[0_8px_25px_rgba(0,168,132,0.45)] flex items-center justify-center cursor-pointer transition-transform active:scale-95 z-30"
+            className="md:hidden absolute bottom-22 right-4 w-13 h-13 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-[0_8px_25px_rgba(59,130,246,0.45)] flex items-center justify-center cursor-pointer transition-transform active:scale-95 z-30"
             title="New Chat"
           >
             <MessageSquarePlus className="w-6 h-6 stroke-[2.5]" />
@@ -2836,7 +2833,7 @@ export default function Messages() {
               <button
                 type="button"
                 onClick={handleBackNavigation}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#202c33]/90 hover:bg-[#2a3942] border border-[#2a3942] text-[#d1d7db] hover:text-[#00a884] text-xs font-semibold shadow-md transition-all active:scale-95 cursor-pointer"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[#202c33]/90 hover:bg-[#2a3942] border border-[#2a3942] text-[#d1d7db] hover:text-blue-400 text-xs font-semibold shadow-md transition-all active:scale-95 cursor-pointer"
                 title="Back"
               >
                 <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
@@ -2845,12 +2842,12 @@ export default function Messages() {
             </div>
 
             <div className="mb-6 relative">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-[#00a884]/20 via-[#202c33] to-[#005c4b]/30 border-2 border-[#00a884]/40 flex items-center justify-center shadow-2xl shadow-[#00a884]/20">
+              <div className="w-24 h-24 rounded-full bg-gradient-to-tr from-blue-600/20 via-[#202c33] to-indigo-600/30 border-2 border-blue-500/40 flex items-center justify-center shadow-2xl shadow-blue-500/20">
                 <div className="w-16 h-16 rounded-full bg-[#202c33] flex items-center justify-center shadow-inner">
-                  <MessageSquare className="w-8 h-8 text-[#00a884]" />
+                  <MessageSquare className="w-8 h-8 text-blue-400" />
                 </div>
               </div>
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-[#00a884] text-[#111b21] flex items-center justify-center font-bold shadow-md">
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-center font-bold shadow-md shadow-blue-500/30">
                 <Sparkles className="w-4 h-4" />
               </div>
             </div>
@@ -2867,11 +2864,11 @@ export default function Messages() {
                 onClick={() => setIsDocumentPickerOpen(true)}
                 className="flex flex-col items-center gap-2 group cursor-pointer focus:outline-none"
               >
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#202c33] group-hover:bg-[#2a3942] border border-[#00a884]/40 text-[#00a884] flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-110 active:scale-95">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full bg-[#202c33] group-hover:bg-[#2a3942] border border-blue-500/40 text-blue-400 flex items-center justify-center shadow-lg transition-all duration-200 group-hover:scale-110 active:scale-95">
                   <FileText className="w-6 h-6 sm:w-7 sm:h-7" />
                 </div>
                 <div className="text-center">
-                  <span className="block text-xs sm:text-sm font-semibold text-[#e9edef] group-hover:text-[#00a884] transition-colors">
+                  <span className="block text-xs sm:text-sm font-semibold text-[#e9edef] group-hover:text-blue-400 transition-colors">
                     Send document
                   </span>
                   <span className="text-[10px] text-[#8696a0]">Share workspace files</span>
@@ -2913,14 +2910,14 @@ export default function Messages() {
             <button
               type="button"
               onClick={() => setMobileView('list')}
-              className="md:hidden -mt-4 mb-8 px-5 py-2.5 rounded-xl bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] text-xs font-bold flex items-center gap-2 shadow-lg transition-all active:scale-95 cursor-pointer"
+              className="md:hidden -mt-4 mb-8 px-5 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-2 shadow-lg shadow-blue-500/25 transition-all active:scale-95 cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
               <span>Back to Conversations List</span>
             </button>
 
             <div className="absolute bottom-6 flex items-center gap-1.5 text-xs text-[#8696a0]">
-              <Lock className="w-3.5 h-3.5 text-[#00a884]" />
+              <Lock className="w-3.5 h-3.5 text-blue-400" />
               <span>Multi-tenant organization security active • {activeOrganization?.organizationName || 'PMS'}</span>
             </div>
           </div>
@@ -2930,13 +2927,13 @@ export default function Messages() {
             {/* Active Chat Header */}
             <div className="h-15 border-b border-[#2a3942] px-4 sm:px-5 flex items-center justify-between shrink-0 bg-[#202c33] z-10">
               <div className="flex items-center gap-3 min-w-0">
-                {/* Mobile Back Button (WhatsApp Style) */}
+                {/* Mobile Back Button */}
                 <button
                   onClick={() => {
                     setMobileView('list');
                     setSelectedConversationId(null);
                   }}
-                  className="p-1 -ml-1 text-[#d1d7db] hover:text-[#00a884] md:hidden cursor-pointer"
+                  className="p-1 -ml-1 text-[#d1d7db] hover:text-blue-400 md:hidden cursor-pointer"
                   title="Back to conversations"
                 >
                   <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
@@ -2945,7 +2942,7 @@ export default function Messages() {
                 {/* Avatar and Channel/Team/Contact Details */}
                 {selectedConversationType === 'channel' ? (
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-[#111b21] border border-[#2a3942] text-[#00a884] flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
                       {activeChannelObj?.isPrivate ? <Lock className="w-5 h-5 text-amber-400" /> : <Hash className="w-5 h-5" />}
                     </div>
                     <div className="min-w-0">
@@ -2991,7 +2988,7 @@ export default function Messages() {
                             : (activeContactObj as any)?.status === 'away'
                             ? 'bg-amber-400'
                             : activeContactObj?.isOnline
-                            ? 'bg-[#00a884]'
+                            ? 'bg-emerald-500'
                             : 'bg-[#8696a0]'
                         }`}
                       />
@@ -3004,12 +3001,12 @@ export default function Messages() {
                         {activeContactObj?.id === AI_ASSISTANT_ID ? (
                           <span className="text-purple-400 font-medium">AI Copilot Active</span>
                         ) : typingUserInActiveConv ? (
-                          <span className="text-[#00a884] font-medium flex items-center gap-1">
+                          <span className="text-blue-400 font-medium flex items-center gap-1">
                             <span>typing</span>
                             <span className="flex items-center gap-0.5 ml-0.5">
-                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.3s]" />
-                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.15s]" />
-                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce" />
+                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" />
                             </span>
                           </span>
                         ) : (activeContactObj as any)?.status === 'busy' ? (
@@ -3023,8 +3020,8 @@ export default function Messages() {
                             Away
                           </span>
                         ) : activeContactObj?.isOnline ? (
-                          <span className="text-[#00a884] font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#00a884] animate-pulse" />
+                          <span className="text-emerald-400 font-medium flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                             Online
                           </span>
                         ) : (
@@ -3042,14 +3039,14 @@ export default function Messages() {
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                 <button
                   onClick={() => startCall('video', activeContactObj?.name || activeChannelObj?.name || 'Workspace', activeContactObj?.profilePhoto)}
-                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] hover:text-[#00a884] transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] hover:text-blue-400 transition-colors cursor-pointer"
                   title="Video Call"
                 >
                   <Video className="w-5 h-5" />
                 </button>
                 <button
                   onClick={() => startCall('audio', activeContactObj?.name || activeChannelObj?.name || 'Workspace', activeContactObj?.profilePhoto)}
-                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] hover:text-[#00a884] transition-colors cursor-pointer"
+                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] hover:text-blue-400 transition-colors cursor-pointer"
                   title="Voice Call"
                 >
                   <Phone className="w-5 h-5" />
@@ -3058,7 +3055,7 @@ export default function Messages() {
                 <button
                   onClick={() => setShowThreadSearch(!showThreadSearch)}
                   className={`p-2 rounded-full transition-colors cursor-pointer ${
-                    showThreadSearch ? 'bg-[#2a3942] text-[#00a884]' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
+                    showThreadSearch ? 'bg-blue-600 text-white' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
                   }`}
                   title="Search in conversation"
                 >
@@ -3067,7 +3064,7 @@ export default function Messages() {
                 <button
                   onClick={toggleDetailsPanel}
                   className={`p-2 rounded-full transition-colors cursor-pointer ${
-                    detailsPanelOpen ? 'bg-[#2a3942] text-[#00a884]' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
+                    detailsPanelOpen ? 'bg-blue-600 text-white' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
                   }`}
                   title="Conversation Details"
                 >
@@ -3120,12 +3117,12 @@ export default function Messages() {
             <div className="flex-1 overflow-y-auto min-h-0 p-4 sm:p-6 space-y-3 bg-[#0b141a] custom-scroll-area">
               {isLoadingMessages ? (
                 <div className="h-full flex flex-col items-center justify-center gap-3 text-[#8696a0]">
-                  <Loader2 className="w-7 h-7 animate-spin text-[#00a884]" />
+                  <Loader2 className="w-7 h-7 animate-spin text-blue-400" />
                   <p className="text-xs font-semibold">Synchronizing messages with Firestore...</p>
                 </div>
               ) : filteredMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center p-6 text-center max-w-sm mx-auto space-y-3">
-                  <div className="w-14 h-14 rounded-full bg-[#202c33] border border-[#2a3942] flex items-center justify-center text-[#00a884]">
+                  <div className="w-14 h-14 rounded-full bg-[#202c33] border border-[#2a3942] flex items-center justify-center text-blue-400">
                     <Lock className="w-6 h-6" />
                   </div>
                   <div>
@@ -3165,7 +3162,7 @@ export default function Messages() {
                       id={`msg-${msg.id}`}
                       className={`flex items-start gap-2 group relative transition-all duration-300 ${
                         isMe ? 'flex-row-reverse' : 'flex-row'
-                      } ${isHighlighted ? 'bg-[#00a884]/20 p-2 rounded-2xl ring-2 ring-[#00a884]' : ''}`}
+                      } ${isHighlighted ? 'bg-blue-500/20 p-2 rounded-2xl ring-2 ring-blue-500' : ''}`}
                       onMouseEnter={() => setActiveMessageActionId(msg.id)}
                       onMouseLeave={() => setActiveMessageActionId(null)}
                     >
@@ -3178,7 +3175,7 @@ export default function Messages() {
                           </span>
                         )}
 
-                        {/* Quoted Reply Banner (Requirement 9) */}
+                        {/* Quoted Reply Banner */}
                         {msg.replyTo && (
                           <div
                             onClick={() => {
@@ -3189,19 +3186,19 @@ export default function Messages() {
                                 setTimeout(() => setHighlightedMsgId(null), 1800);
                               }
                             }}
-                            className="mb-1 px-3 py-1.5 bg-[#111b21]/70 border-l-3 border-[#00a884] rounded-r-lg text-[11px] text-[#8696a0] max-w-full truncate cursor-pointer hover:bg-[#111b21] transition-colors"
+                            className="mb-1 px-3 py-1.5 bg-[#111b21]/70 border-l-3 border-blue-500 rounded-r-lg text-[11px] text-[#8696a0] max-w-full truncate cursor-pointer hover:bg-[#111b21] transition-colors"
                             title="Click to view quoted message"
                           >
-                            <span className="font-bold text-[#00a884] mr-1">↳ {msg.replyTo.senderName}:</span>
+                            <span className="font-bold text-blue-400 mr-1">↳ {msg.replyTo.senderName}:</span>
                             <span className="italic">"{msg.replyTo.content}"</span>
                           </div>
                         )}
 
-                        {/* WhatsApp Message Bubble */}
+                        {/* Message Bubble */}
                         <div
                           className={`pl-3.5 pr-6 py-2 rounded-xl text-[13.5px] leading-relaxed shadow-sm break-words relative group/bubble ${
                             isMe
-                              ? 'bg-[#005c4b] text-[#e9edef] rounded-tr-xs'
+                              ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-tr-xs shadow-md shadow-blue-600/20'
                               : 'bg-[#202c33] text-[#e9edef] rounded-tl-xs'
                           }`}
                         >
@@ -3227,7 +3224,7 @@ export default function Messages() {
                             </button>
                           )}
 
-                          {/* WhatsApp Dropdown Context Menu ("comes down") */}
+                          {/* Dropdown Context Menu */}
                           {String(activeContextMenuMsgId) === String(msg.id) && !msg.isDeleted && (
                             <div
                               className={`absolute top-7 ${
@@ -3357,7 +3354,7 @@ export default function Messages() {
                                         setPlayingAudioId(msg.id);
                                       }
                                     }}
-                                    className="w-8 h-8 rounded-full bg-[#00a884] text-[#111b21] flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95 transition-all"
+                                    className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white flex items-center justify-center shrink-0 cursor-pointer shadow-sm hover:scale-105 active:scale-95 transition-all shadow-blue-500/25"
                                   >
                                     {playingAudioId === msg.id ? (
                                       <Pause className="w-4 h-4 fill-current" />
@@ -3367,7 +3364,7 @@ export default function Messages() {
                                   </button>
                                   <div className="flex-1">
                                     <div className="h-1.5 bg-[#202c33] rounded-full overflow-hidden">
-                                      <div className={`h-full bg-[#00a884] ${playingAudioId === msg.id ? 'w-full animate-pulse' : 'w-1/3'}`} />
+                                      <div className={`h-full bg-blue-500 ${playingAudioId === msg.id ? 'w-full animate-pulse' : 'w-1/3'}`} />
                                     </div>
                                     <span className="text-[10px] text-[#8696a0] font-mono mt-1 block">Voice Note</span>
                                   </div>
@@ -3407,7 +3404,7 @@ export default function Messages() {
                                           accessLevel: 'Restricted Workspace Access'
                                         });
                                       }}
-                                      className="px-2.5 py-1.5 rounded-lg bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md transition-transform active:scale-95"
+                                      className="px-2.5 py-1.5 rounded-lg bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer shadow-md shadow-blue-500/25 transition-transform active:scale-95"
                                       title="Open Document in PDF Viewer"
                                     >
                                       <Eye className="w-3.5 h-3.5" />
@@ -3484,7 +3481,7 @@ export default function Messages() {
                               }}
                               className={`w-7 h-7 rounded-full bg-[#182229]/80 hover:bg-[#202c33] text-[#8696a0] hover:text-[#d1d7db] flex items-center justify-center cursor-pointer shadow-sm transition-all active:scale-95 ${
                                 String(activeReactionTrayMsgId) === String(msg.id)
-                                  ? 'bg-[#202c33] text-white ring-1 ring-[#00a884]'
+                                  ? 'bg-[#202c33] text-white ring-1 ring-blue-500'
                                   : ''
                               }`}
                               title="Add reaction"
@@ -3552,12 +3549,12 @@ export default function Messages() {
                     transition={{ duration: 0.15 }}
                     className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#202c33] border border-[#2a3942] text-[#8696a0] text-xs max-w-xs shadow-sm self-start my-1 shrink-0"
                   >
-                    <span className="font-semibold text-[#00a884]">{typingUserInActiveConv}</span>
+                    <span className="font-semibold text-blue-400">{typingUserInActiveConv}</span>
                     <span>is typing</span>
                     <span className="flex items-center gap-0.5 ml-0.5">
-                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.3s]" />
-                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.15s]" />
-                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce" />
+                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 bg-blue-400 rounded-full animate-bounce" />
                     </span>
                   </motion.div>
                 )}
@@ -3602,7 +3599,7 @@ export default function Messages() {
             >
               <div className="p-4 border-b border-[#2a3942] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#00a884]/20 text-[#00a884] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
                     <FileText className="w-4 h-4" />
                   </div>
                   <div>
@@ -3632,18 +3629,18 @@ export default function Messages() {
                           onClick={() => setSelectedDocToSend(docItem)}
                           className={`w-full p-2.5 rounded-xl border flex items-center justify-between text-left transition-all cursor-pointer ${
                             isSelected
-                              ? 'border-[#00a884] bg-[#00a884]/15 text-[#e9edef]'
+                              ? 'border-blue-500 bg-blue-500/15 text-[#e9edef]'
                               : 'border-[#2a3942] hover:bg-[#2a3942] text-[#d1d7db]'
                           }`}
                         >
                           <div className="flex items-center gap-3 truncate">
-                            <FileText className={`w-5 h-5 ${isSelected ? 'text-[#00a884]' : 'text-[#8696a0]'}`} />
+                            <FileText className={`w-5 h-5 ${isSelected ? 'text-blue-400' : 'text-[#8696a0]'}`} />
                             <div className="truncate">
                               <p className="text-xs font-bold truncate">{docItem.title}</p>
                               <p className="text-[10px] text-[#8696a0]">{docItem.size || '1.4 MB'}</p>
                             </div>
                           </div>
-                          {isSelected && <CheckCheck className="w-4 h-4 text-[#00a884]" />}
+                          {isSelected && <CheckCheck className="w-4 h-4 text-blue-400" />}
                         </button>
                       );
                     })}
@@ -3662,7 +3659,7 @@ export default function Messages() {
                       }}
                       className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         docRecipientType === 'channel'
-                          ? 'bg-[#00a884] text-[#111b21]'
+                          ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25'
                           : 'bg-[#111b21] text-[#8696a0] hover:text-[#d1d7db]'
                       }`}
                     >
@@ -3675,7 +3672,7 @@ export default function Messages() {
                       }}
                       className={`py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                         docRecipientType === 'dm'
-                          ? 'bg-[#00a884] text-[#111b21]'
+                          ? 'bg-blue-600 text-white font-bold shadow-md shadow-blue-500/25'
                           : 'bg-[#111b21] text-[#8696a0] hover:text-[#d1d7db]'
                       }`}
                     >
@@ -3692,7 +3689,7 @@ export default function Messages() {
                             value: c.id,
                             label: `#${c.name}`,
                             subLabel: c.description || 'Channel',
-                            icon: <Hash className="w-3.5 h-3.5 text-teal-400" />
+                            icon: <Hash className="w-3.5 h-3.5 text-blue-400" />
                           }))
                         : contacts.filter(c => c.id !== AI_ASSISTANT_ID).map((u) => ({
                             value: u.id,
@@ -3719,7 +3716,7 @@ export default function Messages() {
                   disabled={!selectedDocToSend}
                   className={`px-5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all ${
                     selectedDocToSend
-                      ? 'bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] shadow-md cursor-pointer'
+                      ? 'bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/25 cursor-pointer'
                       : 'bg-[#2a3942] text-[#8696a0] cursor-not-allowed'
                   }`}
                 >
@@ -3794,13 +3791,13 @@ export default function Messages() {
                               : contact.status === 'away'
                               ? 'bg-amber-400'
                               : contact.isOnline
-                              ? 'bg-[#00a884]'
+                              ? 'bg-emerald-500'
                               : 'bg-[#8696a0]'
                           }`}
                         />
                       </div>
                       <div className="truncate">
-                        <p className="text-xs font-bold text-[#e9edef] group-hover:text-[#00a884] transition-colors truncate">
+                        <p className="text-xs font-bold text-[#e9edef] group-hover:text-blue-400 transition-colors truncate">
                           {contact.name}
                         </p>
                         <p className="text-[10px] text-[#8696a0] truncate">
@@ -3818,7 +3815,7 @@ export default function Messages() {
                         </p>
                       </div>
                     </div>
-                    <ArrowRight className="w-4 h-4 text-[#8696a0] group-hover:text-[#00a884] group-hover:translate-x-1 transition-all" />
+                    <ArrowRight className="w-4 h-4 text-[#8696a0] group-hover:text-blue-400 group-hover:translate-x-1 transition-all" />
                   </button>
                 ))}
               </div>
@@ -3841,7 +3838,7 @@ export default function Messages() {
             >
               <div className="p-4 border-b border-[#2a3942] flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="w-8 h-8 rounded-full bg-[#00a884]/20 text-[#00a884] flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-blue-500/20 text-blue-400 flex items-center justify-center">
                     <Settings className="w-4 h-4" />
                   </div>
                   <div>
@@ -3867,7 +3864,7 @@ export default function Messages() {
                         type="checkbox"
                         checked={settings.soundEnabled}
                         onChange={(e) => setSettings({ ...settings, soundEnabled: e.target.checked })}
-                        className="w-4 h-4 accent-[#00a884]"
+                        className="w-4 h-4 accent-blue-500"
                       />
                     </label>
                     <label className="flex items-center justify-between text-xs text-[#d1d7db] cursor-pointer">
@@ -3876,7 +3873,7 @@ export default function Messages() {
                         type="checkbox"
                         checked={settings.enterToSend}
                         onChange={(e) => setSettings({ ...settings, enterToSend: e.target.checked })}
-                        className="w-4 h-4 accent-[#00a884]"
+                        className="w-4 h-4 accent-blue-500"
                       />
                     </label>
                     <label className="flex items-center justify-between text-xs text-[#d1d7db] cursor-pointer">
@@ -3885,7 +3882,7 @@ export default function Messages() {
                         type="checkbox"
                         checked={settings.desktopNotifications}
                         onChange={(e) => setSettings({ ...settings, desktopNotifications: e.target.checked })}
-                        className="w-4 h-4 accent-[#00a884]"
+                        className="w-4 h-4 accent-blue-500"
                       />
                     </label>
                   </div>
@@ -3900,7 +3897,7 @@ export default function Messages() {
                         type="checkbox"
                         checked={settings.readReceipts}
                         onChange={(e) => setSettings({ ...settings, readReceipts: e.target.checked })}
-                        className="w-4 h-4 accent-[#00a884]"
+                        className="w-4 h-4 accent-blue-500"
                       />
                     </label>
                     <label className="flex items-center justify-between text-xs text-[#d1d7db] cursor-pointer">
@@ -3909,7 +3906,7 @@ export default function Messages() {
                         type="checkbox"
                         checked={settings.onlineStatusVisible}
                         onChange={(e) => setSettings({ ...settings, onlineStatusVisible: e.target.checked })}
-                        className="w-4 h-4 accent-[#00a884]"
+                        className="w-4 h-4 accent-blue-500"
                       />
                     </label>
                   </div>
@@ -3925,7 +3922,7 @@ export default function Messages() {
                 </button>
                 <button
                   onClick={() => handleSaveSettings(settings)}
-                  className="px-5 py-2 rounded-xl text-xs font-bold bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] shadow-md cursor-pointer"
+                  className="px-5 py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white shadow-md shadow-blue-500/25 cursor-pointer"
                 >
                   Save Settings
                 </button>
@@ -3954,7 +3951,7 @@ export default function Messages() {
                 <X className="w-5 h-5" />
               </button>
 
-              <div className="w-20 h-20 mx-auto rounded-full overflow-hidden ring-4 ring-[#00a884]/40 shadow-xl mb-3">
+              <div className="w-20 h-20 mx-auto rounded-full overflow-hidden ring-4 ring-blue-500/40 shadow-xl mb-3">
                 <img
                   src={resolveAvatar(user?.profilePhoto, user?.name, user?.gender)}
                   alt={user?.name}
@@ -3963,7 +3960,7 @@ export default function Messages() {
               </div>
 
               <h3 className="text-lg font-bold text-[#e9edef]">{user?.name}</h3>
-              <p className="text-xs text-[#00a884] font-semibold">{formatRoleName(user?.role)}</p>
+              <p className="text-xs text-blue-400 font-semibold">{formatRoleName(user?.role)}</p>
               <p className="text-xs text-[#8696a0] mt-0.5">{user?.email}</p>
 
               <div className="mt-5 p-3 bg-[#111b21] rounded-xl text-left text-xs space-y-2 border border-[#2a3942]">
@@ -3987,7 +3984,7 @@ export default function Messages() {
                       : userStatus === 'away'
                       ? 'text-amber-400'
                       : userStatus === 'online'
-                      ? 'text-[#00a884]'
+                      ? 'text-emerald-400'
                       : 'text-[#8696a0]'
                   }`}>{userStatus}</span>
                 </div>
@@ -3995,7 +3992,7 @@ export default function Messages() {
 
               <button
                 onClick={() => setIsViewProfileModalOpen(false)}
-                className="mt-5 w-full py-2 bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] text-xs font-bold rounded-xl"
+                className="mt-5 w-full py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/25"
               >
                 Close
               </button>
@@ -4033,7 +4030,7 @@ export default function Messages() {
                     type="text"
                     value={editName}
                     onChange={(e) => setEditName(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-[#00a884]"
+                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -4042,7 +4039,7 @@ export default function Messages() {
                     type="text"
                     value={editDesignation}
                     onChange={(e) => setEditDesignation(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-[#00a884]"
+                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-blue-500"
                   />
                 </div>
                 <div>
@@ -4051,7 +4048,7 @@ export default function Messages() {
                     type="text"
                     value={editDepartment}
                     onChange={(e) => setEditDepartment(e.target.value)}
-                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-[#00a884]"
+                    className="w-full px-3 py-2 bg-[#111b21] border border-[#2a3942] rounded-xl text-xs text-[#d1d7db] outline-none focus:border-blue-500"
                   />
                 </div>
               </div>
@@ -4065,7 +4062,7 @@ export default function Messages() {
                 </button>
                 <button
                   onClick={handleSaveProfile}
-                  className="px-5 py-2 bg-[#00a884] hover:bg-[#00a884]/90 text-[#111b21] text-xs font-bold rounded-xl"
+                  className="px-5 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-bold rounded-xl shadow-md shadow-blue-500/25"
                 >
                   Save Changes
                 </button>
@@ -4127,7 +4124,7 @@ export default function Messages() {
             >
               <div className="p-4 border-b border-[#2a3942] flex items-center justify-between">
                 <div className="flex items-center gap-2">
-                  <Share2 className="w-4 h-4 text-[#00a884]" />
+                  <Share2 className="w-4 h-4 text-blue-400" />
                   <h3 className="font-bold text-sm">Forward Message</h3>
                 </div>
                 <button
@@ -4167,7 +4164,7 @@ export default function Messages() {
                     onClick={() => handleForwardMessage('channel', ch.id)}
                     className="w-full p-2 rounded-xl hover:bg-[#2a3942] flex items-center gap-2.5 text-left cursor-pointer transition-colors"
                   >
-                    <div className="w-8 h-8 rounded-full bg-[#111b21] flex items-center justify-center text-[#00a884] font-bold text-xs">#</div>
+                    <div className="w-8 h-8 rounded-full bg-[#1e293b] border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold text-xs">#</div>
                     <div className="truncate">
                       <p className="text-xs font-bold text-[#e9edef]">#{ch.name}</p>
                       <p className="text-[10px] text-[#8696a0]">{ch.description || 'Channel'}</p>
@@ -4234,7 +4231,7 @@ export default function Messages() {
               className="w-full max-w-sm bg-[#202c33] border border-[#2a3942] rounded-3xl p-6 text-center text-[#e9edef] shadow-2xl flex flex-col items-center"
             >
               <div className="relative mb-4">
-                <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-[#00a884]/40 shadow-xl">
+                <div className="w-24 h-24 rounded-full overflow-hidden ring-4 ring-blue-500/40 shadow-xl">
                   <img
                     src={resolveAvatar(activeCall.contactAvatar, activeCall.contactName)}
                     alt={activeCall.contactName}
@@ -4242,12 +4239,12 @@ export default function Messages() {
                   />
                 </div>
                 {activeCall.status === 'ringing' && (
-                  <span className="absolute inset-0 rounded-full ring-4 ring-[#00a884] animate-ping" />
+                  <span className="absolute inset-0 rounded-full ring-4 ring-blue-500 animate-ping" />
                 )}
               </div>
 
               <h3 className="text-lg font-bold text-[#e9edef]">{activeCall.contactName}</h3>
-              <p className="text-xs font-semibold text-[#00a884] mt-1 mb-6">
+              <p className="text-xs font-semibold text-blue-400 mt-1 mb-6">
                 {activeCall.status === 'ringing'
                   ? `Ringing (${activeCall.type} call)...`
                   : `Connected • ${Math.floor(activeCall.duration / 60)
