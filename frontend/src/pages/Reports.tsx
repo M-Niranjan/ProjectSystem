@@ -240,7 +240,7 @@ startxref
   };
 
   return (
-    <div className="space-y-6 pb-20 print:p-0 print:space-y-4 w-full min-w-0">
+    <div className="space-y-6 pb-28 sm:pb-20 lg:pb-12 print:p-0 print:space-y-4 w-full min-w-0">
       {/* Title */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 print:hidden">
         <div>

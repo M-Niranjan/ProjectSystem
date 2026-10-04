@@ -413,7 +413,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
   };
 
   return (
-    <div className="space-y-6 pt-1 sm:pt-2 pb-20 w-full min-w-0">
+    <div className="space-y-6 pt-1 sm:pt-2 pb-28 sm:pb-20 lg:pb-12 w-full min-w-0">
       {/* ========================================================================= */}
       {/* TOP BAR: ORGANIZATION + WORKSPACE + ADMIN WELCOME                         */}
       {/* ========================================================================= */}

@@ -238,7 +238,7 @@ export default function Projects() {
   });
 
   return (
-    <div className="flex flex-col min-h-[calc(100vh-120px)] pb-12">
+    <div className="flex flex-col min-h-[calc(100vh-120px)] pb-28 sm:pb-20 lg:pb-12">
       {/* Title Header */}
       <div className="flex-shrink-0 flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200/10 dark:border-white/5">
         <div>
@@ -263,7 +263,7 @@ export default function Projects() {
         {/* Filters & View Switches bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/5 border border-slate-200/50 dark:border-white/5 p-3 rounded-2xl backdrop-blur-md">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-full max-w-xs">
+          <div className="relative w-full sm:w-64 md:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
               type="text"

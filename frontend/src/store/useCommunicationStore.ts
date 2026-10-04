@@ -17,7 +17,12 @@ export interface ChatMessage {
   content: string;
   text?: string;
   message?: string;
-  status?: string;
+  status?: 'sending' | 'pending' | 'sent' | 'delivered' | 'read' | 'failed' | string;
+  sentAt?: string | any;
+  deliveredAt?: string | any;
+  readAt?: string | any;
+  deliveredTo?: string[];
+  readBy?: string[];
   type?: string;
   messageType?: string;
   sender: {
@@ -69,6 +74,7 @@ interface CommunicationState {
   activeTab: 'channels' | 'dms';
   activeChannelId: number | string | null;
   activeContactId: number | string | null;
+  currentOpenConversationId: string | null;
   sidebarOpen: boolean; // mobile drawer
   detailsPanelOpen: boolean;
   searchQuery: string;
@@ -89,6 +95,7 @@ interface CommunicationState {
   setActiveTab: (tab: 'channels' | 'dms') => void;
   setActiveChannelId: (id: number | string | null) => void;
   setActiveContactId: (id: number | string | null) => void;
+  setCurrentOpenConversationId: (convId: string | null) => void;
   setSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
   setDetailsPanelOpen: (open: boolean) => void;
@@ -111,6 +118,7 @@ export const useCommunicationStore = create<CommunicationState>((set, get) => ({
   activeTab: 'channels',
   activeChannelId: null,
   activeContactId: null,
+  currentOpenConversationId: null,
   sidebarOpen: true,
   detailsPanelOpen: false,
   searchQuery: '',
@@ -134,6 +142,7 @@ export const useCommunicationStore = create<CommunicationState>((set, get) => ({
     set({ activeContactId: id, activeTab: 'dms' });
     if (id) get().clearUnread(`dm_${id}`);
   },
+  setCurrentOpenConversationId: (convId) => set({ currentOpenConversationId: convId }),
 
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
   toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),

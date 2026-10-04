@@ -362,7 +362,7 @@ export default function Tasks() {
   };
 
   return (
-    <div className="space-y-5 pt-1 sm:pt-2 pb-20 w-full min-w-0">
+    <div className="space-y-5 pt-1 sm:pt-2 pb-28 sm:pb-20 lg:pb-12 w-full min-w-0">
       {/* Tier 1: Title & Primary Action Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full">
         <div>
@@ -386,9 +386,9 @@ export default function Tasks() {
       </div>
 
       {/* Tier 2: Dedicated Frosted Search & Controls Toolbar (Option 2) */}
-      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-3 px-4 shadow-xs dark:shadow-xl flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+      <div className="bg-white dark:bg-[#0e131f]/90 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl p-3 px-4 shadow-xs dark:shadow-xl flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
         {/* Left: Search Input */}
-        <div className="relative w-full md:w-96">
+        <div className="relative w-full lg:w-80 xl:w-96">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="text"
@@ -400,7 +400,7 @@ export default function Tasks() {
         </div>
 
         {/* Right: View Toggles & My Tasks Toggle */}
-        <div className="flex items-center gap-5 shrink-0 justify-between md:justify-end flex-wrap">
+        <div className="flex items-center gap-3 sm:gap-4 shrink-0 justify-between lg:justify-end flex-wrap w-full lg:w-auto">
           {/* View Toggles (Grid / List / Group Assignee) */}
           <div className="flex items-center gap-1 bg-slate-100 dark:bg-[#080b13] border border-slate-200/80 dark:border-slate-800/90 p-1 rounded-xl">
             <button
@@ -586,7 +586,7 @@ export default function Tasks() {
         </div>
 
         {/* Right: Status Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 custom-scrollbar">
+        <div className="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 no-scrollbar custom-scrollbar overscroll-contain">
           {[
             { id: 'ALL', label: 'ALL' },
             { id: 'BACKLOG', label: 'BACKLOG' },
@@ -831,12 +831,6 @@ export default function Tasks() {
             <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
                 <tr className="border-b border-slate-200/90 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/40 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-4 w-12 text-center">
-                    <input
-                      type="checkbox"
-                      className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
-                    />
-                  </th>
                   <th className="py-3.5 px-4 w-24">ID</th>
                   <th className="py-3.5 px-4">Task Name</th>
                   <th className="py-3.5 px-4 w-44">Assignee</th>
@@ -849,7 +843,7 @@ export default function Tasks() {
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium text-slate-700 dark:text-slate-300">
                 {filteredTasks.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-14 text-center text-slate-400 font-medium">
+                    <td colSpan={7} className="py-14 text-center text-slate-400 font-medium">
                       No tasks found matching current filters.
                     </td>
                   </tr>
@@ -862,12 +856,6 @@ export default function Tasks() {
                         className="hover:bg-slate-50/80 dark:hover:bg-[#141b2c]/60 transition-colors group cursor-pointer"
                         onClick={() => openTaskDetail(task)}
                       >
-                        <td className="py-3.5 px-4 text-center" onClick={(e) => e.stopPropagation()}>
-                          <input
-                            type="checkbox"
-                            className="w-4 h-4 rounded border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-blue-600 focus:ring-0 cursor-pointer"
-                          />
-                        </td>
                         <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">
                           PM-{task.id}
                         </td>

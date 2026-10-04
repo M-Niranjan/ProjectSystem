@@ -262,7 +262,7 @@ export default function Navbar() {
   };
 
   return (
-    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex items-center justify-between gap-2 sm:gap-4 px-2.5 sm:px-4 print:hidden ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[92px]'} pl-2.5 sm:pl-4 transition-all duration-200 ease-in-out`}>
+    <header className={`fixed top-0 right-0 left-0 z-20 h-14 glass-navbar flex flex-nowrap items-center justify-between gap-2 sm:gap-4 px-2.5 sm:px-4 print:hidden ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[92px]'} pl-2.5 sm:pl-4 transition-all duration-200 ease-in-out`}>
       {/* Left: Navigation Drawer Trigger & Active Organization Switcher */}
       <div className="flex items-center gap-1.5 sm:gap-2.5 min-w-0 flex-shrink-0">
         <button
@@ -279,7 +279,7 @@ export default function Navbar() {
             <button
               ref={orgButtonRef}
               onClick={() => setShowOrgDropdown(!showOrgDropdown)}
-              className="h-8.5 sm:h-9 px-2 sm:px-3 flex items-center gap-1.5 sm:gap-2 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-blue-500/40 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-xs max-w-[150px] xs:max-w-[190px] sm:max-w-[260px] md:max-w-[320px]"
+              className="h-8.5 sm:h-9 px-2 sm:px-3 flex items-center gap-1.5 sm:gap-2 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:border-blue-500/40 text-slate-800 dark:text-slate-200 text-xs font-bold transition-all cursor-pointer shadow-xs max-w-[130px] xs:max-w-[170px] sm:max-w-[200px] lg:max-w-[320px]"
               title={`Organization: ${activeOrganization.organizationName} (Workspace: ${activeOrganization.organizationCode || activeOrganization.organizationId})`}
             >
               <div className="w-5 h-5 rounded-full bg-blue-500/15 border border-blue-500/30 text-blue-500 flex items-center justify-center flex-shrink-0">
@@ -288,7 +288,7 @@ export default function Navbar() {
               <span className="truncate text-xs font-bold">{activeOrganization.organizationName}</span>
               {/* Subtle Live Sync Pulse Beacon on Mobile */}
               <span className="sm:hidden w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" title="Live Auto-Sync Active" />
-              <span className="hidden sm:inline-flex items-center font-mono text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 flex-shrink-0">
+              <span className="hidden lg:inline-flex items-center font-mono text-[10px] uppercase font-bold text-blue-600 dark:text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-500/20 flex-shrink-0">
                 Workspace: {activeOrganization.organizationCode || activeOrganization.organizationId}
               </span>
               {orgMemberships && orgMemberships.length > 1 && (
@@ -362,17 +362,35 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Center: Tablet / Desktop Search Bar (Hidden on Mobile, handled by Bottom Nav) */}
-      <div className="hidden sm:flex items-center gap-1.5 sm:gap-2 flex-1 max-w-md min-w-0 mx-2">
+      {/* Center 1: Tablet Search & Voice Trigger Icons (Clean circular buttons on tablet 640px-1023px, opens Command Palette) */}
+      <div className="hidden sm:flex lg:hidden items-center gap-1.5 flex-shrink-0">
+        <button
+          onClick={triggerSearchPalette}
+          className="w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
+          title="Search Workspace (3SK)"
+        >
+          <Search className="w-3.5 h-3.5" />
+        </button>
+        <button
+          onClick={() => setVoiceOverlay(true)}
+          className="w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-600 dark:text-slate-400 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors cursor-pointer flex-shrink-0 shadow-2xs"
+          title="Voice command palette"
+        >
+          <Mic className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Center 2: Desktop Search Bar (Large screens >= 1024px) */}
+      <div className="hidden lg:flex items-center gap-2 flex-1 max-w-sm xl:max-w-md min-w-0 mx-3">
         <div 
           onClick={triggerSearchPalette}
-          className="w-full h-9 items-center justify-between gap-1.5 sm:gap-2 px-3.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-slate-400 text-xs cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-all select-none shadow-inner flex"
+          className="w-full h-9 items-center justify-between gap-2 px-3.5 bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-full text-slate-600 dark:text-slate-400 text-xs cursor-pointer hover:border-slate-300 dark:hover:border-white/20 transition-all select-none shadow-inner flex"
         >
           <div className="flex items-center gap-2 truncate">
             <Search className="w-3.5 h-3.5 text-slate-500 dark:text-slate-400 flex-shrink-0" />
-            <span className="truncate text-xs text-slate-600 dark:text-slate-400">Search...</span>
+            <span className="truncate text-xs text-slate-600 dark:text-slate-400">Search workspace...</span>
           </div>
-          <kbd className="hidden md:inline-block px-2 py-0.5 text-[10px] bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 rounded-full font-mono">
+          <kbd className="hidden xl:inline-block px-2 py-0.5 text-[10px] bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-400 rounded-full font-mono">
             3SK
           </kbd>
         </div>
@@ -393,11 +411,11 @@ export default function Navbar() {
             <button
               ref={quickCreateButtonRef}
               onClick={() => setShowQuickCreate(!showQuickCreate)}
-              className="h-8.5 w-8.5 sm:w-auto px-0 sm:px-3.5 flex items-center justify-center gap-1.5 bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 dark:border-teal-500/40 hover:border-teal-400 rounded-full font-bold text-xs shadow-xs transition-all cursor-pointer flex-shrink-0"
+              className="h-8.5 px-3 flex items-center justify-center gap-1.5 bg-teal-500/15 hover:bg-teal-500/25 text-teal-700 dark:text-teal-300 border border-teal-500/30 dark:border-teal-500/40 hover:border-teal-400 rounded-full font-bold text-xs shadow-xs transition-all cursor-pointer flex-shrink-0"
               title="Create new project or task"
             >
               <Plus className="w-3.5 h-3.5 flex-shrink-0" />
-              <span className="hidden sm:inline">Create</span>
+              <span>Create</span>
             </button>
             
             {showQuickCreate && (
@@ -443,7 +461,8 @@ export default function Navbar() {
           {darkMode ? <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
         </button>
 
-        <div className="hidden sm:block relative flex-shrink-0">
+        {/* Language Toggle (Large Desktop Only) */}
+        <div className="hidden xl:block relative flex-shrink-0">
           <button
             ref={languagesButtonRef}
             onClick={() => setShowLanguages(!showLanguages)}

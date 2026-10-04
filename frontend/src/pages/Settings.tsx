@@ -222,7 +222,7 @@ export default function Settings() {
   const ActiveTabIcon = activeTabObj?.icon || User;
 
   return (
-    <div className="space-y-6 pb-20 w-full min-w-0">
+    <div className="space-y-6 pb-28 sm:pb-20 lg:pb-12 w-full min-w-0">
       {/* Desktop Title Header */}
       <div className="hidden md:flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
@@ -422,7 +422,7 @@ export default function Settings() {
       {/* Main Settings Panel */}
       <div className={`glass-panel overflow-hidden border border-slate-200/80 dark:border-white/10 rounded-3xl shadow-xl shadow-slate-200/40 dark:shadow-black/30 ${mobileDetailOpen ? 'flex flex-col' : 'hidden'} md:flex md:flex-row min-h-[520px]`}>
         {/* Left Sidebar Navigation Tabs */}
-        <div className="hidden md:flex w-72 border-r border-slate-200/70 dark:border-white/5 flex-shrink-0 bg-slate-50/60 dark:bg-white/[0.02] p-3.5 flex-col justify-between overflow-y-auto max-h-[650px]">
+        <div className="hidden md:flex w-60 lg:w-72 border-r border-slate-200/70 dark:border-white/5 flex-shrink-0 bg-slate-50/60 dark:bg-white/[0.02] p-3.5 flex-col justify-between overflow-y-auto max-h-[650px]">
           <div className="space-y-1.5">
             <p className="text-[11px] font-black text-slate-400 dark:text-slate-400 uppercase tracking-wider px-2 pb-1.5">Settings Menu</p>
             {tabs.map((tab) => {

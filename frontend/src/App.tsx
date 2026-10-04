@@ -19,6 +19,7 @@ import CreateTaskModal from './components/CreateTaskModal';
 import LuxuryToast from './components/common/LuxuryToast';
 import SignOutConfirmModal from './components/common/SignOutConfirmModal';
 import LiveRefreshProvider from './components/LiveRefreshProvider';
+import GlobalCommunicationSyncProvider from './components/communication/GlobalCommunicationSyncProvider';
 import MobileBottomNav from './components/MobileBottomNav';
 
 // Pages
@@ -304,7 +305,7 @@ function AppContent() {
           <main className={`flex-1 min-w-0 max-w-full print:p-0 print:m-0 print:pt-0 print:max-w-none ${
             isMessagesPage
               ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-0 sm:p-2 overflow-hidden overscroll-none'
-              : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 pb-20 sm:pb-8 w-full max-w-7xl mx-auto'
+              : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 pb-32 sm:pb-24 lg:pb-12 w-full max-w-7xl mx-auto'
           }`}>
             <ErrorBoundary>
               <Routes location={location}>
@@ -376,7 +377,9 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <LiveRefreshProvider>
-        <AppContent />
+        <GlobalCommunicationSyncProvider>
+          <AppContent />
+        </GlobalCommunicationSyncProvider>
       </LiveRefreshProvider>
     </QueryClientProvider>
   );

@@ -1963,7 +1963,7 @@ ${item.content || ''}
   // RENDER: CONCEPT D UNIFIED DOCUMENT HUB (MIXED GRID VIEW)
   // ============================================================================
   return (
-    <div className="h-[calc(100dvh-5rem)] md:h-[calc(100vh-5.5rem)] w-full relative overflow-hidden">
+    <div className="h-[calc(100dvh-13.5rem)] sm:h-[calc(100dvh-14rem)] lg:h-[calc(100dvh-12rem)] min-h-[520px] w-full relative overflow-hidden">
       {/* Hidden file input for native file picking */}
       <input
         type="file"

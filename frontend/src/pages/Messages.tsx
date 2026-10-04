@@ -99,6 +99,7 @@ import CreateChannelModal, { ChannelFormData } from '../components/communication
 import ConversationDetailsPanel from '../components/communication/ConversationDetailsPanel';
 import MessageComposer from '../components/communication/MessageComposer';
 import PremiumPdfViewerModal from '../components/common/PremiumPdfViewerModal';
+import MessageStatus from '../components/communication/MessageStatus';
 
 // Team Channel Item Interface
 export interface TeamChannelItem {
@@ -262,6 +263,7 @@ export default function Messages() {
     lastSenderId: string | number;
     lastSenderName: string;
     lastMessageIsRead?: boolean;
+    lastMessageStatus?: string;
     unreadCount?: number;
   }>>(() => {
     try {
@@ -270,6 +272,20 @@ export default function Messages() {
     } catch (e) {}
     return {};
   });
+
+  const setCurrentOpenConversationId = useCommunicationStore((s) => s.setCurrentOpenConversationId);
+
+  // Real-Time Typing State (Requirement 10: Temporary realtime presence per conversation)
+  const [typingUserInActiveConv, setTypingUserInActiveConv] = useState<string | null>(null);
+  const typingTimerRef = useRef<any>(null);
+
+  // Synchronize active open conversation ID for accurate background delivery vs read logic
+  useEffect(() => {
+    setCurrentOpenConversationId(selectedConversationId);
+    return () => {
+      setCurrentOpenConversationId(null);
+    };
+  }, [selectedConversationId, setCurrentOpenConversationId]);
 
   // Settings State (Persisted in localStorage & Firestore user doc)
   const [settings, setSettings] = useState(() => {
@@ -853,6 +869,7 @@ export default function Messages() {
               lastSenderId: data.lastSenderId,
               lastSenderName: data.lastSenderName || 'Member',
               lastMessageIsRead: Boolean(data.lastMessageIsRead),
+              lastMessageStatus: data.lastMessageStatus || (data.lastMessageIsRead ? 'read' : 'sent'),
               unreadCount: unreadForMe
             };
           });
@@ -881,6 +898,116 @@ export default function Messages() {
       };
     } catch (e) {}
   }, [orgId, currentUid]);
+
+  // Real-Time Typing Handlers (Requirement 10: Specific to selected conversation)
+  const handleUserTyping = useCallback(() => {
+    if (!firebaseDb || !selectedConversationId || !currentUid) return;
+
+    try {
+      const typingDocRef = doc(firebaseDb, 'typing', `${selectedConversationId}_${currentUid}`);
+      setDoc(
+        typingDocRef,
+        {
+          conversationId: selectedConversationId,
+          userId: String(currentUid),
+          userName: user?.name || 'Someone',
+          isTyping: true,
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      ).catch(() => {});
+
+      if (typingTimerRef.current) {
+        clearTimeout(typingTimerRef.current);
+      }
+
+      typingTimerRef.current = setTimeout(() => {
+        try {
+          setDoc(
+            typingDocRef,
+            {
+              isTyping: false,
+              updatedAt: serverTimestamp()
+            },
+            { merge: true }
+          ).catch(() => {});
+        } catch (e) {}
+      }, 2500);
+    } catch (e) {}
+  }, [selectedConversationId, currentUid, user?.name]);
+
+  const clearUserTyping = useCallback(() => {
+    if (!firebaseDb || !selectedConversationId || !currentUid) return;
+    if (typingTimerRef.current) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+    try {
+      const typingDocRef = doc(firebaseDb, 'typing', `${selectedConversationId}_${currentUid}`);
+      setDoc(
+        typingDocRef,
+        {
+          isTyping: false,
+          updatedAt: serverTimestamp()
+        },
+        { merge: true }
+      ).catch(() => {});
+    } catch (e) {}
+  }, [selectedConversationId, currentUid]);
+
+  // Real-time listener for typing indicator in active conversation
+  useEffect(() => {
+    if (!firebaseDb || !selectedConversationId) {
+      setTypingUserInActiveConv(null);
+      return;
+    }
+
+    try {
+      const qTyping = query(
+        collection(firebaseDb, 'typing'),
+        where('conversationId', '==', selectedConversationId)
+      );
+
+      const unsub = onSnapshot(
+        qTyping,
+        (snapshot) => {
+          const now = Date.now();
+          let activeTyper: string | null = null;
+
+          snapshot.docs.forEach((d) => {
+            const data = d.data();
+            if (String(data.userId) !== String(currentUid) && data.isTyping === true) {
+              let updatedMs = 0;
+              if (data.updatedAt?.toMillis) {
+                updatedMs = data.updatedAt.toMillis();
+              } else if (data.updatedAt?.seconds) {
+                updatedMs = data.updatedAt.seconds * 1000;
+              } else if (data.updatedAt) {
+                updatedMs = new Date(data.updatedAt).getTime();
+              }
+
+              // Verify freshness within 6 seconds
+              if (updatedMs === 0 || now - updatedMs < 6000) {
+                activeTyper = data.userName || 'Teammate';
+              }
+            }
+          });
+
+          setTypingUserInActiveConv(activeTyper);
+        },
+        () => {
+          setTypingUserInActiveConv(null);
+        }
+      );
+
+      return () => {
+        unsub();
+        clearUserTyping();
+      };
+    } catch (e) {
+      return () => {};
+    }
+  }, [selectedConversationId, currentUid, clearUserTyping]);
 
   // Handle external navigation directly to a contact chat
   useEffect(() => {
@@ -1241,7 +1368,10 @@ export default function Messages() {
       content,
       text: content,
       message: content,
-      status: (isOffline || !navigator.onLine) ? 'pending' : 'sent',
+      status: (!navigator.onLine || isOffline) ? 'failed' : 'sending',
+      sentAt: null,
+      deliveredAt: null,
+      readAt: null,
       type: msgType,
       messageType: msgType,
       sender: {
@@ -1261,7 +1391,7 @@ export default function Messages() {
         : null
     };
 
-    // Immediate optimistic local update - ONLY retain messages that belong to selectedConversationId (Requirement 6 & 17)
+    // Immediate optimistic local update with sending/failed state (Requirements 2, 6, 17)
     setMessages((prev) => {
       const sanitizedPrev = prev.filter(m => !m.conversationId || m.conversationId === selectedConversationId);
       const next = [...sanitizedPrev, newMsg];
@@ -1272,6 +1402,7 @@ export default function Messages() {
     });
 
     setReplyToMessage(null);
+    clearUserTyping();
 
     // Play chime sound if enabled in settings
     if (settings.soundEnabled) {
@@ -1280,7 +1411,7 @@ export default function Messages() {
 
     const convPreview = content || (fileAttachment ? (fileAttachment.name.endsWith('.webm') ? '🎙️ Voice message' : `Attachment: ${fileAttachment.name}`) : 'File shared');
 
-    // Update local metadata immediately so latest conversation moves to top instantly (Requirement 8)
+    // Update local metadata immediately so latest conversation moves to top instantly (Requirement 8 & 13)
     setConvMetaMap((prev) => {
       const next = {
         ...prev,
@@ -1289,7 +1420,8 @@ export default function Messages() {
           lastMessageAt: nowIso,
           lastSenderId: String(currentUid),
           lastSenderName: user?.name || 'You',
-          lastMessageIsRead: selectedConversationType === 'ai'
+          lastMessageIsRead: selectedConversationType === 'ai',
+          lastMessageStatus: (!navigator.onLine || isOffline) ? 'failed' : 'sending',
         }
       };
       try {
@@ -1298,10 +1430,15 @@ export default function Messages() {
       return next;
     });
 
+    if (!navigator.onLine || isOffline) {
+      showToast('Network disconnected. Message queued to retry.');
+      return;
+    }
+
     // Save to Firestore (Real-Time Store - Requirements 3, 7, 8, 10, 13, 14)
     try {
       if (firebaseDb) {
-        // Save message document
+        // Save message document with actual 'sent' state and timestamps
         const docRef = await addDoc(collection(firebaseDb, 'messages'), {
           conversationId: selectedConversationId,
           organizationId: orgId,
@@ -1317,6 +1454,10 @@ export default function Messages() {
           content,
           message: content,
           status: 'sent',
+          sentAt: serverTimestamp(),
+          deliveredAt: null,
+          readAt: null,
+          deliveredTo: [],
           type: msgType,
           messageType: msgType,
           fileName: fileAttachment?.name || null,
@@ -1337,12 +1478,12 @@ export default function Messages() {
         if (docRef?.id) {
           setMessages((prev) =>
             prev.map((m) =>
-              m.id === tempId ? { ...m, id: docRef.id, messageId: docRef.id, status: 'sent' } : m
+              m.id === tempId ? { ...m, id: docRef.id, messageId: docRef.id, status: 'sent', sentAt: nowIso } : m
             )
           );
         }
 
-        // Update conversation metadata document with participants, timestamp & unread counters (Requirements 8, 9, 13)
+        // Update conversation metadata document with participants, timestamp, status & unread counters
         await setDoc(doc(firebaseDb, 'conversations', selectedConversationId), {
           id: selectedConversationId,
           conversationId: selectedConversationId,
@@ -1359,53 +1500,149 @@ export default function Messages() {
           lastSenderId: String(currentUid),
           lastSenderName: user?.name || 'You',
           lastMessageIsRead: selectedConversationType === 'ai',
+          lastMessageStatus: 'sent',
           ...(targetUserId ? { [`unreadCounts.${targetUserId}`]: increment(1) } : {}),
           updatedAt: serverTimestamp()
         }, { merge: true });
+
+        // AI Assistant Response Automation (Requirement 1)
+        if (selectedConversationType === 'ai') {
+          setTimeout(() => {
+            const queryLower = content.toLowerCase();
+            let aiResponse = "I've reviewed your request against current project deliverables: You have 3 active tasks in sprint tracking. Everything is currently running on schedule!";
+
+            if (queryLower.includes('task') || queryLower.includes('sprint') || queryLower.includes('progress')) {
+              aiResponse = "Sprint Analysis: The team has completed 75% of target user stories for the current milestone. Primary blocker: Backend verification API endpoint pending review.";
+            } else if (queryLower.includes('document') || queryLower.includes('file') || queryLower.includes('requirement')) {
+              aiResponse = "Document Repository Synced: The latest 'Sprint Planning Guidelines.pdf' and 'Architecture Specification' were indexed recently.";
+            } else if (queryLower.includes('hi') || queryLower.includes('hello')) {
+              aiResponse = `Greetings ${user?.name || 'teammate'}! I am your Project AI Copilot. How can I assist with tasks, team updates, or documents today?`;
+            }
+
+            const aiMsg: ChatMessage = {
+              id: `ai_${Date.now()}`,
+              content: aiResponse,
+              sender: {
+                id: AI_ASSISTANT_ID,
+                name: 'Project AI Assistant',
+                role: 'AI Assistant',
+                profilePhoto: AI_CONTACT.profilePhoto
+              },
+              createdAt: new Date().toISOString(),
+              isRead: true
+            };
+
+            setMessages((prev) => {
+              const next = [...prev, aiMsg];
+              try {
+                localStorage.setItem(`pms_chat_cache_${orgId}_${selectedConversationId}`, JSON.stringify(next));
+              } catch (e) {}
+              return next;
+            });
+
+            if (settings.soundEnabled) {
+              playChime();
+            }
+          }, 700);
+        }
       }
     } catch (fireErr) {
-      console.warn('Firestore write warning:', fireErr);
+      console.warn('Firestore write failed:', fireErr);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? { ...m, status: 'failed' } : m))
+      );
+      showToast('Failed to send message. Please tap Retry.');
+    }
+  };
+
+  // 4b. RETRY SENDING FAILED MESSAGE (Requirement 17: Failed -> Sending -> Sent)
+  const handleRetryMessage = async (failedMsg: ChatMessage) => {
+    if (!navigator.onLine || isOffline) {
+      showToast('Network offline. Reconnect to retry sending.');
+      return;
     }
 
-    // AI Assistant Response Automation (Requirement 1)
-    if (selectedConversationType === 'ai') {
-      setTimeout(() => {
-        const queryLower = content.toLowerCase();
-        let aiResponse = "I've reviewed your request against current project deliverables: You have 3 active tasks in sprint tracking. Everything is currently running on schedule!";
+    const failedId = failedMsg.id;
+    setMessages((prev) =>
+      prev.map((m) => (m.id === failedId ? { ...m, status: 'sending' } : m))
+    );
 
-        if (queryLower.includes('task') || queryLower.includes('sprint') || queryLower.includes('progress')) {
-          aiResponse = "Sprint Analysis: The team has completed 75% of target user stories for the current milestone. Primary blocker: Backend verification API endpoint pending review.";
-        } else if (queryLower.includes('document') || queryLower.includes('file') || queryLower.includes('requirement')) {
-          aiResponse = "Document Repository Synced: The latest 'Sprint Planning Guidelines.pdf' and 'Architecture Specification' were indexed recently.";
-        } else if (queryLower.includes('hi') || queryLower.includes('hello')) {
-          aiResponse = `Greetings ${user?.name || 'teammate'}! I am your Project AI Copilot. How can I assist with tasks, team updates, or documents today?`;
-        }
+    const nowIso = new Date().toISOString();
+    const targetUserId = selectedConversationType === 'dm' ? String(selectedUserId) : null;
+    const participants = selectedConversationType === 'dm' ? [String(currentUid), String(selectedUserId)].sort() : [];
 
-        const aiMsg: ChatMessage = {
-          id: `ai_${Date.now()}`,
-          content: aiResponse,
-          sender: {
-            id: AI_ASSISTANT_ID,
-            name: 'Project AI Assistant',
-            role: 'AI Assistant',
-            profilePhoto: AI_CONTACT.profilePhoto
-          },
-          createdAt: new Date().toISOString(),
-          isRead: true
-        };
-
-        setMessages((prev) => {
-          const next = [...prev, aiMsg];
-          try {
-            localStorage.setItem(`pms_chat_cache_${orgId}_${selectedConversationId}`, JSON.stringify(next));
-          } catch (e) {}
-          return next;
+    try {
+      if (firebaseDb) {
+        const docRef = await addDoc(collection(firebaseDb, 'messages'), {
+          conversationId: failedMsg.conversationId || selectedConversationId,
+          organizationId: failedMsg.organizationId || orgId,
+          senderId: String(currentUid),
+          receiverId: failedMsg.receiverId || targetUserId,
+          recipientId: failedMsg.recipientId || targetUserId,
+          senderName: user?.name || 'You',
+          senderPhoto: user?.profilePhoto || null,
+          senderRole: user?.role || 'ROLE_EMPLOYEE',
+          channelId: selectedConversationType === 'channel' ? String(selectedChannelId) : null,
+          teamId: selectedConversationType === 'team' ? String(selectedTeamId) : null,
+          text: failedMsg.content,
+          content: failedMsg.content,
+          message: failedMsg.content,
+          status: 'sent',
+          sentAt: serverTimestamp(),
+          deliveredAt: null,
+          readAt: null,
+          deliveredTo: [],
+          type: failedMsg.type || 'text',
+          messageType: failedMsg.type || 'text',
+          fileName: failedMsg.fileName || null,
+          fileUrl: failedMsg.fileUrl || null,
+          fileType: failedMsg.fileType || null,
+          fileSize: failedMsg.fileSize || null,
+          readBy: [String(currentUid)],
+          isRead: false,
+          isEdited: false,
+          isDeleted: false,
+          createdAt: nowIso,
+          timestamp: serverTimestamp()
         });
 
-        if (settings.soundEnabled) {
-          playChime();
+        if (docRef?.id) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === failedId
+                ? { ...m, id: docRef.id, messageId: docRef.id, status: 'sent', sentAt: nowIso }
+                : m
+            )
+          );
+
+          if (selectedConversationId) {
+            await setDoc(doc(firebaseDb, 'conversations', selectedConversationId), {
+              id: selectedConversationId,
+              conversationId: selectedConversationId,
+              organizationId: orgId,
+              type: selectedConversationType,
+              participants,
+              participantUids: participants,
+              lastMessageText: failedMsg.content,
+              lastMessage: failedMsg.content,
+              lastMessageAt: serverTimestamp(),
+              lastMessageAtIso: nowIso,
+              lastSenderId: String(currentUid),
+              lastSenderName: user?.name || 'You',
+              lastMessageIsRead: selectedConversationType === 'ai',
+              lastMessageStatus: 'sent',
+              ...(targetUserId ? { [`unreadCounts.${targetUserId}`]: increment(1) } : {}),
+              updatedAt: serverTimestamp()
+            }, { merge: true });
+          }
         }
-      }, 700);
+      }
+    } catch (err) {
+      console.warn('Retry send failed:', err);
+      setMessages((prev) =>
+        prev.map((m) => (m.id === failedId ? { ...m, status: 'failed' } : m))
+      );
+      showToast('Retry failed. Please check network and try again.');
     }
   };
 
@@ -1619,6 +1856,60 @@ export default function Messages() {
     return d.toLocaleDateString([], { day: '2-digit', month: 'short', year: 'numeric' });
   };
 
+  // Helper: Format real-time Last Seen timestamp with local timezone (Requirement 9)
+  const formatLastSeen = (lastSeenRaw?: any): string => {
+    if (!lastSeenRaw) return 'Offline';
+    let d: Date;
+    if (lastSeenRaw instanceof Date) {
+      d = lastSeenRaw;
+    } else if (typeof lastSeenRaw?.toDate === 'function') {
+      d = lastSeenRaw.toDate();
+    } else if (lastSeenRaw?.seconds) {
+      d = new Date(lastSeenRaw.seconds * 1000);
+    } else if (typeof lastSeenRaw === 'number') {
+      d = new Date(lastSeenRaw);
+    } else if (typeof lastSeenRaw === 'string') {
+      d = new Date(lastSeenRaw);
+    } else {
+      return 'Offline';
+    }
+
+    if (isNaN(d.getTime())) return 'Offline';
+
+    const now = new Date();
+    const diffMinutes = Math.floor((now.getTime() - d.getTime()) / (1000 * 60));
+
+    // If within last 2 minutes
+    if (diffMinutes < 2) {
+      return 'Last seen recently';
+    }
+
+    const timeStr = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const isToday =
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear();
+
+    if (isToday) {
+      return `Last seen today at ${timeStr}`;
+    }
+
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday =
+      d.getDate() === yesterday.getDate() &&
+      d.getMonth() === yesterday.getMonth() &&
+      d.getFullYear() === yesterday.getFullYear();
+
+    if (isYesterday) {
+      return `Last seen yesterday at ${timeStr}`;
+    }
+
+    const monthDayStr = d.toLocaleDateString([], { month: 'short', day: 'numeric' });
+    return `Last seen ${monthDayStr}, ${timeStr}`;
+  };
+
   // Render message body with interactive clickable Task references
   const renderMessageBody = (content: string) => {
     if (!content) return null;
@@ -1686,6 +1977,7 @@ export default function Messages() {
     unreadCount: number;
     isLastMe: boolean;
     isLastRead: boolean;
+    lastMessageStatus?: string;
   }
 
   // Combine Channels, Teams, Contacts, and AI Assistant
@@ -1710,7 +2002,8 @@ export default function Messages() {
       previewText: aiMeta?.lastMessageText || 'Ask about sprint tasks, documents, or team updates',
       unreadCount: unreadMap[aiConvId] || 0,
       isLastMe: String(aiMeta?.lastSenderId) === String(currentUid),
-      isLastRead: true
+      isLastRead: true,
+      lastMessageStatus: 'read'
     });
 
     // 2. Channels
@@ -1731,7 +2024,8 @@ export default function Messages() {
         previewText: meta?.lastMessageText || ch.description || 'Public channel',
         unreadCount: unreadMap[convId] || 0,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
-        isLastRead: Boolean(meta?.lastMessageIsRead)
+        isLastRead: Boolean(meta?.lastMessageIsRead),
+        lastMessageStatus: meta?.lastMessageStatus || (meta?.lastMessageIsRead ? 'read' : 'sent')
       });
     });
 
@@ -1753,7 +2047,8 @@ export default function Messages() {
         previewText: meta?.lastMessageText || t.description || 'Team channel',
         unreadCount: unreadMap[convId] || 0,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
-        isLastRead: Boolean(meta?.lastMessageIsRead)
+        isLastRead: Boolean(meta?.lastMessageIsRead),
+        lastMessageStatus: meta?.lastMessageStatus || (meta?.lastMessageIsRead ? 'read' : 'sent')
       });
     });
 
@@ -1779,7 +2074,8 @@ export default function Messages() {
         previewText: meta?.lastMessageText || formatRoleName(c.role, 'title') || c.designation || 'Workspace Member',
         unreadCount: unreadMap[convId] || 0,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
-        isLastRead: Boolean(meta?.lastMessageIsRead)
+        isLastRead: Boolean(meta?.lastMessageIsRead),
+        lastMessageStatus: meta?.lastMessageStatus || (meta?.lastMessageIsRead ? 'read' : 'sent')
       });
     });
 
@@ -2410,23 +2706,13 @@ export default function Messages() {
                     <div className="flex items-center justify-between">
                       <p className="text-xs text-[#8696a0] truncate flex items-center gap-1">
                         {item.isLastMe && (
-                          (isOffline || !navigator.onLine) ? (
-                            <span title="Waiting for connection" className="shrink-0 flex items-center">
-                              <Clock className="w-3.5 h-3.5 text-[#8696a0]" />
-                            </span>
-                          ) : item.isLastRead ? (
-                            <span title="Read" className="shrink-0 flex items-center">
-                              <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
-                            </span>
-                          ) : item.isOnline ? (
-                            <span title="Delivered" className="shrink-0 flex items-center">
-                              <CheckCheck className="w-3.5 h-3.5 text-[#8696a0]" />
-                            </span>
-                          ) : (
-                            <span title="Sent" className="shrink-0 flex items-center">
-                              <Check className="w-3.5 h-3.5 text-[#8696a0]" />
-                            </span>
-                          )
+                          <MessageStatus
+                            status={item.lastMessageStatus}
+                            isRead={item.isLastRead}
+                            isMe={true}
+                            showFailedAction={false}
+                            className="shrink-0"
+                          />
                         )}
                         <span className="truncate">{item.previewText}</span>
                       </p>
@@ -2644,6 +2930,15 @@ export default function Messages() {
                       <div className="text-[11px] truncate flex items-center gap-1.5">
                         {activeContactObj?.id === AI_ASSISTANT_ID ? (
                           <span className="text-purple-400 font-medium">AI Copilot Active</span>
+                        ) : typingUserInActiveConv ? (
+                          <span className="text-[#00a884] font-medium flex items-center gap-1">
+                            <span>typing</span>
+                            <span className="flex items-center gap-0.5 ml-0.5">
+                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                              <span className="w-1 h-1 bg-[#00a884] rounded-full animate-bounce" />
+                            </span>
+                          </span>
                         ) : (activeContactObj as any)?.status === 'busy' ? (
                           <span className="text-rose-400 font-medium flex items-center gap-1">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
@@ -2661,9 +2956,7 @@ export default function Messages() {
                           </span>
                         ) : (
                           <span className="text-[#8696a0]">
-                            {(activeContactObj as any)?.lastSeen
-                              ? `Last seen ${formatRelativeTime((activeContactObj as any).lastSeen)}`
-                              : 'Offline'}
+                            {formatLastSeen((activeContactObj as any)?.lastSeen)}
                           </span>
                         )}
                       </div>
@@ -2964,23 +3257,12 @@ export default function Messages() {
                             {msg.isEdited && <span className="italic text-[9px] text-[#8696a0]">(edited)</span>}
                             <span>{formattedTime}</span>
                             {isMe && (
-                              (isOffline || !navigator.onLine || msg.status === 'pending') ? (
-                                <span title="Waiting for connection...">
-                                  <Clock className="w-3 h-3 text-[#8696a0] animate-pulse" />
-                                </span>
-                              ) : msg.isRead || msg.status === 'read' ? (
-                                <span title="Read (Double blue check)">
-                                  <CheckCheck className="w-3.5 h-3.5 text-[#53bdeb]" />
-                                </span>
-                              ) : msg.status === 'delivered' || activeContactObj?.isOnline ? (
-                                <span title="Delivered (Double gray check)">
-                                  <CheckCheck className="w-3.5 h-3.5 text-[#8696a0]" />
-                                </span>
-                              ) : (
-                                <span title="Sent (Single check)">
-                                  <Check className="w-3.5 h-3.5 text-[#8696a0]" />
-                                </span>
-                              )
+                              <MessageStatus
+                                status={msg.status}
+                                isRead={msg.isRead}
+                                isMe={true}
+                                onRetry={() => handleRetryMessage(msg)}
+                              />
                             )}
                           </div>
                         </div>
@@ -3068,12 +3350,33 @@ export default function Messages() {
                 })
               )}
 
+              <AnimatePresence>
+                {typingUserInActiveConv && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 6, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 6, scale: 0.95 }}
+                    transition={{ duration: 0.15 }}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-[#202c33] border border-[#2a3942] text-[#8696a0] text-xs max-w-xs shadow-sm self-start my-1 shrink-0"
+                  >
+                    <span className="font-semibold text-[#00a884]">{typingUserInActiveConv}</span>
+                    <span>is typing</span>
+                    <span className="flex items-center gap-0.5 ml-0.5">
+                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 bg-[#00a884] rounded-full animate-bounce" />
+                    </span>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
               <div ref={messagesEndRef} />
             </div>
 
             {/* Message Composer (Requirements 4, 16, 22, 38) */}
             <MessageComposer
               onSendMessage={handleSendMessage}
+              onTyping={handleUserTyping}
               replyToMessage={replyToMessage}
               onClearReply={() => setReplyToMessage(null)}
               editingMessage={editingMessage}

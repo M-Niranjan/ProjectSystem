@@ -185,13 +185,13 @@ export default function MobileBottomNav() {
         )}
       </AnimatePresence>
 
-      {/* iOS Floating Pill Bottom Navigation Bar */}
-      <div className="sm:hidden fixed bottom-3 left-3 right-3 z-40 max-w-sm mx-auto pointer-events-none select-none">
+      {/* iOS / Android Floating Pill Bottom Navigation Bar */}
+      <div className="sm:hidden fixed bottom-[max(0.75rem,env(safe-area-inset-bottom,0.75rem))] left-3 right-3 z-40 max-w-sm mx-auto pointer-events-none select-none">
         <nav
           aria-label="Mobile Navigation Pill"
           className="pointer-events-auto h-[62px] px-2 rounded-full bg-white/80 dark:bg-[#111b21]/80 backdrop-blur-2xl border border-white/60 dark:border-white/10 shadow-[0_12px_36px_rgba(0,0,0,0.18)] dark:shadow-[0_16px_42px_rgba(0,0,0,0.65)] ring-1 ring-black/5 dark:ring-white/5 flex items-center justify-between relative overflow-hidden"
         >
-          {/* Sliding Active Pill Capsule - Strictly constrained inside footer, X-axis only */}
+          {/* Sliding Active Pill Capsule - Reduced size, white glassmorphism with specular shine */}
           {activeTabIndex !== -1 && (
             <motion.div
               initial={false}
@@ -199,9 +199,12 @@ export default function MobileBottomNav() {
                 left: `${activeTabIndex * 25}%`,
               }}
               transition={{ type: 'spring', damping: 28, stiffness: 350 }}
-              className="absolute inset-y-1.5 w-1/4 p-1 pointer-events-none z-0"
+              className="absolute inset-y-2 w-1/4 px-1.5 py-0.5 pointer-events-none z-0 flex items-center justify-center"
             >
-              <div className="w-full h-full rounded-full bg-emerald-600/20 dark:bg-[#153e2d] border border-emerald-500/30 shadow-sm" />
+              <div className="w-full h-full rounded-2xl bg-gradient-to-b from-white/35 via-white/20 to-white/10 dark:from-white/25 dark:via-white/15 dark:to-white/5 backdrop-blur-md border border-white/45 dark:border-white/30 shadow-[0_4px_16px_rgba(255,255,255,0.12)] relative overflow-hidden">
+                {/* Specular glass shine highlight across top */}
+                <div className="absolute inset-x-0 top-0 h-[45%] bg-gradient-to-b from-white/50 to-transparent rounded-t-2xl pointer-events-none" />
+              </div>
             </motion.div>
           )}
 
@@ -215,14 +218,14 @@ export default function MobileBottomNav() {
               <LayoutGrid
                 className={`w-[21px] h-[21px] transition-colors ${
                   isDashboardActive
-                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
-                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
+                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
                 className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
                   isDashboardActive
-                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    ? 'text-slate-900 dark:text-white font-bold'
                     : 'text-slate-600 dark:text-slate-400 font-medium'
                 }`}
               >
@@ -241,14 +244,14 @@ export default function MobileBottomNav() {
               <ClipboardCheck
                 className={`w-[21px] h-[21px] transition-colors ${
                   isTasksActive
-                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
-                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
+                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
                 className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
                   isTasksActive
-                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    ? 'text-slate-900 dark:text-white font-bold'
                     : 'text-slate-600 dark:text-slate-400 font-medium'
                 }`}
               >
@@ -265,12 +268,12 @@ export default function MobileBottomNav() {
           >
             <div className="relative z-10 flex flex-col items-center">
               <div className="relative">
-                {/* WhatsApp outline speech bubble */}
+                {/* Fixed Clean WhatsApp outline speech bubble */}
                 <svg
                   className={`w-[21px] h-[21px] transition-colors ${
                     isChatActive
-                      ? 'text-emerald-700 dark:text-[#25D366]'
-                      : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white'
+                      ? 'text-slate-900 dark:text-white drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
+                      : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white'
                   }`}
                   viewBox="0 0 24 24"
                   fill="none"
@@ -279,7 +282,7 @@ export default function MobileBottomNav() {
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 >
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                  <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                 </svg>
 
                 {/* Unread badge - ONLY show when real unread messages exist */}
@@ -292,7 +295,7 @@ export default function MobileBottomNav() {
               <span
                 className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
                   isChatActive
-                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    ? 'text-slate-900 dark:text-white font-bold'
                     : 'text-slate-600 dark:text-slate-400 font-medium'
                 }`}
               >
@@ -311,14 +314,14 @@ export default function MobileBottomNav() {
               <SettingsIcon
                 className={`w-[21px] h-[21px] transition-colors ${
                   isSettingsActive
-                    ? 'text-emerald-700 dark:text-[#25D366] stroke-[2.3]'
-                    : 'text-slate-700 dark:text-slate-300 group-hover:text-black dark:group-hover:text-white stroke-[1.8]'
+                    ? 'text-slate-900 dark:text-white stroke-[2.3] drop-shadow-[0_1px_4px_rgba(255,255,255,0.25)]'
+                    : 'text-slate-600 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
                 className={`text-[10px] mt-0.5 tracking-tight transition-colors ${
                   isSettingsActive
-                    ? 'text-emerald-700 dark:text-[#25D366] font-bold'
+                    ? 'text-slate-900 dark:text-white font-bold'
                     : 'text-slate-600 dark:text-slate-400 font-medium'
                 }`}
               >
