@@ -26,6 +26,7 @@ import {
   Network,
   ScrollText,
   UserPlus,
+  Settings as SettingsIcon,
   X
 } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -135,6 +136,7 @@ export default function Sidebar() {
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Reports', view: 'reports', icon: BarChart3 },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
+    { name: 'Settings', view: 'settings', icon: SettingsIcon },
   ];
 
   const employeeMenuItems: SidebarItem[] = [
@@ -148,6 +150,7 @@ export default function Sidebar() {
     { name: 'Calendar', view: 'calendar', icon: Calendar },
     { name: 'Documents', view: 'documents', icon: FileText },
     { name: 'Workspace Activity', view: 'workspace-activity', icon: Clock },
+    { name: 'Settings', view: 'settings', icon: SettingsIcon },
   ];
 
   const allowedItems = user?.role === 'ROLE_ADMIN'
