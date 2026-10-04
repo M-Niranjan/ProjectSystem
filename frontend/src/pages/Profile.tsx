@@ -38,10 +38,29 @@ export default function Profile() {
   const department = user?.department || 'Development';
   const designation =
     user?.designation || (isTeamLead ? 'Team Lead' : isAdmin ? 'System Administrator' : 'Software Developer');
-  const employeeId = (user as any)?.employeeId || `EMP-${String(user?.id || 124).padStart(5, '0')}`;
-  const joiningDate = user?.createdAt
-    ? new Date(user.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    : '15 Aug 2024';
+  const employeeId = (user as any)?.employeeId || (user?.id ? `EMP-${user.id}` : (user?.uid ? `EMP-${user.uid}` : 'EMP-00124'));
+  const formatJoiningDate = (dateVal: any) => {
+    if (!dateVal) return '15 Aug 2024';
+    try {
+      let d: Date;
+      if (typeof dateVal === 'number') {
+        d = new Date(dateVal);
+      } else if (typeof dateVal === 'object' && dateVal?.seconds) {
+        d = new Date(dateVal.seconds * 1000);
+      } else if (typeof dateVal === 'object' && dateVal?._seconds) {
+        d = new Date(dateVal._seconds * 1000);
+      } else if (typeof dateVal === 'string') {
+        d = new Date(dateVal);
+      } else {
+        return '15 Aug 2024';
+      }
+      if (isNaN(d.getTime())) return '15 Aug 2024';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '15 Aug 2024';
+    }
+  };
+  const joiningDate = formatJoiningDate(user?.createdAt);
 
   const displayAvatar = resolveAvatar(user?.profilePhoto, name, user?.gender);
 

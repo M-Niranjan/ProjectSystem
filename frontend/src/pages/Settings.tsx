@@ -33,6 +33,10 @@ import {
   HelpCircle,
   AlertTriangle,
   ChevronRight,
+  Mail,
+  Phone,
+  Briefcase,
+  IdCard,
   Sparkles,
   Sun,
   Moon,
@@ -243,6 +247,28 @@ export default function Settings() {
   // -------------------------------------------------------------
   // 1. ACCOUNT STATE
   // -------------------------------------------------------------
+  const formatJoiningDate = (dateVal: any) => {
+    if (!dateVal) return '15 Aug 2024';
+    try {
+      let d: Date;
+      if (typeof dateVal === 'number') {
+        d = new Date(dateVal);
+      } else if (typeof dateVal === 'object' && dateVal?.seconds) {
+        d = new Date(dateVal.seconds * 1000);
+      } else if (typeof dateVal === 'object' && dateVal?._seconds) {
+        d = new Date(dateVal._seconds * 1000);
+      } else if (typeof dateVal === 'string') {
+        d = new Date(dateVal);
+      } else {
+        return '15 Aug 2024';
+      }
+      if (isNaN(d.getTime())) return '15 Aug 2024';
+      return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    } catch {
+      return '15 Aug 2024';
+    }
+  };
+
   const [profileName, setProfileName] = useState(user?.name || 'Vinay');
   const [profileEmail, setProfileEmail] = useState(user?.email || 'vinay.teamlead@company.com');
   const [profilePhone, setProfilePhone] = useState(user?.phone || '+1 (555) 234-5678');
@@ -250,7 +276,8 @@ export default function Settings() {
     user?.designation || (isTeamLead ? 'Team Lead & Senior Engineer' : isAdmin ? 'System Administrator' : 'Software Engineer')
   );
   const [profileDepartment, setProfileDepartment] = useState(user?.department || 'Engineering');
-  const [employeeId] = useState(`EMP-${user?.id || '1042'}`);
+  const employeeId = (user as any)?.employeeId || (user?.id ? `EMP-${user.id}` : (user?.uid ? `EMP-${user.uid}` : 'EMP-00124'));
+  const joiningDate = formatJoiningDate(user?.createdAt);
 
   // Account Preferences
   const [defaultDashboard, setDefaultDashboard] = useState('Overview');
@@ -583,6 +610,7 @@ export default function Settings() {
       if (activeCategory === 'account') {
         const payload: any = {
           name: profileName,
+          email: profileEmail,
           phone: profilePhone,
           designation: profileDesignation,
           department: profileDepartment,
@@ -954,85 +982,174 @@ export default function Settings() {
           {activeCategory === 'account' && (
             <div className="space-y-4">
               {/* Profile Details Card */}
-              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
-                <div className="border-b border-slate-100 dark:border-white/10 pb-3">
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <User className="w-4 h-4 text-blue-500" />
-                    Personal Information
-                  </h2>
+              <div className="p-4.5 sm:p-5 rounded-2xl sm:rounded-3xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-4">
+                <div className="border-b border-slate-100 dark:border-white/10 pb-3.5 flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+                        Personal Information
+                      </h2>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Overview and editable settings for your identity and organization credentials
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Full Name</label>
-                    <input
-                      type="text"
-                      value={profileName}
-                      onChange={(e) => {
-                        setProfileName(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    />
+                <div className="space-y-3 pt-1">
+                  {/* 1. Full Name */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-blue-50 dark:bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                      <User className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Full Name</label>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="text"
+                        value={profileName}
+                        onChange={(e) => {
+                          setProfileName(e.target.value);
+                          setIsDirty(true);
+                        }}
+                        placeholder="Enter full name"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-white/10 focus:border-blue-500 focus:outline-none transition-all"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Email Address (Verified)</label>
-                    <input
-                      type="email"
-                      value={profileEmail}
-                      disabled
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.02] text-slate-400 cursor-not-allowed"
-                    />
+                  {/* 2. Employee ID */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-purple-50 dark:bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                      <IdCard className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Employee ID</span>
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        value={employeeId}
+                        disabled
+                        className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-mono font-medium text-slate-600 dark:text-slate-400 cursor-not-allowed"
+                      />
+                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Phone Number</label>
-                    <input
-                      type="tel"
-                      value={profilePhone}
-                      onChange={(e) => {
-                        setProfilePhone(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    />
+                  {/* 3. Email Address */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                      <Mail className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Email Address</label>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="email"
+                        value={profileEmail}
+                        onChange={(e) => {
+                          setProfileEmail(e.target.value);
+                          setIsDirty(true);
+                        }}
+                        placeholder="Enter email address"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-white/10 focus:border-blue-500 focus:outline-none transition-all"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Job Title</label>
-                    <input
-                      type="text"
-                      value={profileDesignation}
-                      onChange={(e) => {
-                        setProfileDesignation(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    />
+                  {/* 4. Phone Number */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-50 dark:bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+                      <Phone className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Phone Number</label>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <input
+                        type="tel"
+                        value={profilePhone}
+                        onChange={(e) => {
+                          setProfilePhone(e.target.value);
+                          setIsDirty(true);
+                        }}
+                        placeholder="Enter phone number"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-xs font-medium text-slate-900 dark:text-white focus:bg-white dark:focus:bg-white/10 focus:border-blue-500 focus:outline-none transition-all"
+                      />
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Department</label>
-                    <input
-                      type="text"
-                      value={profileDepartment}
-                      onChange={(e) => {
-                        setProfileDepartment(e.target.value);
-                        setIsDirty(true);
-                      }}
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5 text-slate-900 dark:text-white focus:outline-none"
-                    />
+                  {/* 5. Department */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                      <Building2 className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Department</label>
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        value={profileDepartment}
+                        disabled={!isAdmin}
+                        onChange={(e) => {
+                          setProfileDepartment(e.target.value);
+                          setIsDirty(true);
+                        }}
+                        placeholder="Department name"
+                        className={`w-full ${isAdmin ? 'px-3.5' : 'pl-3.5 pr-8 cursor-not-allowed'} py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 ${isAdmin ? 'bg-slate-50/70 dark:bg-white/5 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-white/10 focus:border-blue-500' : 'bg-slate-100/80 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400'} text-xs font-medium focus:outline-none transition-all`}
+                      />
+                      {!isAdmin && <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block font-bold text-slate-700 dark:text-slate-300 mb-1.5">Employee ID</label>
-                    <input
-                      type="text"
-                      value={employeeId}
-                      disabled
-                      className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/[0.02] text-slate-400 font-mono cursor-not-allowed"
-                    />
+                  {/* 6. Job Title */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                      <Briefcase className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <label className="text-xs font-bold text-slate-700 dark:text-slate-300">Job Title</label>
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        value={profileDesignation}
+                        disabled={!isAdmin}
+                        onChange={(e) => {
+                          setProfileDesignation(e.target.value);
+                          setIsDirty(true);
+                        }}
+                        placeholder="Job title or designation"
+                        className={`w-full ${isAdmin ? 'px-3.5' : 'pl-3.5 pr-8 cursor-not-allowed'} py-2.5 rounded-xl border border-slate-200/90 dark:border-white/10 ${isAdmin ? 'bg-slate-50/70 dark:bg-white/5 text-slate-900 dark:text-white focus:bg-white dark:focus:bg-white/10 focus:border-blue-500' : 'bg-slate-100/80 dark:bg-white/[0.03] text-slate-600 dark:text-slate-400'} text-xs font-medium focus:outline-none transition-all`}
+                      />
+                      {!isAdmin && <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />}
+                    </div>
+                  </div>
+
+                  {/* 7. Joining Date */}
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-2xl bg-cyan-50 dark:bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+                      <Calendar className="w-4.5 h-4.5" />
+                    </div>
+                    <div className="w-28 sm:w-32 shrink-0">
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Joining Date</span>
+                    </div>
+                    <div className="flex-1 min-w-0 relative">
+                      <input
+                        type="text"
+                        value={joiningDate}
+                        disabled
+                        className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-medium text-slate-600 dark:text-slate-400 cursor-not-allowed"
+                      />
+                      <Lock className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
                   </div>
                 </div>
               </div>
