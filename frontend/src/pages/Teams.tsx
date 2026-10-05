@@ -1,9 +1,9 @@
 import { getAvatarByName, resolveAvatar, MEN_AVATAR, WOMEN_AVATAR } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle, Network, UserPlus } from 'lucide-react';
+import { Users, UserCheck, Shield, Mail, Plus, X, Globe, Briefcase, Award, Eye, EyeOff, Pencil, AlertCircle, Network, UserPlus, Trash2 } from 'lucide-react';
 import api from '../services/api';
-import { upsertFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
+import { upsertFirestoreUserDoc, deleteFirestoreUserDoc, fetchAllFirestoreUserDocs } from '../services/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { normalizeRole, formatRoleName } from '../services/authRoles';
@@ -27,9 +27,9 @@ interface TeamMember {
 }
 
 export default function Teams() {
-  const { user } = useAuthStore();
+  const { user, activeOrgRole } = useAuthStore();
   const { showToast } = useUIStore();
-  const userRole = normalizeRole(user?.role);
+  const userRole = normalizeRole(activeOrgRole || user?.role);
   const isAdmin = userRole === 'ROLE_ADMIN';
   const isTeamLead = userRole === 'ROLE_MANAGER';
 
@@ -39,6 +39,10 @@ export default function Teams() {
   const [isInviteTeammateModalOpen, setIsInviteTeammateModalOpen] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
   const [editingMember, setEditingMember] = useState<TeamMember | null>(null);
+
+  // Deletion confirmation state
+  const [memberToDelete, setMemberToDelete] = useState<TeamMember | null>(null);
+  const [isDeletingMember, setIsDeletingMember] = useState(false);
 
   // Form states
   const [inviteEmail, setInviteEmail] = useState('');
@@ -58,7 +62,7 @@ export default function Teams() {
   const [isViewOpen, setIsViewOpen] = useState(false);
 
   // Lock background scroll when any team modal is open
-  useScrollLock(isInviteOpen || isViewOpen || isInviteTeammateModalOpen);
+  useScrollLock(isInviteOpen || isViewOpen || isInviteTeammateModalOpen || memberToDelete !== null);
 
   // Profile image camera state
   const [isCameraActive, setIsCameraActive] = useState(false);
@@ -131,6 +135,34 @@ export default function Teams() {
     setInviteGender((member.gender as any) || 'Male');
     setProfilePhoto(member.profilePhoto || '');
     setIsInviteOpen(true);
+  };
+
+  const handleDeleteMember = (member: TeamMember, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!isAdmin) return;
+    setMemberToDelete(member);
+  };
+
+  const handleConfirmDeleteMember = async () => {
+    if (!memberToDelete || !isAdmin) return;
+    setIsDeletingMember(true);
+    try {
+      const docId = String(memberToDelete.id);
+      try {
+        await api.delete(`/api/teams/${docId}`);
+      } catch (apiErr) {
+        console.warn('Backend delete team member notice:', apiErr);
+      }
+      await deleteFirestoreUserDoc(docId);
+      setMembers(prev => prev.filter(m => String(m.id) !== docId));
+      showToast(`Member "${memberToDelete.name}" removed successfully.`);
+      setMemberToDelete(null);
+    } catch (err: any) {
+      console.error('Delete member error:', err);
+      showToast(err.message || 'Failed to remove member.', 'error');
+    } finally {
+      setIsDeletingMember(false);
+    }
   };
 
   const handleOpenCreate = () => {
@@ -290,18 +322,14 @@ export default function Teams() {
           </p>
         </div>
 
-        <button
-          onClick={() => {
-            if (isTeamLead || !isAdmin) {
-              setIsInviteTeammateModalOpen(true);
-            } else {
-              handleOpenCreate();
-            }
-          }}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/10 cursor-pointer transition-all transform hover:-translate-y-0.5"
-        >
-          <UserPlus className="w-4 h-4" /> Invite Teammate
-        </button>
+        {isAdmin && (
+          <button
+            onClick={handleOpenCreate}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/10 cursor-pointer transition-all transform hover:-translate-y-0.5"
+          >
+            <UserPlus className="w-4 h-4" /> Invite Teammate
+          </button>
+        )}
       </div>
 
       {/* Members Grid layout */}
@@ -322,14 +350,24 @@ export default function Teams() {
                 <Eye className="w-3.5 h-3.5" />
               </button>
               {isAdmin && (
-                <button
-                  type="button"
-                  onClick={(e) => handleOpenEdit(member, e)}
-                  className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-500/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                  title="Edit Teammate"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenEdit(member, e)}
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-blue-50 dark:bg-white/5 dark:hover:bg-blue-500/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                    title="Edit Teammate"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleDeleteMember(member, e)}
+                    className="p-1.5 rounded-lg bg-slate-100 hover:bg-rose-50 dark:bg-white/5 dark:hover:bg-rose-500/15 text-slate-400 hover:text-rose-500 transition-colors cursor-pointer"
+                    title="Delete Teammate"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </>
               )}
             </div>
 
@@ -776,6 +814,101 @@ export default function Teams() {
                   className="w-full py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-xl font-bold text-xs shadow-md shadow-blue-500/10 cursor-pointer"
                 >
                   Close Profile
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Member Confirmation Modal */}
+      <AnimatePresence>
+        {memberToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => !isDeletingMember && setMemberToDelete(null)}
+              className="fixed inset-0 bg-slate-950/70 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              className="bg-white dark:bg-slate-900 w-full max-w-md relative z-10 shadow-2xl border border-slate-200/90 dark:border-slate-800 rounded-3xl p-6 space-y-4"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-11 h-11 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-500 flex items-center justify-center shrink-0">
+                    <Trash2 className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-slate-800 dark:text-white">
+                      Delete Team Member
+                    </h3>
+                    <p className="text-xs text-slate-400 font-medium">
+                      Permanent deletion confirmation
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  disabled={isDeletingMember}
+                  onClick={() => setMemberToDelete(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              <div className="p-3.5 bg-slate-50 dark:bg-white/[0.03] border border-slate-200/60 dark:border-white/5 rounded-2xl flex items-center gap-3">
+                <img
+                  src={resolveAvatar(memberToDelete.profilePhoto, memberToDelete.name || memberToDelete.email, memberToDelete.gender)}
+                  alt="avatar"
+                  className="w-10 h-10 rounded-xl object-cover ring-2 ring-rose-500/20"
+                />
+                <div className="min-w-0">
+                  <p className="font-black text-sm text-slate-800 dark:text-white truncate">
+                    {memberToDelete.name}
+                  </p>
+                  <p className="text-[11px] text-slate-400 font-semibold truncate">
+                    {memberToDelete.email}
+                  </p>
+                </div>
+              </div>
+
+              <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+                Are you sure you want to remove <strong className="text-slate-900 dark:text-white font-bold">{memberToDelete.name}</strong> from the organization? This action will remove their access to project workflows and cannot be undone.
+              </p>
+
+              <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-white/5">
+                <button
+                  type="button"
+                  disabled={isDeletingMember}
+                  onClick={() => setMemberToDelete(null)}
+                  className="px-4 py-2 rounded-xl border border-slate-200 dark:border-white/10 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5 cursor-pointer transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isDeletingMember}
+                  onClick={handleConfirmDeleteMember}
+                  className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold shadow-md shadow-rose-500/20 cursor-pointer transition-all flex items-center gap-2"
+                >
+                  {isDeletingMember ? (
+                    <>
+                      <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                      <span>Deleting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 className="w-3.5 h-3.5" />
+                      <span>Confirm Delete</span>
+                    </>
+                  )}
                 </button>
               </div>
             </motion.div>

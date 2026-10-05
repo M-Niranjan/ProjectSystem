@@ -8,6 +8,8 @@ import TeamMemberPickerModal from '../components/TeamMemberPickerModal';
 import { useScrollLock } from '../hooks/useScrollLock';
 import LuxurySelect from '../components/common/LuxurySelect';
 import { useLiveRefresh } from '../hooks/useLiveRefresh';
+import { useAuthStore } from '../store/useAuthStore';
+import { normalizeRole } from '../services/authRoles';
 
 interface CurrencyOption {
   code: string;
@@ -41,6 +43,10 @@ interface Project {
 }
 
 export default function Projects() {
+  const { user, activeOrgRole } = useAuthStore();
+  const userRole = normalizeRole(activeOrgRole || user?.role);
+  const isAdmin = userRole === 'ROLE_ADMIN';
+
   const [projects, setProjects] = useState<Project[]>([]);
   const [isGridView, setIsGridView] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -250,12 +256,14 @@ export default function Projects() {
           </p>
         </div>
 
-        <button
-          onClick={openCreateModal}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 cursor-pointer transition-colors flex-shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Create Project
-        </button>
+        {isAdmin && (
+          <button
+            onClick={openCreateModal}
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold text-sm shadow-lg shadow-blue-500/20 cursor-pointer transition-colors flex-shrink-0"
+          >
+            <Plus className="w-4 h-4" /> Create Project
+          </button>
+        )}
       </div>
 
       {/* Main Content */}
@@ -354,19 +362,24 @@ export default function Projects() {
                       >
                         <Star className="w-4 h-4 fill-current" />
                       </button>
-                      <button
-                        onClick={(e) => openEditModal(project, e)}
-                        className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
-                        title="Edit Project"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={(e) => deleteProject(project.id, e)}
-                        className="p-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {isAdmin && (
+                        <>
+                          <button
+                            onClick={(e) => openEditModal(project, e)}
+                            className="p-1 rounded-lg hover:bg-white/15 text-slate-400 hover:text-blue-500 transition-colors cursor-pointer"
+                            title="Edit Project"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={(e) => deleteProject(project.id, e)}
+                            className="p-1 rounded-lg hover:bg-red-500/10 text-slate-400 hover:text-red-500 transition-colors cursor-pointer"
+                            title="Delete Project"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -449,19 +462,24 @@ export default function Projects() {
                     >
                       <Star className="w-4 h-4 fill-current" />
                     </button>
-                    <button
-                      onClick={(e) => openEditModal(project, e)}
-                      className="p-1.5 sm:p-1 rounded hover:bg-white/10 text-slate-400 hover:text-blue-500"
-                      title="Edit Project"
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={(e) => deleteProject(project.id, e)}
-                      className="p-1.5 sm:p-1 rounded hover:bg-red-500/10 text-slate-400 hover:text-red-500"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    {isAdmin && (
+                      <>
+                        <button
+                          onClick={(e) => openEditModal(project, e)}
+                          className="p-1.5 sm:p-1 rounded hover:bg-white/10 text-slate-400 hover:text-blue-500"
+                          title="Edit Project"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => deleteProject(project.id, e)}
+                          className="p-1.5 sm:p-1 rounded hover:bg-red-500/10 text-slate-400 hover:text-red-500"
+                          title="Delete Project"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>

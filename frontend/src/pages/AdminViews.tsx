@@ -15,8 +15,9 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh';
 // 1. USER MANAGEMENT VIEW
 // ==========================================
 export function UserManagementView() {
-  const { user } = useAuthStore();
-  const isAdmin = (user?.role as any) === 'ROLE_ADMIN' || (user?.role as any) === 'admin';
+  const { user, activeOrgRole } = useAuthStore();
+  const effectiveRole = normalizeRole(activeOrgRole || user?.role);
+  const isAdmin = effectiveRole === 'ROLE_ADMIN';
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('ALL');
@@ -96,6 +97,7 @@ export function UserManagementView() {
   });
 
   const handleOpenEdit = (u: any) => {
+    if (!isAdmin) return;
     setEditingUser(u);
     setName(u.name);
     setEmail(u.email);
@@ -110,6 +112,7 @@ export function UserManagementView() {
   };
 
   const handleOpenCreate = () => {
+    if (!isAdmin) return;
     setEditingUser(null);
     setName('');
     setEmail('');
@@ -132,6 +135,7 @@ export function UserManagementView() {
   };
 
   const handleToggleStatus = async (user: any) => {
+    if (!isAdmin) return;
     const updated = { ...user, active: !user.active };
     try {
       await api.put(`/api/teams/${user.id || user.uid}`, updated);
@@ -145,6 +149,7 @@ export function UserManagementView() {
   const getUserKey = (u: any) => String(u?.uid || u?.id || u?.email || '');
 
   const toggleSelectUser = (u: any) => {
+    if (!isAdmin) return;
     const key = getUserKey(u);
     if (!key) return;
     setSelectedUserKeys(prev => {
@@ -159,6 +164,7 @@ export function UserManagementView() {
   };
 
   const handleTouchStart = (u: any, e: React.TouchEvent) => {
+    if (!isAdmin) return;
     // If already in selection mode, normal tap toggles
     if (isSelectionModeActive) return;
 
@@ -182,7 +188,7 @@ export function UserManagementView() {
   };
 
   const handleTouchMove = (e: React.TouchEvent) => {
-    if (!touchStartPosRef.current || !longPressTimerRef.current) return;
+    if (!isAdmin || !touchStartPosRef.current || !longPressTimerRef.current) return;
     const touch = e.touches[0];
     const dx = Math.abs(touch.clientX - touchStartPosRef.current.x);
     const dy = Math.abs(touch.clientY - touchStartPosRef.current.y);
@@ -201,6 +207,7 @@ export function UserManagementView() {
   };
 
   const handleRowClick = (u: any, e: React.MouseEvent) => {
+    if (!isAdmin) return;
     // If a long-press just fired on mobile, skip duplicate click handling
     if (isLongPressTriggeredRef.current) {
       isLongPressTriggeredRef.current = false;
@@ -442,31 +449,33 @@ export function UserManagementView() {
               { value: 'ROLE_EMPLOYEE', label: 'Employee', badge: 'MEMBER', badgeColor: 'bg-blue-500/20 text-blue-500 dark:text-blue-400' }
             ]}
           />
-          <button
-            type="button"
-            onClick={() => {
-              if (isSelectionModeActive) {
-                handleClearSelection();
-              } else {
-                setIsSelectionMode(true);
-              }
-            }}
-            className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
-              isSelectionModeActive
-                ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
-                : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
-            }`}
-            title={isSelectionModeActive ? "Exit multi-select mode" : "Select users (or hold Ctrl + click / long-press on mobile)"}
-          >
-            <CheckSquare className="w-4 h-4" />
-            <span className="hidden xs:inline">{isSelectionModeActive ? 'Exit Select' : 'Select'}</span>
-          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => {
+                if (isSelectionModeActive) {
+                  handleClearSelection();
+                } else {
+                  setIsSelectionMode(true);
+                }
+              }}
+              className={`px-3 py-2 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shrink-0 ${
+                isSelectionModeActive
+                  ? 'bg-blue-600 text-white border-blue-600 shadow-md shadow-blue-500/20'
+                  : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/10'
+              }`}
+              title={isSelectionModeActive ? "Exit multi-select mode" : "Select users (or hold Ctrl + click / long-press on mobile)"}
+            >
+              <CheckSquare className="w-4 h-4" />
+              <span className="hidden xs:inline">{isSelectionModeActive ? 'Exit Select' : 'Select'}</span>
+            </button>
+          )}
         </div>
       </div>
 
-      {/* Batch Action Bar (displays when selection mode is active) */}
+      {/* Batch Action Bar (displays when selection mode is active and user is admin) */}
       <AnimatePresence>
-        {isSelectionModeActive && (
+        {isAdmin && isSelectionModeActive && (
           <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.98 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -618,17 +627,30 @@ export function UserManagementView() {
                     {normRole === 'ROLE_ADMIN' ? '👑 Admin' : normRole === 'ROLE_MANAGER' ? '👔 Team Lead' : '👷 Employee'}
                   </span>
 
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
-                    className={`inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full whitespace-nowrap cursor-pointer transition-all border shrink-0 ${
-                      u.active !== false 
-                        ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
-                        : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
-                    }`}
-                  >
-                    {u.active !== false ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
-                    {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
-                  </button>
+                  {isAdmin ? (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleToggleStatus(u); }}
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full whitespace-nowrap cursor-pointer transition-all border shrink-0 ${
+                        u.active !== false 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+                      }`}
+                    >
+                      {u.active !== false ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                      {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
+                    </button>
+                  ) : (
+                    <span
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-black px-3 py-1 rounded-full whitespace-nowrap border shrink-0 ${
+                        u.active !== false 
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' 
+                          : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                      }`}
+                    >
+                      {u.active !== false ? <CheckCircle2 className="w-3.5 h-3.5" /> : <XCircle className="w-3.5 h-3.5" />}
+                      {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
+                    </span>
+                  )}
                 </div>
               </div>
             );
@@ -642,7 +664,7 @@ export function UserManagementView() {
           <table className="w-full text-left text-xs border-collapse min-w-[700px]">
             <thead>
               <tr className="bg-slate-50 dark:bg-slate-800/40 border-b border-slate-200/80 dark:border-slate-800 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                {isSelectionModeActive && (
+                {isAdmin && isSelectionModeActive && (
                   <th className="p-4 w-10 text-center animate-fadeIn">
                     <input
                       type="checkbox"
@@ -657,7 +679,7 @@ export function UserManagementView() {
                 <th className="p-4 whitespace-nowrap">Designation & Dept</th>
                 <th className="p-4 whitespace-nowrap">Assigned Role</th>
                 <th className="p-4 whitespace-nowrap">Account Status</th>
-                <th className="p-4 text-right whitespace-nowrap">Actions</th>
+                {isAdmin && <th className="p-4 text-right whitespace-nowrap">Actions</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-white/5">
@@ -681,7 +703,7 @@ export function UserManagementView() {
                     }`}
                     title={isSelectionModeActive ? "Click to toggle selection" : "Hold Ctrl + Click to select (or press & hold 1s on touch)"}
                   >
-                    {isSelectionModeActive && (
+                    {isAdmin && isSelectionModeActive && (
                       <td className="p-4 w-10 text-center animate-fadeIn" onClick={(e) => e.stopPropagation()}>
                         <input
                           type="checkbox"
@@ -720,18 +742,29 @@ export function UserManagementView() {
                     </td>
 
                     <td className="p-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                      <button
-                        onClick={() => handleToggleStatus(u)}
-                        className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg cursor-pointer transition-all whitespace-nowrap border ${
-                          u.active !== false ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
-                        }`}
-                      >
-                        {u.active !== false ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
-                        {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
-                      </button>
+                      {isAdmin ? (
+                        <button
+                          onClick={() => handleToggleStatus(u)}
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg cursor-pointer transition-all whitespace-nowrap border ${
+                            u.active !== false ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20 hover:bg-rose-500/20'
+                          }`}
+                        >
+                          {u.active !== false ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
+                        </button>
+                      ) : (
+                        <span
+                          className={`inline-flex items-center gap-1.5 text-[10px] font-black px-2.5 py-1 rounded-lg whitespace-nowrap border ${
+                            u.active !== false ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' : 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+                          }`}
+                        >
+                          {u.active !== false ? <CheckCircle2 className="w-3 h-3" /> : <XCircle className="w-3 h-3" />}
+                          {u.active !== false ? 'ACTIVE' : 'DEACTIVATED'}
+                        </span>
+                      )}
                     </td>
 
-                    {isAdmin ? (
+                    {isAdmin && (
                       <td className="p-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
                           <button
@@ -749,10 +782,6 @@ export function UserManagementView() {
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                      </td>
-                    ) : (
-                      <td className="p-4 text-right whitespace-nowrap text-slate-400 font-medium text-[11px]">
-                        Member
                       </td>
                     )}
                   </tr>
