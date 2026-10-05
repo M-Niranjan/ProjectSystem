@@ -8,8 +8,10 @@ import {
   verifyResetCode,
   resetPasswordWithCode,
   fetchUserOrgMemberships,
+  signInWithEmailPassword,
 } from '../services/firebase';
 import { normalizeRole } from '../services/authRoles';
+import { useUIStore } from './useUIStore';
 
 export interface OrgMembership {
   id?: string;
@@ -54,6 +56,8 @@ interface User {
   education?: string;
   resumeBase64?: string;
   resumeFileName?: string;
+  organizationId?: string;
+  organizationName?: string;
   createdAt: string;
 }
 
@@ -162,7 +166,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
   return {
     user: initialUser,
     token: initialToken,
-    loading: false, // Instant hydration: Render immediately with cached session!
+    loading: true, // Keep loading true initially until session is verified!
     error: null,
 
     // Multi-organization state
@@ -174,34 +178,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
     clearError: () => set({ error: null }),
 
     initAuth: async () => {
-      // 1. Instant re-check from cache if store is not populated
-      let activeUser = get().user;
-      let activeToken = get().token;
-
-      if (!activeUser || !activeToken) {
-        const cachedUser = getInitialUser();
-        const savedToken = getInitialToken();
-        if (cachedUser && savedToken) {
-          activeUser = cachedUser;
-          activeToken = savedToken;
-          set({
-            user: cachedUser,
-            token: savedToken,
-            orgMemberships: getInitialOrgMemberships(),
-            activeOrganizationId: getInitialOrgId(),
-            activeOrganization: getInitialActiveOrg(),
-            loading: false
-          });
-        }
-      }
-
-      // If we don't even have a cached user, show initial loading state while contacting auth
-      if (!activeUser) {
-        set({ loading: true });
-      }
+      set({ loading: true });
 
       try {
-        // Wait for Firebase Auth to initialize asynchronously with a 2000ms safety timeout
+        // 1. Wait for Firebase Auth to initialize with session persistence
         const firebaseUser = await new Promise<any>((resolve) => {
           if (firebaseAuth.currentUser) {
             resolve(firebaseAuth.currentUser);
@@ -211,9 +191,10 @@ export const useAuthStore = create<AuthState>((set, get) => {
             unsubscribe();
             resolve(u);
           });
+          // Generous timeout to allow network resolution on mobile devices
           setTimeout(() => {
             resolve(firebaseAuth.currentUser);
-          }, 2000);
+          }, 3500);
         });
 
         if (!firebaseUser) {
@@ -227,6 +208,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
                 if (roleEnum) {
                   const verifiedUser: User = {
                     id: meRes.data.id,
+                    uid: String(meRes.data.uid || meRes.data.id),
                     email: meRes.data.email,
                     name: meRes.data.name || (meRes.data.email ? meRes.data.email.split('@')[0] : 'User'),
                     role: roleEnum,
@@ -276,8 +258,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
                 }
               }
             } catch (meErr: any) {
-              console.warn('[Auth] Backend session restore failed (offline/unreachable):', meErr?.message);
-              // CRITICAL: If cached session is present, KEEP IT! Do not wipe on network glitch/offline
+              console.warn('[Auth] Backend session restore fallback:', meErr?.message);
               if (get().user && get().token) {
                 set({ loading: false });
                 return;
@@ -285,17 +266,15 @@ export const useAuthStore = create<AuthState>((set, get) => {
             }
           }
 
-          // If we have a cached user in memory, preserve it!
-          if (get().user && get().token) {
-            set({ loading: false });
-            return;
-          }
-
+          // If session is absent, clear storage
           if (typeof window !== 'undefined') {
             sessionStorage.removeItem('token');
             localStorage.removeItem('token');
             localStorage.removeItem('auth_user');
             localStorage.removeItem('mock_user');
+            localStorage.removeItem('active_org_id');
+            localStorage.removeItem('active_org');
+            localStorage.removeItem('org_memberships');
           }
           set({
             user: null,
@@ -306,7 +285,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           return;
         }
 
-        // Firebase user authenticated
+        // Firebase user authenticated!
         let userData = await fetchFirestoreUserDoc(firebaseUser.uid);
 
         if (!userData) {
@@ -319,18 +298,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
 
         if (!userData) {
-          // If we had a cached user, preserve it!
-          if (get().user && get().token) {
-            set({ loading: false });
-            return;
-          }
-
-          if (typeof window !== 'undefined') {
-            sessionStorage.removeItem('token');
-            localStorage.removeItem('token');
-            localStorage.removeItem('auth_user');
-            localStorage.removeItem('mock_user');
-          }
+          console.warn('[Auth] User document not found in Firestore for UID:', firebaseUser.uid);
           set({
             user: null,
             token: null,
@@ -340,13 +308,62 @@ export const useAuthStore = create<AuthState>((set, get) => {
           return;
         }
 
-        const rawRole = (userData as any).role ?? (userData as any).roleCode;
-        const roleEnum = normalizeRole(rawRole);
-        if (!roleEnum) {
-          if (get().user && get().token) {
-            set({ loading: false });
-            return;
+        // Fetch memberships from Firestore
+        let memberships: OrgMembership[] = [];
+        try {
+          memberships = await fetchUserOrgMemberships(firebaseUser.uid, firebaseUser.email || undefined);
+        } catch (_orgErr) {}
+
+        // Fallback: If memberships is empty but userDoc has organizationId
+        if (memberships.length === 0 && (userData as any).organizationId) {
+          const orgId = (userData as any).organizationId;
+          memberships = [{
+            id: `${orgId}_${firebaseUser.uid}`,
+            organizationId: orgId,
+            organizationName: (userData as any).organizationName || orgId,
+            organizationCode: (userData as any).organizationCode || orgId,
+            role: (userData as any).role || 'employee',
+            roleCode: (userData as any).roleCode || ((userData as any).role === 'admin' ? 'ROLE_ADMIN' : (userData as any).role === 'teamLeader' ? 'ROLE_MANAGER' : 'ROLE_EMPLOYEE'),
+            status: (userData as any).status || 'active',
+          }];
+        }
+
+        let currentOrgId = getInitialOrgId();
+        let currentOrg: OrgMembership | null = null;
+
+        if (memberships.length === 1) {
+          // Exactly one organization: Automatically select and enter!
+          currentOrgId = memberships[0].organizationId;
+          currentOrg = memberships[0];
+          localStorage.setItem('active_org_id', currentOrgId);
+          localStorage.setItem('active_org', JSON.stringify(currentOrg));
+          sessionStorage.setItem('active_org_id', currentOrgId);
+        } else if (memberships.length > 1) {
+          // Multiple organizations: check if remembered org is valid for this user
+          if (currentOrgId && memberships.some((m) => m.organizationId === currentOrgId)) {
+            currentOrg = memberships.find((m) => m.organizationId === currentOrgId) || null;
+            if (currentOrg) {
+              localStorage.setItem('active_org', JSON.stringify(currentOrg));
+              sessionStorage.setItem('active_org_id', currentOrgId);
+            }
+          } else {
+            currentOrgId = null;
+            currentOrg = null;
+            localStorage.removeItem('active_org_id');
+            localStorage.removeItem('active_org');
+            sessionStorage.removeItem('active_org_id');
           }
+        }
+
+        localStorage.setItem('org_memberships', JSON.stringify(memberships));
+
+        // Strict role resolution: active organization role > Firestore user role
+        const rawRole = currentOrg 
+          ? (currentOrg.roleCode || currentOrg.role)
+          : ((userData as any).roleCode ?? (userData as any).role);
+        const roleEnum = normalizeRole(rawRole);
+
+        if (!roleEnum) {
           set({
             user: null,
             token: null,
@@ -359,7 +376,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const activeUser: User = {
           id: firebaseUser.uid as any,
           uid: firebaseUser.uid,
-          email: firebaseUser.email || '',
+          email: firebaseUser.email || (userData as any).email || '',
           name:
             (userData as any).name ||
             (userData as any).displayName ||
@@ -387,30 +404,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           createdAt: (userData as any).createdAt || new Date().toISOString(),
         };
 
-        let memberships = getInitialOrgMemberships();
-        try {
-          const fetchedMemberships = await fetchUserOrgMemberships(firebaseUser.uid, firebaseUser.email || undefined);
-          if (fetchedMemberships && fetchedMemberships.length > 0) {
-            memberships = fetchedMemberships;
-            localStorage.setItem('org_memberships', JSON.stringify(memberships));
-          }
-        } catch (_orgErr) {}
-
-        let currentOrgId = getInitialOrgId();
-        let currentOrg = getInitialActiveOrg();
-        if (memberships.length === 1) {
-          currentOrgId = memberships[0].organizationId;
-          currentOrg = memberships[0];
-          localStorage.setItem('active_org_id', currentOrgId);
-          localStorage.setItem('active_org', JSON.stringify(currentOrg));
-        } else if (currentOrgId && memberships.some((m) => m.organizationId === currentOrgId)) {
-          currentOrg = memberships.find((m) => m.organizationId === currentOrgId) || null;
-          if (currentOrg) localStorage.setItem('active_org', JSON.stringify(currentOrg));
-        }
-
         const fbToken = await firebaseUser.getIdToken();
-        const resolvedOrgRole = currentOrg ? (normalizeRole(currentOrg.roleCode || currentOrg.role) as any) : activeUser.role;
-        activeUser.role = resolvedOrgRole;
         localStorage.setItem('auth_user', JSON.stringify(activeUser));
         localStorage.setItem('token', fbToken);
 
@@ -420,36 +414,14 @@ export const useAuthStore = create<AuthState>((set, get) => {
           orgMemberships: memberships,
           activeOrganizationId: currentOrgId,
           activeOrganization: currentOrg,
-          activeOrgRole: resolvedOrgRole,
+          activeOrgRole: currentOrg ? (normalizeRole(currentOrg.roleCode || currentOrg.role) as any) : roleEnum,
           loading: false,
           error: null,
         });
         return;
       } catch (err: any) {
         console.warn('[Auth] Session background check error:', err?.message);
-
-        // Retain session if already cached
-        if (get().user && get().token) {
-          set({ loading: false });
-          return;
-        }
-
-        if (typeof window !== 'undefined') {
-          sessionStorage.removeItem('token');
-          localStorage.removeItem('token');
-          localStorage.removeItem('auth_user');
-          localStorage.removeItem('mock_user');
-          localStorage.removeItem('active_org_id');
-          localStorage.removeItem('active_org');
-          localStorage.removeItem('org_memberships');
-        }
-
-        set({
-          user: null,
-          token: null,
-          loading: false,
-          error: null,
-        });
+        set({ loading: false });
       }
     },
 
@@ -480,6 +452,25 @@ export const useAuthStore = create<AuthState>((set, get) => {
           localStorage.setItem('token', switchRes.data.token);
           set({ token: switchRes.data.token });
         }
+      } catch (_e) {}
+
+      // Purge cached communication metadata of other organizations
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('pms_conv_meta_') || key.startsWith('pms_chat_cache_'))) {
+            if (!key.includes(orgId)) {
+              keysToRemove.push(key);
+            }
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (_e) {}
+
+      try {
+        useUIStore.getState().hideToast();
+        useUIStore.getState().setSignOutModalOpen(false);
       } catch (_e) {}
 
       set({
@@ -538,20 +529,20 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const memberships: OrgMembership[] = orgMemberships || [];
         localStorage.setItem('org_memberships', JSON.stringify(memberships));
 
+        const initialSavedOrgId = getInitialOrgId();
         let activeOrg: OrgMembership | null = null;
         if (activeOrganizationId) {
           activeOrg = memberships.find((m) => m.organizationId === activeOrganizationId) || null;
-          if (activeOrg) {
-            localStorage.setItem('active_org_id', activeOrganizationId);
-            localStorage.setItem('active_org', JSON.stringify(activeOrg));
-            sessionStorage.setItem('active_org_id', activeOrganizationId);
-          }
         } else if (memberships.length === 1) {
-          const singleOrgId = memberships[0].organizationId;
           activeOrg = memberships[0];
-          localStorage.setItem('active_org_id', singleOrgId);
+        } else if (memberships.length > 1 && initialSavedOrgId && memberships.some((m) => m.organizationId === initialSavedOrgId)) {
+          activeOrg = memberships.find((m) => m.organizationId === initialSavedOrgId) || null;
+        }
+
+        if (activeOrg) {
+          localStorage.setItem('active_org_id', activeOrg.organizationId);
           localStorage.setItem('active_org', JSON.stringify(activeOrg));
-          sessionStorage.setItem('active_org_id', singleOrgId);
+          sessionStorage.setItem('active_org_id', activeOrg.organizationId);
         } else {
           localStorage.removeItem('active_org_id');
           localStorage.removeItem('active_org');
@@ -559,6 +550,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         }
 
         const resolvedOrgRole = activeOrg ? (normalizeRole(activeOrgRole || activeOrg.roleCode || activeOrg.role) as any) : null;
+
+        try {
+          useUIStore.getState().hideToast();
+          useUIStore.getState().setSignOutModalOpen(false);
+        } catch (_e) {}
 
         set({
           token: accessToken,
@@ -665,6 +661,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
 
         localStorage.setItem('org_memberships', JSON.stringify(memberships));
 
+        const initialSavedOrgId = getInitialOrgId();
         let activeOrgId: string | null = serverActiveOrgId;
         let activeOrg: OrgMembership | null = null;
 
@@ -673,6 +670,9 @@ export const useAuthStore = create<AuthState>((set, get) => {
         } else if (memberships.length === 1) {
           activeOrgId = memberships[0].organizationId;
           activeOrg = memberships[0];
+        } else if (memberships.length > 1 && initialSavedOrgId && memberships.some((m) => m.organizationId === initialSavedOrgId)) {
+          activeOrgId = initialSavedOrgId;
+          activeOrg = memberships.find((m) => m.organizationId === initialSavedOrgId) || null;
         }
 
         if (activeOrg) {
@@ -692,6 +692,11 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const storage = rememberMe ? localStorage : sessionStorage;
         storage.setItem('token', token);
         localStorage.setItem('auth_user', JSON.stringify({ ...user, role: activeRole || user.role }));
+        try {
+          useUIStore.getState().hideToast();
+          useUIStore.getState().setSignOutModalOpen(false);
+        } catch (_e) {}
+
         set({
           token,
           user: { ...user, role: activeRole || user.role },
@@ -756,9 +761,22 @@ export const useAuthStore = create<AuthState>((set, get) => {
         const response = await api.post('/api/organizations/register', data);
         const { accessToken, user, organization, orgMemberships, activeOrganizationId, activeOrgRole } = response.data;
 
-        if (accessToken) {
-          sessionStorage.setItem('token', accessToken);
-          localStorage.setItem('token', accessToken);
+        let clientToken = accessToken;
+        // Sign into client Firebase Auth to activate browserLocalPersistence
+        try {
+          if (data.adminEmail && data.password) {
+            const userCred = await signInWithEmailPassword(data.adminEmail, data.password);
+            if (userCred.user) {
+              clientToken = await userCred.user.getIdToken();
+            }
+          }
+        } catch (fbSignErr: any) {
+          console.warn('[registerOrganization] Client Firebase sign in warning:', fbSignErr?.message);
+        }
+
+        if (clientToken) {
+          sessionStorage.setItem('token', clientToken);
+          localStorage.setItem('token', clientToken);
         }
         if (user) {
           localStorage.setItem('auth_user', JSON.stringify(user));
@@ -819,6 +837,24 @@ export const useAuthStore = create<AuthState>((set, get) => {
       localStorage.removeItem('active_org');
       localStorage.removeItem('org_memberships');
       sessionStorage.removeItem('active_org_id');
+
+      // Purge all organization-specific communication and conversation caches
+      try {
+        const keysToRemove: string[] = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && (key.startsWith('pms_conv_meta_') || key.startsWith('pms_chat_cache_') || key.startsWith('pms_comm_'))) {
+            keysToRemove.push(key);
+          }
+        }
+        keysToRemove.forEach((k) => localStorage.removeItem(k));
+      } catch (_e) {}
+
+      try {
+        useUIStore.getState().hideToast();
+        useUIStore.getState().setSignOutModalOpen(false);
+      } catch (_e) {}
+
       void firebaseAuth.signOut();
       set({
         user: null,

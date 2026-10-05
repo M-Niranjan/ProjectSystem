@@ -1,4 +1,4 @@
-import { getApp, getApps, initializeApp } from 'firebase/app';
+import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -6,7 +6,10 @@ import {
   signInWithEmailAndPassword,
   sendPasswordResetEmail,
   verifyPasswordResetCode,
-  confirmPasswordReset
+  confirmPasswordReset,
+  setPersistence,
+  browserLocalPersistence,
+  indexedDBLocalPersistence
 } from 'firebase/auth';
 
 const firebaseConfig = {
@@ -23,6 +26,16 @@ import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'fire
 
 const firebaseApp = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 export const firebaseAuth = getAuth(firebaseApp);
+
+// Configure robust session persistence for browser, Android Webview and Capacitor
+try {
+  setPersistence(firebaseAuth, browserLocalPersistence).catch(() => {
+    setPersistence(firebaseAuth, indexedDBLocalPersistence).catch(console.warn);
+  });
+} catch (persistErr) {
+  console.warn('Firebase persistence initialization warning:', persistErr);
+}
+
 export const firebaseDb = getFirestore(firebaseApp);
 export const firebaseStorage = getStorage(firebaseApp);
 
@@ -174,18 +187,28 @@ export const verifyResetCode = (oobCode: string) => verifyPasswordResetCode(fire
 
 export const resetPasswordWithCode = (oobCode: string, newPassword: string) => confirmPasswordReset(firebaseAuth, oobCode, newPassword);
 
-export const fetchAllFirestoreUserDocs = async (): Promise<any[]> => {
+export const fetchFirestoreUsersByOrg = async (orgId: string): Promise<any[]> => {
+  if (!orgId) return [];
   try {
-    const snap = await getDocs(collection(firebaseDb, 'users'));
+    const q = query(collection(firebaseDb, 'users'), where('organizationId', '==', orgId));
+    const snap = await getDocs(q);
     return snap.docs.map(d => ({
       id: d.id,
       uid: d.id,
       ...d.data()
     }));
   } catch (err) {
-    console.error('Error fetching all Firestore user docs:', err);
+    console.error(`Error fetching Firestore users for org ${orgId}:`, err);
     return [];
   }
+};
+
+export const fetchAllFirestoreUserDocs = async (orgId?: string): Promise<any[]> => {
+  if (orgId) {
+    return fetchFirestoreUsersByOrg(orgId);
+  }
+  console.warn('fetchAllFirestoreUserDocs called without orgId. Organization isolation enforced.');
+  return [];
 };
 
 export const fetchOrganizationDoc = async (orgId: string): Promise<any | null> => {
@@ -254,11 +277,12 @@ export const fetchUserOrgMemberships = async (uid: string, email?: string): Prom
 // =========================================================================
 
 export const fetchFirestoreProjects = async (orgId?: string): Promise<any[]> => {
+  if (!orgId) {
+    console.warn('fetchFirestoreProjects called without orgId. Organization isolation enforced.');
+    return [];
+  }
   try {
-    let q = query(collection(firebaseDb, 'projects'));
-    if (orgId) {
-      q = query(collection(firebaseDb, 'projects'), where('organizationId', '==', orgId));
-    }
+    const q = query(collection(firebaseDb, 'projects'), where('organizationId', '==', orgId));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (err) {
@@ -268,14 +292,16 @@ export const fetchFirestoreProjects = async (orgId?: string): Promise<any[]> => 
 };
 
 export const fetchFirestoreTasks = async (orgId?: string, projectId?: string): Promise<any[]> => {
+  if (!orgId) {
+    console.warn('fetchFirestoreTasks called without orgId. Organization isolation enforced.');
+    return [];
+  }
   try {
-    let q = query(collection(firebaseDb, 'tasks'));
-    if (orgId && projectId) {
+    let q;
+    if (projectId) {
       q = query(collection(firebaseDb, 'tasks'), where('organizationId', '==', orgId), where('projectId', '==', projectId));
-    } else if (orgId) {
+    } else {
       q = query(collection(firebaseDb, 'tasks'), where('organizationId', '==', orgId));
-    } else if (projectId) {
-      q = query(collection(firebaseDb, 'tasks'), where('projectId', '==', projectId));
     }
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -338,11 +364,12 @@ export const deleteFirestoreTaskDoc = async (taskId: string): Promise<boolean> =
 };
 
 export const fetchFirestoreAuditLogs = async (orgId?: string): Promise<any[]> => {
+  if (!orgId) {
+    console.warn('fetchFirestoreAuditLogs called without orgId. Organization isolation enforced.');
+    return [];
+  }
   try {
-    let q: any = collection(firebaseDb, 'audit_logs');
-    if (orgId) {
-      q = query(collection(firebaseDb, 'audit_logs'), where('organizationId', '==', orgId));
-    }
+    const q = query(collection(firebaseDb, 'audit_logs'), where('organizationId', '==', orgId));
     const snap = await getDocs(q);
     return snap.docs.map(d => ({ id: d.id, ...(d.data() as Record<string, any>) }));
   } catch (err) {

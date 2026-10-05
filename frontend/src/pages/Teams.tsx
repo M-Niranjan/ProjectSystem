@@ -27,7 +27,7 @@ interface TeamMember {
 }
 
 export default function Teams() {
-  const { user, activeOrgRole } = useAuthStore();
+  const { user, activeOrgRole, activeOrganizationId } = useAuthStore();
   const { showToast } = useUIStore();
   const userRole = normalizeRole(activeOrgRole || user?.role);
   const isAdmin = userRole === 'ROLE_ADMIN';
@@ -86,7 +86,8 @@ export default function Teams() {
     }
 
     if (!fetchSucceeded && teamList.length === 0) {
-      teamList = await fetchAllFirestoreUserDocs();
+      const orgId = activeOrganizationId || user?.organizationId;
+      teamList = await fetchAllFirestoreUserDocs(orgId);
     }
 
     setMembers(teamList);

@@ -209,7 +209,7 @@ function RoleGuard({ allowedRoles, children }: { allowedRoles: string[]; childre
 
 function AppContent() {
   const { user, token, initAuth, loading, activeOrganizationId } = useAuthStore();
-  const { activeView, initTheme, sidebarExpanded, setView } = useUIStore();
+  const { activeView, initTheme, sidebarExpanded, setView, loginSplashActive, loginSplashExiting } = useUIStore();
   const location = useLocation();
   const navigate = useNavigate();
   const isNavigatingFromUI = useRef(false);
@@ -243,167 +243,160 @@ function AppContent() {
   }, [activeView]);
 
   const [showSplash, setShowSplash] = useState(true);
+  const [splashExiting, setSplashExiting] = useState(false);
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setShowSplash(false);
-    }, 1100);
-    return () => clearTimeout(timer);
+    // Start fade-out 600ms before removing splash
+    const fadeTimer = setTimeout(() => setSplashExiting(true), 2400);
+    const hideTimer = setTimeout(() => setShowSplash(false), 3000);
+    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
   }, []);
 
-  if (loading || showSplash) {
+  const isSplashVisible = showSplash || loginSplashActive;
+  const isSplashExiting = splashExiting || loginSplashExiting;
+
+  if (isSplashVisible) {
     return (
-      <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-[#07090e] text-white select-none overflow-hidden">
-        {/* Background ambient lighting */}
-        <div className="absolute w-96 h-96 bg-cyan-500/10 rounded-full blur-3xl -top-12 -left-12 pointer-events-none" />
-        <div className="absolute w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl -bottom-12 -right-12 pointer-events-none" />
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.92, y: 12 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.96 }}
-          transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-          className="flex flex-col items-center px-6 relative z-10"
-        >
-          <img
-            src="/logo-with-text-dark.png"
-            alt="Project Management System"
-            className="w-auto h-16 sm:h-20 max-w-[85vw] object-contain drop-shadow-[0_12px_30px_rgba(0,0,0,0.6)]"
-          />
-
-          {/* Luxury Progress Shimmer Bar */}
-          <div className="mt-8 w-48 h-1 bg-white/10 rounded-full overflow-hidden relative">
-            <motion.div
-              initial={{ x: '-100%' }}
-              animate={{ x: '100%' }}
-              transition={{ repeat: Infinity, duration: 1.2, ease: 'easeInOut' }}
-              className="w-1/2 h-full bg-gradient-to-r from-transparent via-[#38bdf8] to-transparent"
-            />
+      <div className={`pms-login-splash${isSplashExiting ? ' pms-splash-exiting' : ''}`}>
+        <div className="pms-splash-inner">
+          {/* ── ICON: large, centered, on top ── */}
+          <div className="pms-splash-icon-wrap">
+            <img src="/logo.png" alt="PMS" className="pms-splash-icon" />
           </div>
 
-          <p className="mt-4 text-[11px] font-mono tracking-widest text-slate-400 uppercase font-semibold">
-            Loading Workspace...
-          </p>
-        </motion.div>
+          {/* ── TEXT: stacked center-aligned below icon ── */}
+          <div className="pms-splash-text-block">
+            <p className="pms-splash-line1">
+              <span className="pms-splash-reveal pms-splash-delay-1">Project Management</span>
+            </p>
+            <p className="pms-splash-line2">
+              <span className="pms-splash-reveal pms-splash-delay-2">System</span>
+            </p>
+          </div>
+
+          {/* ── PROGRESS BAR ── */}
+          <div className="pms-splash-bar-wrap">
+            <div className="pms-splash-bar-track">
+              <div className="pms-splash-bar-fill" />
+            </div>
+          </div>
+
+          {/* ── CAPTION ── */}
+          <p className="pms-splash-caption">LOADING WORKSPACE...</p>
+        </div>
       </div>
     );
   }
 
-  // Handle password reset page / links even when unauthenticated
+  let mainContent: React.ReactNode = null;
+
   if (location.pathname === '/reset-password' || location.search.includes('oobCode')) {
-    return <ResetPassword />;
-  }
+    mainContent = <ResetPassword />;
+  } else if (location.pathname === '/accept-invitation') {
+    mainContent = <AcceptInvitation />;
+  } else if (location.pathname === '/register-organization') {
+    mainContent = <RegisterOrganization />;
+  } else if (!token || !user) {
+    mainContent = <Login />;
+  } else if (!activeOrganizationId || location.pathname === '/select-organization') {
+    mainContent = <OrgSelector />;
+  } else {
+    const isMessagesPage = location.pathname === '/messages';
+    mainContent = (
+      <div className={`relative ${isMessagesPage ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'}`}>
+        {/* Pure Uniform Background Layer */}
+        <div className="animated-bg" />
 
-  // Handle invitation acceptance page even when unauthenticated
-  if (location.pathname === '/accept-invitation') {
-    return <AcceptInvitation />;
-  }
+        {/* Core Shell Structure */}
+        <div className="flex">
+          {/* Sidebar */}
+          <Sidebar />
 
-  // Handle organization registration page even when unauthenticated
-  if (location.pathname === '/register-organization') {
-    return <RegisterOrganization />;
-  }
+          {/* Content Wrapper */}
+          <div 
+            className={`flex-1 flex flex-col ${isMessagesPage ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'} max-w-full transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
+          >
+            {/* Header Frosted Navbar */}
+            <Navbar />
 
-  // Render Login page if unauthorized
-  if (!token || !user) {
-    return <Login />;
-  }
+            {/* Mobile Bottom Navigation Dock */}
+            <MobileBottomNav />
 
-  // Multi-Organization guard: if no organization is active, or navigating to select-organization
-  if (!activeOrganizationId || location.pathname === '/select-organization') {
-    return <OrgSelector />;
-  }
+            <main className={`flex-1 min-w-0 max-w-full print:p-0 print:m-0 print:pt-0 print:max-w-none ${
+              isMessagesPage
+                ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-0 sm:p-2 overflow-hidden overscroll-none'
+                : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 pb-24 sm:pb-20 lg:pb-12 w-full max-w-7xl mx-auto'
+            }`}>
+              <ErrorBoundary>
+                <Routes location={location}>
+                      <Route path="/" element={<RoleDashboardRedirect />} />
+                      <Route path="/dashboard" element={<RoleDashboardRedirect />} />
+                      <Route path="/admin/dashboard" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'admin']}><AdminDashboard /></RoleGuard>} />
+                      <Route path="/admin-dashboard" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'admin']}><Navigate to="/admin/dashboard" replace /></RoleGuard>} />
+                      <Route path="/team-lead/dashboard" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'teamLeader', 'team_leader', 'manager']}><TeamLeaderDashboard /></RoleGuard>} />
+                      <Route path="/team-leader-dashboard" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'teamLeader', 'team_leader', 'manager']}><Navigate to="/team-lead/dashboard" replace /></RoleGuard>} />
+                      <Route path="/employee/dashboard" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee']}><EmployeeDashboard /></RoleGuard>} />
+                      <Route path="/employee-dashboard" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee']}><Navigate to="/employee/dashboard" replace /></RoleGuard>} />
+                      
+                      {/* Common Modules */}
+                      <Route path="/projects" element={<Projects />} />
+                      <Route path="/my-projects" element={<Projects />} />
+                      <Route path="/tasks" element={<Tasks />} />
+                      <Route path="/my-tasks" element={<Tasks />} />
+                      <Route path="/boards" element={<Boards />} />
+                      <Route path="/calendar" element={<Calendar />} />
+                      <Route path="/timeline" element={<Timeline />} />
+                      <Route path="/time-tracking" element={<Timeline />} />
+                      <Route path="/teams" element={<Teams />} />
+                      <Route path="/messages" element={<Messages />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/settings" element={<Settings />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/documents" element={<Documents />} />
+                      <Route path="/workspace-activity" element={<WorkspaceActivity />} />
 
-  const isMessagesPage = location.pathname === '/messages';
+                      {/* User / Employee Directory (Available to all organization members) */}
+                      <Route path="/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
+                      <Route path="/admin/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
+                      <Route path="/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
+                      <Route path="/admin/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
+                      <Route path="/organization" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><OrganizationSettingsView /></RoleGuard>} />
+                      <Route path="/admin/organization" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><OrganizationSettingsView /></RoleGuard>} />
+                      <Route path="/audit-logs" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><AuditLogsView /></RoleGuard>} />
+                      <Route path="/admin/audit-logs" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><AuditLogsView /></RoleGuard>} />
+
+                      {/* Role Specific Modules */}
+                      <Route path="/team-tracking" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><TeamWorkTracking /></RoleGuard>} />
+                      <Route path="/employee/:id/work-profile" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><EmployeeWorkProfilePage /></RoleGuard>} />
+                      <Route path="/step-verification" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><StepVerificationDashboard /></RoleGuard>} />
+                      <Route path="/reviews" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><TaskReviews /></RoleGuard>} />
+                      <Route path="/performance" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee', 'ROLE_MANAGER', 'ROLE_ADMIN', 'admin']}><MyPerformance /></RoleGuard>} />
+                      <Route path="/select-organization" element={<OrgSelector />} />
+
+                      <Route path="*" element={<RoleDashboardRedirect />} />
+                    </Routes>
+              </ErrorBoundary>
+            </main>
+          </div>
+        </div>
+
+        {/* Floating Utilities */}
+        <CommandPalette />
+        <VoiceController />
+        <PomodoroTimer />
+        <TaskDetailModal />
+        <CreateProjectModal />
+        <CreateTaskModal />
+      </div>
+    );
+  }
 
   return (
-    <div className={`relative ${isMessagesPage ? 'fixed inset-0 h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'}`}>
-      {/* Pure Uniform Background Layer */}
-      <div className="animated-bg" />
-
-      {/* Core Shell Structure */}
-      <div className="flex">
-        {/* Sidebar */}
-        <Sidebar />
-
-        {/* Content Wrapper */}
-        <div 
-          className={`flex-1 flex flex-col ${isMessagesPage ? 'h-[100dvh] max-h-[100dvh] overflow-hidden overscroll-none' : 'min-h-screen overflow-x-hidden'} max-w-full transition-all duration-300 ease-in-out ${sidebarExpanded ? 'lg:pl-[286px]' : 'lg:pl-[88px]'} pl-0 print:p-0 print:m-0 print:pl-0`}
-        >
-          {/* Header Frosted Navbar */}
-          <Navbar />
-
-          {/* Mobile Bottom Navigation Dock */}
-          <MobileBottomNav />
-
-          <main className={`flex-1 min-w-0 max-w-full print:p-0 print:m-0 print:pt-0 print:max-w-none ${
-            isMessagesPage
-              ? 'w-full max-w-none flex flex-col h-[calc(100dvh-3.5rem)] max-h-[calc(100dvh-3.5rem)] mt-14 p-0 sm:p-2 overflow-hidden overscroll-none'
-              : 'main-workspace-frame overflow-x-hidden px-3 sm:px-6 md:px-8 pb-24 sm:pb-20 lg:pb-12 w-full max-w-7xl mx-auto'
-          }`}>
-            <ErrorBoundary>
-              <Routes location={location}>
-                    <Route path="/" element={<RoleDashboardRedirect />} />
-                    <Route path="/dashboard" element={<RoleDashboardRedirect />} />
-                    <Route path="/admin/dashboard" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'admin']}><AdminDashboard /></RoleGuard>} />
-                    <Route path="/admin-dashboard" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'admin']}><Navigate to="/admin/dashboard" replace /></RoleGuard>} />
-                    <Route path="/team-lead/dashboard" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'teamLeader', 'team_leader', 'manager']}><TeamLeaderDashboard /></RoleGuard>} />
-                    <Route path="/team-leader-dashboard" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'teamLeader', 'team_leader', 'manager']}><Navigate to="/team-lead/dashboard" replace /></RoleGuard>} />
-                    <Route path="/employee/dashboard" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee']}><EmployeeDashboard /></RoleGuard>} />
-                    <Route path="/employee-dashboard" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee']}><Navigate to="/employee/dashboard" replace /></RoleGuard>} />
-                    
-                    {/* Common Modules */}
-                    <Route path="/projects" element={<Projects />} />
-                    <Route path="/my-projects" element={<Projects />} />
-                    <Route path="/tasks" element={<Tasks />} />
-                    <Route path="/my-tasks" element={<Tasks />} />
-                    <Route path="/boards" element={<Boards />} />
-                    <Route path="/calendar" element={<Calendar />} />
-                    <Route path="/timeline" element={<Timeline />} />
-                    <Route path="/time-tracking" element={<Timeline />} />
-                    <Route path="/teams" element={<Teams />} />
-                    <Route path="/messages" element={<Messages />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/settings" element={<Settings />} />
-                    <Route path="/profile" element={<Profile />} />
-                    <Route path="/documents" element={<Documents />} />
-                    <Route path="/workspace-activity" element={<WorkspaceActivity />} />
-
-                    {/* User / Employee Directory (Available to all organization members) */}
-                    <Route path="/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
-                    <Route path="/admin/users" element={<RoleGuard allowedRoles={['ROLE_ADMIN', 'ROLE_MANAGER', 'ROLE_TEAM_LEAD', 'ROLE_EMPLOYEE', 'admin', 'teamLeader', 'employee', 'manager']}><UserManagementView /></RoleGuard>} />
-                    <Route path="/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
-                    <Route path="/admin/roles" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><RolesPermissionsView /></RoleGuard>} />
-                    <Route path="/organization" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><OrganizationSettingsView /></RoleGuard>} />
-                    <Route path="/admin/organization" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><OrganizationSettingsView /></RoleGuard>} />
-                    <Route path="/audit-logs" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><AuditLogsView /></RoleGuard>} />
-                    <Route path="/admin/audit-logs" element={<RoleGuard allowedRoles={['ROLE_ADMIN']}><AuditLogsView /></RoleGuard>} />
-
-                    {/* Role Specific Modules */}
-                    <Route path="/team-tracking" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><TeamWorkTracking /></RoleGuard>} />
-                    <Route path="/employee/:id/work-profile" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN']}><EmployeeWorkProfilePage /></RoleGuard>} />
-                    <Route path="/step-verification" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><StepVerificationDashboard /></RoleGuard>} />
-                    <Route path="/reviews" element={<RoleGuard allowedRoles={['ROLE_MANAGER', 'ROLE_ADMIN', 'admin', 'teamLeader', 'team_leader', 'manager', 'ROLE_TEAM_LEAD']}><TaskReviews /></RoleGuard>} />
-                    <Route path="/performance" element={<RoleGuard allowedRoles={['ROLE_EMPLOYEE', 'employee', 'ROLE_MANAGER', 'ROLE_ADMIN', 'admin']}><MyPerformance /></RoleGuard>} />
-                    <Route path="/select-organization" element={<OrgSelector />} />
-
-                    <Route path="*" element={<RoleDashboardRedirect />} />
-                  </Routes>
-            </ErrorBoundary>
-          </main>
-        </div>
-      </div>
-
-      {/* Floating Utilities */}
+    <>
+      {mainContent}
       <LuxuryToast />
-      <CommandPalette />
-      <VoiceController />
-      <PomodoroTimer />
-      <TaskDetailModal />
-      <CreateProjectModal />
-      <CreateTaskModal />
       <SignOutConfirmModal />
-    </div>
+    </>
   );
 }
 

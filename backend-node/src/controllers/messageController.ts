@@ -32,12 +32,13 @@ export class MessageController {
       }
 
       if (firebaseFirestore) {
-        let q: FirebaseFirestore.Query = firebaseFirestore.collection('messages')
-          .where('conversationId', '==', conversationId);
-
-        if (orgId) {
-          q = q.where('organizationId', '==', orgId);
+        if (!orgId) {
+          return res.status(400).json({ message: 'Organization context required for message retrieval.' });
         }
+
+        let q: FirebaseFirestore.Query = firebaseFirestore.collection('messages')
+          .where('conversationId', '==', conversationId)
+          .where('organizationId', '==', orgId);
 
         const snap = await q.limit(100).get();
         const messages = snap.docs.map(d => ({ id: d.id, messageId: d.id, ...d.data() }));

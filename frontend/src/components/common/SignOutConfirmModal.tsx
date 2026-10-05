@@ -1,8 +1,7 @@
 import React, { useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { LogOut, X, AlertTriangle, ShieldCheck } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { LogOut, X, ShieldCheck } from 'lucide-react';
 import { useUIStore } from '../../store/useUIStore';
 import { useAuthStore } from '../../store/useAuthStore';
 import { resolveAvatar } from '../../services/avatar';
@@ -10,9 +9,8 @@ import { normalizeRole, formatRoleName } from '../../services/authRoles';
 import { useScrollLock } from '../../hooks/useScrollLock';
 
 export default function SignOutConfirmModal() {
-  const { signOutModalOpen, setSignOutModalOpen, showToast } = useUIStore();
+  const { signOutModalOpen, setSignOutModalOpen } = useUIStore();
   const { user, activeOrganization, logout } = useAuthStore();
-  const navigate = useNavigate();
 
   // Lock background scroll when modal is active
   useScrollLock(signOutModalOpen);
@@ -32,12 +30,11 @@ export default function SignOutConfirmModal() {
 
   const handleConfirmSignOut = () => {
     setSignOutModalOpen(false);
+    useUIStore.getState().hideToast();
+    // Flag for Login page to show "Signed out successfully" toast
+    try { localStorage.setItem('pms_signed_out_success', '1'); } catch (_e) {}
+    // logout() clears all state and redirects via window.location.hash
     logout();
-    navigate('/', { replace: true });
-    if (typeof window !== 'undefined') {
-      window.location.hash = '#/';
-    }
-    showToast('Signed out successfully. See you next time!', 'info');
   };
 
   const normRole = normalizeRole(user?.role);

@@ -77,9 +77,9 @@ export class OrganizationController {
         adminUid = `adm_${crypto.randomBytes(8).toString('hex')}`;
       }
 
-      // 4. Generate internal organizationId and human-readable organizationCode (Workspace Code)
-      const orgId = `org_${crypto.randomBytes(6).toString('hex')}`;
-      const orgCode = await FirebaseAdminService.generateUniqueWorkspaceCode(cleanOrgName);
+      // 4. Generate unique Organization ID (e.g. ABC-7K29X)
+      const orgId = await FirebaseAdminService.generateUniqueOrganizationId(cleanOrgName);
+      const orgCode = orgId;
 
       // 5. Create Organization document in Firestore
       const orgData = {
@@ -405,6 +405,15 @@ export class OrganizationController {
       const orgId = req.params.id || req.organizationId;
       if (!orgId) return res.status(400).json({ message: 'Organization ID is required.' });
 
+      // STRICT ISOLATION GUARD: Verify user is a member of this organization or platform admin
+      const isPlatformAdmin = normalizeRole(req.user.role) === 'ROLE_ADMIN';
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(req.user.uid || String(req.user.id), req.user.email);
+      const isMember = memberships.some(m => m.organizationId === orgId && m.status !== 'disabled');
+
+      if (!isMember && !isPlatformAdmin) {
+        return res.status(403).json({ message: 'Forbidden: You do not belong to this organization.' });
+      }
+
       const members = await FirebaseAdminService.getFirestoreUsersByOrganization(orgId);
       return res.json(members);
     } catch (err: any) {
@@ -423,6 +432,16 @@ export class OrganizationController {
 
       const orgId = req.params.id || req.organizationId;
       if (!orgId) return res.status(400).json({ message: 'Organization ID is required.' });
+
+      // STRICT ISOLATION GUARD: Verify user has admin/manager privileges in this organization
+      const isPlatformAdmin = normalizeRole(req.user.role) === 'ROLE_ADMIN';
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(req.user.uid || String(req.user.id), req.user.email);
+      const member = memberships.find(m => m.organizationId === orgId && m.status !== 'disabled');
+      const isOrgAdminOrManager = member && (normalizeRole(member.roleCode || member.role) === 'ROLE_ADMIN' || normalizeRole(member.roleCode || member.role) === 'ROLE_MANAGER');
+
+      if (!isPlatformAdmin && !isOrgAdminOrManager) {
+        return res.status(403).json({ message: 'Forbidden: Only organization administrators or managers can add members.' });
+      }
 
       const { email, role, name, department, designation } = req.body;
       if (!email || !email.trim()) {
@@ -529,6 +548,16 @@ export class OrganizationController {
       const orgId = req.params.id || req.organizationId;
       const memberId = req.params.memberId;
       if (!orgId || !memberId) return res.status(400).json({ message: 'Organization ID and Member ID are required.' });
+
+      // STRICT ISOLATION GUARD: Verify user has admin/manager privileges in this organization
+      const isPlatformAdmin = normalizeRole(req.user.role) === 'ROLE_ADMIN';
+      const memberships = await FirebaseAdminService.getUserOrgMemberships(req.user.uid || String(req.user.id), req.user.email);
+      const member = memberships.find(m => m.organizationId === orgId && m.status !== 'disabled');
+      const isOrgAdminOrManager = member && (normalizeRole(member.roleCode || member.role) === 'ROLE_ADMIN' || normalizeRole(member.roleCode || member.role) === 'ROLE_MANAGER');
+
+      if (!isPlatformAdmin && !isOrgAdminOrManager) {
+        return res.status(403).json({ message: 'Forbidden: Only organization administrators or managers can remove members.' });
+      }
 
       // Form membership doc ID: ${orgId}_${memberId} or just memberId
       const membershipDocId = memberId.includes('_') ? memberId : `${orgId}_${memberId}`;

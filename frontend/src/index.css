@@ -268,6 +268,292 @@ aside.glass-panel {
 }
 
 /* ============================================================
+   PMS Login — Static Brand Header Styles
+   ============================================================ */
+
+/* Logo icon wrapper — static, no animation */
+.pms-logo-icon-wrap {
+  filter: drop-shadow(0 6px 20px rgba(100, 80, 200, 0.4));
+}
+
+.pms-logo-icon {
+  width: 88px;
+  height: 88px;
+  object-fit: contain;
+  display: block;
+  border-radius: 22px;
+}
+
+/* Brand text block */
+.pms-brand-text-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+}
+
+.pms-brand-line1 { margin: 0; }
+.pms-brand-line1 span {
+  display: inline-block;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: #1e2d5a;
+  line-height: 1.2;
+}
+.pms-brand-line2 { margin: 0; }
+.pms-brand-line2 span {
+  display: inline-block;
+  font-size: 1.35rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: #2a8fa4;
+  line-height: 1.2;
+}
+.dark .pms-brand-line1 span { color: #c7d3f8; }
+.dark .pms-brand-line2 span { color: #4dd6f0; }
+
+/* ============================================================
+   PMS — PREMIUM SPLASH / LOADING SCREEN
+   Vertical: large icon top-center, text stacked below
+   Smooth, premium, unique — longer keyframe durations
+   ============================================================ */
+
+/* ── Keyframes ── */
+
+/* Full screen: slow elegant fade in */
+@keyframes pms-splash-bg-in {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+/* Full screen: smooth fade out */
+@keyframes pms-splash-exit-fade {
+  0%   { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.04); }
+}
+
+.pms-splash-exiting {
+  animation: pms-splash-exit-fade 0.6s cubic-bezier(0.4, 0, 1, 1) forwards !important;
+  pointer-events: none;
+}
+
+/* Ambient orb 1 — slow drift */
+@keyframes pms-orb1-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(40px, -30px) scale(1.15); }
+}
+
+/* Ambient orb 2 */
+@keyframes pms-orb2-drift {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%       { transform: translate(-35px, 25px) scale(1.1); }
+}
+
+/* Icon: scales up from small, blurs out → sharp, subtle overshoot */
+@keyframes pms-splash-icon-pop {
+  0%   { opacity: 0; transform: scale(0.6) translateY(20px); filter: blur(12px); }
+  55%  { opacity: 1; transform: scale(1.06) translateY(-4px); filter: blur(0); }
+  78%  { transform: scale(0.98) translateY(0); }
+  100% { opacity: 1; transform: scale(1) translateY(0); filter: blur(0); }
+}
+
+/* Icon shimmer ring — pulses gently */
+@keyframes pms-icon-ring-pulse {
+  0%, 100% {
+    box-shadow:
+      0 0 0 0   rgba(99, 179, 237, 0),
+      0 0 40px 10px rgba(79, 70, 229, 0.25),
+      0 20px 60px -10px rgba(0,0,0,0.7);
+  }
+  50% {
+    box-shadow:
+      0 0 0 12px rgba(99, 179, 237, 0.10),
+      0 0 70px 20px rgba(79, 70, 229, 0.40),
+      0 20px 60px -10px rgba(0,0,0,0.7);
+  }
+}
+
+/* Text line — floats up + fades in left→right reveal */
+@keyframes pms-splash-line-in {
+  0%   { opacity: 0; transform: translateY(14px); clip-path: inset(0 100% 0 0); }
+  30%  { opacity: 1; transform: translateY(2px); }
+  100% { opacity: 1; transform: translateY(0);   clip-path: inset(0 0% 0 0); }
+}
+
+/* Progress bar: slow steady sweep */
+@keyframes pms-bar-sweep {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(500%); }
+}
+
+/* Caption: breathes in gently */
+@keyframes pms-caption-breathe-in {
+  0%   { opacity: 0; transform: translateY(6px); letter-spacing: 0.35em; }
+  100% { opacity: 0.5; transform: translateY(0); letter-spacing: 0.22em; }
+}
+
+/* ── Full-screen overlay ── */
+.pms-login-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(
+    ellipse 120% 100% at 50% 40%,
+    #0b0e1c 0%,
+    #07080f 55%,
+    #040508 100%
+  );
+  animation: pms-splash-bg-in 0.4s ease both;
+  overflow: hidden;
+}
+
+/* Ambient glow orbs */
+.pms-login-splash::before,
+.pms-login-splash::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.pms-login-splash::before {
+  width: 520px;
+  height: 520px;
+  top: -100px;
+  left: -120px;
+  background: radial-gradient(circle, rgba(37, 99, 235, 0.12) 0%, transparent 70%);
+  animation: pms-orb1-drift 8s ease-in-out infinite;
+}
+.pms-login-splash::after {
+  width: 480px;
+  height: 480px;
+  bottom: -80px;
+  right: -100px;
+  background: radial-gradient(circle, rgba(124, 58, 237, 0.12) 0%, transparent 70%);
+  animation: pms-orb2-drift 9s ease-in-out infinite;
+}
+
+/* ── Centre column ── */
+.pms-splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  position: relative;
+  z-index: 1;
+}
+
+/* Icon wrapper: animated pop + persistent glow ring */
+.pms-splash-icon-wrap {
+  border-radius: 28px;
+  animation:
+    pms-splash-icon-pop    1.4s cubic-bezier(0.22, 1, 0.36, 1) 0.1s both,
+    pms-icon-ring-pulse    4.0s ease-in-out 1.8s infinite;
+}
+
+.pms-splash-icon {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  display: block;
+  border-radius: 28px;
+}
+
+/* ── Brand text: centered stack ── */
+.pms-splash-text-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  text-align: center;
+}
+
+.pms-splash-line1,
+.pms-splash-line2 {
+  margin: 0;
+  overflow: hidden;
+  line-height: 1.2;
+}
+
+/* "Project Management" — crisp white, very bold */
+.pms-splash-line1 span {
+  display: inline-block;
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  color: #f0f4ff;
+  white-space: nowrap;
+  text-shadow: 0 2px 20px rgba(99, 179, 237, 0.3);
+}
+
+/* "System" — vivid cyan, slightly bigger */
+.pms-splash-line2 span {
+  display: inline-block;
+  font-size: 1.75rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  color: #22d9f0;
+  white-space: nowrap;
+  text-shadow: 0 2px 24px rgba(34, 217, 240, 0.45);
+}
+
+/* Float-up + left-to-right reveal */
+.pms-splash-reveal {
+  animation: pms-splash-line-in 1.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  will-change: clip-path, transform, opacity;
+}
+.pms-splash-delay-1 { animation-delay: 0.9s; }
+.pms-splash-delay-2 { animation-delay: 1.25s; }
+
+/* ── Progress bar ── */
+.pms-splash-bar-wrap {
+  width: 280px;
+  max-width: 80vw;
+}
+
+.pms-splash-bar-track {
+  width: 100%;
+  height: 2.5px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  position: relative;
+}
+
+.pms-splash-bar-fill {
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  border-radius: 99px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(34, 217, 240, 0.15) 15%,
+    #22d9f0 45%,
+    rgba(124, 93, 250, 0.9) 72%,
+    transparent 100%
+  );
+  animation: pms-bar-sweep 2.8s cubic-bezier(0.4, 0, 0.6, 1) 0.8s infinite;
+  will-change: transform;
+}
+
+/* ── Caption ── */
+.pms-splash-caption {
+  margin: -8px 0 0;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  animation: pms-caption-breathe-in 1.6s ease 1.5s both;
+}
+
+
+/* ============================================================
    Option 2: Executive Titanium Precision Background & Blueprint Grid
    ============================================================ */
 .login-bg-executive-titanium {

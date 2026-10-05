@@ -15,7 +15,7 @@ import { useLiveRefresh } from '../hooks/useLiveRefresh';
 // 1. USER MANAGEMENT VIEW
 // ==========================================
 export function UserManagementView() {
-  const { user, activeOrgRole } = useAuthStore();
+  const { user, activeOrgRole, activeOrganizationId } = useAuthStore();
   const effectiveRole = normalizeRole(activeOrgRole || user?.role);
   const isAdmin = effectiveRole === 'ROLE_ADMIN';
   const [users, setUsers] = useState<any[]>([]);
@@ -55,7 +55,8 @@ export function UserManagementView() {
 
     // 1. Fetch directly from Cloud Firestore (Primary Source of Truth)
     try {
-      const fsDocs = await fetchAllFirestoreUserDocs();
+      const orgId = activeOrganizationId || user?.organizationId;
+      const fsDocs = await fetchAllFirestoreUserDocs(orgId);
       if (fsDocs && Array.isArray(fsDocs)) {
         fsDocs.forEach((u: any) => {
           const key = (u.email || '').toLowerCase().trim() || u.uid || u.id;
@@ -340,6 +341,7 @@ export function UserManagementView() {
       return;
     }
     const defaultAvatar = gender === 'Female' ? WOMEN_AVATAR : MEN_AVATAR;
+    const currentOrgId = activeOrganizationId || user?.organizationId;
     const payload: any = { 
       name: name.trim(), 
       email: email.trim().toLowerCase(), 
@@ -348,7 +350,8 @@ export function UserManagementView() {
       designation: designation || (role === 'ROLE_ADMIN' ? 'System Administrator' : role === 'ROLE_MANAGER' ? 'Project Lead' : 'Software Engineer'), 
       department: department || 'Engineering', 
       profilePhoto: editingUser?.profilePhoto || defaultAvatar,
-      active: true 
+      active: true,
+      ...(currentOrgId ? { organizationId: currentOrgId } : {})
     };
     if (password.trim()) {
       payload.password = password.trim();
@@ -372,6 +375,7 @@ export function UserManagementView() {
           await upsertFirestoreUserDoc(createdUid, {
             ...payload,
             uid: createdUid,
+            organizationId: currentOrgId,
             role: canonicalRole,
             roleCode: role,
             createdAt: new Date().toISOString(),

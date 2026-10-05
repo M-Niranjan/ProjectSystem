@@ -69,7 +69,8 @@ import {
   firebaseAuth,
   fetchFirestoreProjects,
   fetchFirestoreUserDoc,
-  upsertFirestoreUserDoc
+  upsertFirestoreUserDoc,
+  fetchFirestoreUsersByOrg
 } from '../services/firebase';
 import {
   collection,
@@ -429,6 +430,7 @@ export default function Messages() {
           isOnline: settings.onlineStatusVisible ? (userStatus !== 'offline') : false,
           status: userStatus,
           lastSeen: serverTimestamp(),
+          organizationId: orgId,
         }, { merge: true }).catch(() => {});
       } catch (e) {}
     };
@@ -474,57 +476,59 @@ export default function Messages() {
       const memberList: ContactItem[] = [];
       const seenIds = new Set<string>();
 
-      // 1. Query Cloud Firestore 'users' collection (Primary Source of Truth for real Firebase Auth UIDs)
-      if (firebaseDb) {
+      // 1. Query Cloud Firestore 'users' collection FILTERED BY organizationId (ORGANIZATION ISOLATION)
+      if (firebaseDb && orgId && orgId !== 'default-org') {
         try {
-          const usersSnap = await getDocs(collection(firebaseDb, 'users'));
+          const orgUsersQuery = query(
+            collection(firebaseDb, 'users'),
+            where('organizationId', '==', orgId)
+          );
+          const usersSnap = await getDocs(orgUsersQuery);
           const now = Date.now();
           usersSnap.forEach((docSnap) => {
             const data = docSnap.data();
             const memberUid = String(docSnap.id || data.uid || '');
             if (memberUid && memberUid !== String(currentUid) && !seenIds.has(memberUid)) {
-              if (!data.organizationId || data.organizationId === orgId) {
-                seenIds.add(memberUid);
+              seenIds.add(memberUid);
 
-                let lastSeenMs = 0;
-                let lastSeenDate: any = null;
-                if (data.lastSeen?.toMillis) {
-                  lastSeenMs = data.lastSeen.toMillis();
-                  lastSeenDate = data.lastSeen.toDate();
-                } else if (data.lastSeen?.seconds) {
-                  lastSeenMs = data.lastSeen.seconds * 1000;
-                  lastSeenDate = new Date(lastSeenMs);
-                } else if (data.lastSeen) {
-                  const parsed = new Date(data.lastSeen).getTime();
-                  if (!isNaN(parsed)) {
-                    lastSeenMs = parsed;
-                    lastSeenDate = new Date(parsed);
-                  }
+              let lastSeenMs = 0;
+              let lastSeenDate: any = null;
+              if (data.lastSeen?.toMillis) {
+                lastSeenMs = data.lastSeen.toMillis();
+                lastSeenDate = data.lastSeen.toDate();
+              } else if (data.lastSeen?.seconds) {
+                lastSeenMs = data.lastSeen.seconds * 1000;
+                lastSeenDate = new Date(lastSeenMs);
+              } else if (data.lastSeen) {
+                const parsed = new Date(data.lastSeen).getTime();
+                if (!isNaN(parsed)) {
+                  lastSeenMs = parsed;
+                  lastSeenDate = new Date(parsed);
                 }
-
-                let isUserOnline = false;
-                let effectiveStatus: 'online' | 'away' | 'busy' | 'offline' = 'offline';
-
-                if (data.status !== 'offline' && data.isOnline !== false) {
-                  const hasRecentHeartbeat = lastSeenMs > 0 && (now - lastSeenMs < 120000);
-                  isUserOnline = data.isOnline === true && (lastSeenMs === 0 || hasRecentHeartbeat);
-                  effectiveStatus = isUserOnline ? (data.status || 'online') : 'offline';
-                }
-
-                memberList.push({
-                  id: memberUid,
-                  uid: memberUid,
-                  name: data.name || data.displayName || (data.email ? data.email.split('@')[0] : 'Member'),
-                  email: data.email || '',
-                  role: data.role || data.roleCode || 'ROLE_EMPLOYEE',
-                  designation: data.designation || 'Team Member',
-                  department: data.department || 'Engineering',
-                  profilePhoto: data.profilePhoto,
-                  isOnline: isUserOnline,
-                  status: effectiveStatus,
-                  lastSeen: lastSeenDate
-                });
               }
+
+              let isUserOnline = false;
+              let effectiveStatus: 'online' | 'away' | 'busy' | 'offline' = 'offline';
+
+              if (data.status !== 'offline' && data.isOnline !== false) {
+                const hasRecentHeartbeat = lastSeenMs > 0 && (now - lastSeenMs < 120000);
+                isUserOnline = data.isOnline === true && (lastSeenMs === 0 || hasRecentHeartbeat);
+                effectiveStatus = isUserOnline ? (data.status || 'online') : 'offline';
+              }
+
+              memberList.push({
+                id: memberUid,
+                uid: memberUid,
+                name: data.name || data.displayName || (data.email ? data.email.split('@')[0] : 'Member'),
+                email: data.email || '',
+                role: data.role || data.roleCode || 'ROLE_EMPLOYEE',
+                designation: data.designation || 'Team Member',
+                department: data.department || 'Engineering',
+                profilePhoto: data.profilePhoto,
+                isOnline: isUserOnline,
+                status: effectiveStatus,
+                lastSeen: lastSeenDate
+              });
             }
           });
         } catch (err) {}
@@ -585,36 +589,6 @@ export default function Messages() {
           });
         }
       } catch (err) {}
-
-      // Fallback teammates if workspace has no members loaded
-      if (memberList.length === 0) {
-        memberList.push(
-          {
-            id: 'fb_uid_ram_001',
-            uid: 'fb_uid_ram_001',
-            name: 'Ram',
-            email: 'ram@taskflow.internal',
-            role: 'ROLE_EMPLOYEE',
-            designation: 'Backend Engineer',
-            department: 'Engineering',
-            profilePhoto: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-            isOnline: false,
-            status: 'offline'
-          },
-          {
-            id: 'fb_uid_mallu_002',
-            uid: 'fb_uid_mallu_002',
-            name: 'Mallu',
-            email: 'mallu@taskflow.internal',
-            role: 'ROLE_EMPLOYEE',
-            designation: 'Frontend Engineer',
-            department: 'Engineering',
-            profilePhoto: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-            isOnline: false,
-            status: 'offline'
-          }
-        );
-      }
 
       setContacts([AI_CONTACT, ...memberList]);
     } catch (e) {}
@@ -714,12 +688,16 @@ export default function Messages() {
 
   // Real-Time Users Presence & Live Status Listener (Requirement 20 & 44)
   useEffect(() => {
-    if (!firebaseDb) return;
+    if (!firebaseDb || !orgId || orgId === 'default-org') return;
 
     try {
-      const usersCol = collection(firebaseDb, 'users');
+      // ORGANIZATION ISOLATION: Only listen to users within this organization
+      const usersOrgQuery = query(
+        collection(firebaseDb, 'users'),
+        where('organizationId', '==', orgId)
+      );
       const unsubscribe = onSnapshot(
-        usersCol,
+        usersOrgQuery,
         (snapshot) => {
           const now = Date.now();
           const presenceMap: Record<string, {
@@ -736,6 +714,9 @@ export default function Messages() {
             const data = docSnap.data();
             const uid = String(docSnap.id || data.uid || '');
             if (!uid) return;
+
+            // DOUBLE-CHECK: Skip users not belonging to this organization
+            if (data.organizationId && data.organizationId !== orgId) return;
 
             let lastSeenMs = 0;
             let lastSeenDate: any = null;
@@ -799,7 +780,8 @@ export default function Messages() {
             const newMembers: ContactItem[] = [];
             Object.entries(presenceMap).forEach(([uid, info]) => {
               if (uid !== String(currentUid) && !seenIds.has(uid)) {
-                if (!info.organizationId || info.organizationId === orgId) {
+                // STRICT: Only add users whose organizationId exactly matches
+                if (info.organizationId === orgId) {
                   seenIds.add(uid);
                   newMembers.push({
                     id: uid,
@@ -916,6 +898,7 @@ export default function Messages() {
           conversationId: selectedConversationId,
           userId: String(currentUid),
           userName: user?.name || 'Someone',
+          organizationId: orgId,
           isTyping: true,
           updatedAt: serverTimestamp()
         },
@@ -931,6 +914,7 @@ export default function Messages() {
           setDoc(
             typingDocRef,
             {
+              organizationId: orgId,
               isTyping: false,
               updatedAt: serverTimestamp()
             },
@@ -939,7 +923,7 @@ export default function Messages() {
         } catch (e) {}
       }, 2500);
     } catch (e) {}
-  }, [selectedConversationId, currentUid, user?.name]);
+  }, [selectedConversationId, currentUid, user?.name, orgId]);
 
   const clearUserTyping = useCallback(() => {
     if (!firebaseDb || !selectedConversationId || !currentUid) return;
@@ -952,13 +936,14 @@ export default function Messages() {
       setDoc(
         typingDocRef,
         {
+          organizationId: orgId,
           isTyping: false,
           updatedAt: serverTimestamp()
         },
         { merge: true }
       ).catch(() => {});
     } catch (e) {}
-  }, [selectedConversationId, currentUid]);
+  }, [selectedConversationId, currentUid, orgId]);
 
   // Real-time listener for typing indicator in active conversation
   useEffect(() => {
@@ -981,6 +966,7 @@ export default function Messages() {
 
           snapshot.docs.forEach((d) => {
             const data = d.data();
+            if (data.organizationId && data.organizationId !== orgId) return;
             if (String(data.userId) !== String(currentUid) && data.isTyping === true) {
               let updatedMs = 0;
               if (data.updatedAt?.toMillis) {
@@ -1170,12 +1156,13 @@ export default function Messages() {
       setMessages([]);
     }
 
-    // Set up real-time listener strictly scoped to conversationId (Requirement 4)
+    // Set up real-time listener strictly scoped to conversationId AND organizationId (ORGANIZATION ISOLATION)
     try {
       if (firebaseDb) {
         const q = query(
           collection(firebaseDb, 'messages'),
           where('conversationId', '==', selectedConversationId),
+          where('organizationId', '==', orgId),
           limit(100)
         );
 

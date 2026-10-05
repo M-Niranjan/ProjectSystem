@@ -112,6 +112,7 @@ interface CommunicationState {
   setReplyToMessage: (msg: ChatMessage | null) => void;
   setEditingMessage: (msg: ChatMessage | null) => void;
   togglePinMessage: (convKey: string, msg: ChatMessage) => void;
+  resetCommunicationState: () => void;
 }
 
 export const useCommunicationStore = create<CommunicationState>((set, get) => ({
@@ -124,7 +125,7 @@ export const useCommunicationStore = create<CommunicationState>((set, get) => ({
   searchQuery: '',
   messageSearchQuery: '',
 
-  onlineUsers: new Set<number>([1, 999, 1001, 1004]), // default online demo IDs
+  onlineUsers: new Set<number | string>(),
   typingUsers: {},
   unreadCounts: {},
   mutedConversations: new Set<string>(),
@@ -210,5 +211,22 @@ export const useCommunicationStore = create<CommunicationState>((set, get) => ({
           [convKey]: nextPinned,
         },
       };
+    }),
+
+  resetCommunicationState: () =>
+    set({
+      activeTab: 'channels',
+      activeChannelId: null,
+      activeContactId: null,
+      currentOpenConversationId: null,
+      detailsPanelOpen: false,
+      searchQuery: '',
+      messageSearchQuery: '',
+      onlineUsers: new Set<number | string>(),
+      typingUsers: {},
+      unreadCounts: {},
+      replyToMessage: null,
+      editingMessage: null,
+      pinnedMessagesMap: {},
     }),
 }));

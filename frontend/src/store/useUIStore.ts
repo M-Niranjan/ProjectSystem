@@ -99,6 +99,11 @@ interface UIState {
   setChatContactId: (id: string | number | null) => void;
   signOutModalOpen: boolean;
   setSignOutModalOpen: (isOpen: boolean) => void;
+  loginSplashActive: boolean;
+  loginSplashExiting: boolean;
+  startLoginSplash: () => void;
+  finishLoginSplash: () => Promise<void>;
+  cancelLoginSplash: () => void;
 }
 
 const applyAccentStyles = (accent: AccentColor) => {
@@ -280,6 +285,15 @@ export const useUIStore = create<UIState>((set, get) => ({
   setChatContactId: (id) => set({ chatContactId: id }),
   signOutModalOpen: false,
   setSignOutModalOpen: (isOpen) => set({ signOutModalOpen: isOpen }),
+  loginSplashActive: false,
+  loginSplashExiting: false,
+  startLoginSplash: () => set({ loginSplashActive: true, loginSplashExiting: false }),
+  finishLoginSplash: async () => {
+    set({ loginSplashExiting: true });
+    await new Promise((r) => setTimeout(r, 450));
+    set({ loginSplashActive: false, loginSplashExiting: false });
+  },
+  cancelLoginSplash: () => set({ loginSplashActive: false, loginSplashExiting: false }),
   toast: null,
   showToast: (message: string, type: ToastType = 'success', duration = 3500) => {
     const id = Date.now().toString() + Math.random().toString(36).substring(2, 6);

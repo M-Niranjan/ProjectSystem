@@ -356,7 +356,7 @@ export class FirebaseAdminService {
     }
   }
 
-  public static async generateUniqueWorkspaceCode(orgName: string): Promise<string> {
+  public static async generateUniqueOrganizationId(orgName: string): Promise<string> {
     const cleanName = (orgName || '').trim();
     const words = cleanName.split(/\s+/).filter(w => w.length > 0);
     let prefix = '';
@@ -369,26 +369,30 @@ export class FirebaseAdminService {
       prefix = words[0].substring(0, 3).toUpperCase();
     }
 
-    // Keep only A-Z
     prefix = prefix.replace(/[^A-Z]/g, '');
     if (prefix.length < 3) {
       const alpha = cleanName.toUpperCase().replace(/[^A-Z]/g, '');
       prefix = (alpha + 'ORG').substring(0, 3);
     }
 
-    // Try sequential counters from 001 to 999: e.g. ABC001, ABC002...
-    let counter = 1;
-    while (counter <= 999) {
-      const candidate = `${prefix}${String(counter).padStart(3, '0')}`;
-      const existing = await this.getOrganizationByCode(candidate);
+    const chars = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
+    for (let attempt = 0; attempt < 20; attempt++) {
+      let suffix = '';
+      for (let i = 0; i < 5; i++) {
+        suffix += chars.charAt(Math.floor(Math.random() * chars.length));
+      }
+      const candidate = `${prefix}-${suffix}`;
+      const existing = await this.getOrganizationDoc(candidate);
       if (!existing) {
         return candidate;
       }
-      counter++;
     }
 
-    // Fallback if full: append random 4 digits
-    return `${prefix}${Math.floor(1000 + Math.random() * 9000)}`;
+    return `${prefix}-${Date.now().toString(36).toUpperCase().slice(-5)}`;
+  }
+
+  public static async generateUniqueWorkspaceCode(orgName: string): Promise<string> {
+    return this.generateUniqueOrganizationId(orgName);
   }
 
   public static async createInvitationDoc(token: string, data: any) {
@@ -507,7 +511,35 @@ export class FirebaseAdminService {
         });
       }
 
-      // 3. Enrich with organization metadata
+      // 3. Fallback: If no memberships found from organizationMembers, check users/{uid} doc
+      if (memberships.length === 0 && uid) {
+        const userDoc = await this.getFirestoreUserDoc(uid);
+        if (userDoc && userDoc.organizationId && !seenOrgIds.has(userDoc.organizationId)) {
+          const orgId = userDoc.organizationId;
+          seenOrgIds.add(orgId);
+          const orgDoc = await this.getOrganizationDoc(orgId);
+          const membershipData = {
+            id: `${orgId}_${uid}`,
+            organizationId: orgId,
+            organizationName: orgDoc?.name || userDoc.organizationName || orgId,
+            organizationCode: orgDoc?.code || orgId,
+            userId: uid,
+            userName: userDoc.name || email?.split('@')[0] || 'User',
+            userEmail: (userDoc.email || email || '').trim().toLowerCase(),
+            role: userDoc.role || 'employee',
+            roleCode: userDoc.roleCode || (userDoc.role === 'admin' ? 'ROLE_ADMIN' : userDoc.role === 'teamLeader' ? 'ROLE_MANAGER' : 'ROLE_EMPLOYEE'),
+            status: userDoc.status || 'active',
+          };
+          memberships.push(membershipData);
+
+          // Auto-repair missing organizationMembers document in background
+          try {
+            await this.addOrgMemberDoc(orgId, membershipData);
+          } catch (_repairErr) {}
+        }
+      }
+
+      // 4. Enrich with organization metadata
       const enrichedMemberships: Record<string, any>[] = [];
       for (const m of memberships) {
         const orgDoc = await this.getOrganizationDoc(m.organizationId);

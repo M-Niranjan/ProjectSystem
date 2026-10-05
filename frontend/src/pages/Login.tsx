@@ -45,7 +45,7 @@ export default function Login() {
   const [forgotErrorMsg, setForgotErrorMsg] = useState('');
 
   const { login, requestOtp, verifyOtp, resetPasswordWithOtp, error, loading, clearError } = useAuthStore();
-  const { darkMode, toggleTheme } = useUIStore();
+  const { darkMode, toggleTheme, showToast, startLoginSplash, finishLoginSplash, cancelLoginSplash } = useUIStore();
 
   const {
     register: registerLogin,
@@ -72,7 +72,22 @@ export default function Login() {
     return () => clearTimeout(timer);
   }, [resetLoginForm, clearError]);
 
+  // Show "Signed out successfully" toast when user arrives after signing out
+  React.useEffect(() => {
+    try {
+      if (localStorage.getItem('pms_signed_out_success') === '1') {
+        localStorage.removeItem('pms_signed_out_success');
+        // Small delay so Login page is fully mounted before showing toast
+        setTimeout(() => {
+          showToast('✅ Signed out successfully. See you soon!', 'success', 4000);
+        }, 400);
+      }
+    } catch (_e) {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const routeAfterLogin = async (fallbackRole?: string | null) => {
+    useUIStore.getState().hideToast();
     resetLoginForm();
     let memberships = useAuthStore.getState().orgMemberships;
     if (!memberships || memberships.length === 0) {
@@ -123,10 +138,15 @@ export default function Login() {
 
   const onLoginSubmit = async (data: any) => {
     clearError();
+    startLoginSplash(); // show global splash (survives navigation)
     useAuthStore.setState({ loading: true, error: null });
+    const startTime = Date.now();
     const email = (data.email || '').trim();
     const password = (data.password || '').trim();
     const workspaceCode = (data.workspaceCode || '').trim() || undefined;
+
+    let success = false;
+    let targetUserRole: string | null = null;
 
     // 1. First attempt Firebase Authentication
     try {
@@ -135,34 +155,48 @@ export default function Login() {
       if (user && user.uid) {
         const ok = await useAuthStore.getState().loginWithFirebase(user, rememberMe, workspaceCode);
         if (ok) {
+          success = true;
           const currentUser = useAuthStore.getState().user;
-          const role = normalizeRole(currentUser?.role);
-          await routeAfterLogin(role);
-          return;
+          targetUserRole = normalizeRole(currentUser?.role);
         }
       }
     } catch (firebaseErr: any) {
       console.warn('Firebase Auth sign in attempt skipped:', firebaseErr?.code || firebaseErr?.message);
     }
 
-    // 2. Attempt Backend API login (which authenticates or auto-provisions user)
-    try {
-      const ok = await login({ email, password, workspaceCode }, rememberMe);
-      if (ok) {
-        const currentUser = useAuthStore.getState().user;
-        const role = normalizeRole(currentUser?.role);
-        await routeAfterLogin(role);
-        return;
+    // 2. Attempt Backend API login
+    if (!success) {
+      try {
+        const ok = await login({ email, password, workspaceCode }, rememberMe);
+        if (ok) {
+          success = true;
+          const currentUser = useAuthStore.getState().user;
+          targetUserRole = normalizeRole(currentUser?.role);
+        }
+      } catch (backendErr: any) {
+        console.error('Backend login error:', backendErr);
       }
-    } catch (backendErr: any) {
-      console.error('Backend login error:', backendErr);
     }
 
+    if (success && targetUserRole) {
+      // Ensure splash is visible for at least 1500ms so the animation plays fully
+      const elapsed = Date.now() - startTime;
+      const minDisplayMs = 1500;
+      if (elapsed < minDisplayMs) {
+        await new Promise((r) => setTimeout(r, minDisplayMs - elapsed));
+      }
+      // Navigate FIRST — splash stays alive in global store during unmount
+      await routeAfterLogin(targetUserRole);
+      // finishLoginSplash fades out and cleans up (450ms fade)
+      finishLoginSplash();
+      return;
+    }
+
+    cancelLoginSplash();
+    useAuthStore.setState({ loading: false });
     const currentError = useAuthStore.getState().error;
     if (!currentError) {
-      useAuthStore.setState({ error: 'Unable to sign in. Please verify your credentials or try again.', loading: false });
-    } else {
-      useAuthStore.setState({ loading: false });
+      useAuthStore.setState({ error: 'Unable to sign in. Please verify your credentials or try again.' });
     }
   };
 
@@ -170,7 +204,9 @@ export default function Login() {
   const handleGoogleSignIn = async () => {
     clearError();
     setGoogleLoading(true);
+    startLoginSplash(); // show global splash
     useAuthStore.setState({ loading: true, error: null });
+    const startTime = Date.now();
     const workspaceCode = (getValues('workspaceCode') || '').trim() || undefined;
 
     try {
@@ -181,12 +217,19 @@ export default function Login() {
         if (ok) {
           const currentUser = useAuthStore.getState().user;
           const role = normalizeRole(currentUser?.role);
+          const elapsed = Date.now() - startTime;
+          const minDisplayMs = 1500;
+          if (elapsed < minDisplayMs) {
+            await new Promise((r) => setTimeout(r, minDisplayMs - elapsed));
+          }
           await routeAfterLogin(role);
+          finishLoginSplash();
           return;
         }
       }
     } catch (err: any) {
       console.error('Google Sign In Error:', err);
+      cancelLoginSplash();
       if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
         useAuthStore.setState({ loading: false });
       } else {
@@ -295,6 +338,8 @@ export default function Login() {
 
   return (
     <div className="fixed inset-0 w-full h-[100dvh] flex flex-col items-center login-bg-executive-titanium text-slate-900 dark:text-white overflow-y-auto overflow-x-hidden overscroll-none touch-pan-y select-none">
+      {/* Login splash is rendered globally in App.tsx via useUIStore.loginSplashActive */}
+
       {/* Option 2: Executive Titanium Architectural Blueprint Grid Overlay - Strictly Fixed & Non-Movable */}
       <div className="blueprint-grid-overlay" aria-hidden="true" />
 
@@ -313,13 +358,26 @@ export default function Login() {
 
       {/* Main Content Area: Centered, Constant, Non-Movable */}
       <div className="my-auto w-full max-w-[400px] flex flex-col items-center px-4 py-8 relative z-10 shrink-0">
-        {/* Brand Header */}
-        <div className="flex flex-col items-center mb-4 text-center">
-          <img
-            src={darkMode ? "/logo-with-text-dark.png" : "/logo-with-text.png"}
-            alt="Project Management System"
-            className="h-14 sm:h-16 w-auto object-contain drop-shadow-xl hover:scale-102 transition-transform"
-          />
+        {/* Brand Header — vertical logo + text */}
+        <div className="flex flex-col items-center mb-5 text-center gap-3">
+          {/* Square App Icon */}
+          <div className="pms-logo-icon-wrap">
+            <img
+              src="/logo.png"
+              alt="PMS Icon"
+              className="pms-logo-icon"
+            />
+          </div>
+
+          {/* Brand Text — static, no animation (animation only during login loading) */}
+          <div className="pms-brand-text-block">
+            <p className="pms-brand-line1">
+              <span>Project Management</span>
+            </p>
+            <p className="pms-brand-line2">
+              <span>System</span>
+            </p>
+          </div>
         </div>
 
         {/* Option 1: Obsidian Minimalist Glass Auth Card - Firmly Fixed & Constant */}

@@ -42,7 +42,7 @@ export class TeamController {
       // Resolve caller's active organization context automatically
       const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
       const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
-      let targetOrgId: string = req.organizationId || '';
+      let targetOrgId: string = adminProfile?.organizationId || req.organizationId || '';
       if (!targetOrgId && callerMemberships.length > 0) {
         targetOrgId = callerMemberships[0].organizationId;
       }
@@ -242,7 +242,7 @@ export class TeamController {
       // Resolve caller's active organization context automatically
       const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
       const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
-      let targetOrgId: string = req.organizationId || '';
+      let targetOrgId: string = creatorProfile?.organizationId || req.organizationId || '';
       if (!targetOrgId && callerMemberships.length > 0) {
         targetOrgId = callerMemberships[0].organizationId;
       }
@@ -453,11 +453,8 @@ export class TeamController {
           firestoreUsers = orgUsers.filter(u => u.teamLeaderId === req.firebaseUid || u.uid === req.firebaseUid || u.id === req.firebaseUid);
         }
       } else {
-        if (requesterRoleNorm === 'ROLE_ADMIN') {
-          firestoreUsers = await FirebaseAdminService.getAllFirestoreUsers();
-        } else {
-          firestoreUsers = await FirebaseAdminService.getFirestoreUsersByTeamLeader(req.firebaseUid);
-        }
+        // ORGANIZATION ISOLATION: Never return users without organization context
+        return res.status(400).json({ message: 'Organization context required. Cannot return users without organization isolation.' });
       }
 
       return res.json(firestoreUsers);

@@ -18,6 +18,7 @@ import { useAuthStore, OrgMembership } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
 import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
+import SignOutConfirmModal from '../components/common/SignOutConfirmModal';
 
 export default function OrgSelector() {
   const navigate = useNavigate();
@@ -99,11 +100,17 @@ export default function OrgSelector() {
       {/* Header bar */}
       <header className="relative z-10 w-full max-w-5xl mx-auto flex items-center justify-between pb-6 border-b border-slate-200 dark:border-white/10">
         <div className="flex items-center gap-3">
-          <img
-            src={darkMode ? "/logo-with-text-dark.png" : "/logo-with-text.png"}
-            alt="Project Management System"
-            className="h-9 sm:h-11 w-auto object-contain drop-shadow-md hover:scale-102 transition-transform"
-          />
+          <div className="flex items-center gap-2.5">
+            <img
+              src="/logo.png"
+              alt="PMS"
+              className="h-9 w-9 sm:h-10 sm:w-10 object-contain rounded-xl drop-shadow-md"
+            />
+            <div className="flex flex-col leading-tight">
+              <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">Project Management</span>
+              <span className="text-xs font-bold text-teal-600 dark:text-teal-400 tracking-tight">System</span>
+            </div>
+          </div>
           <span className="hidden sm:inline-block text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-600 dark:text-blue-400">
             Multi-Tenant
           </span>

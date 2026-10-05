@@ -14,7 +14,8 @@ service cloud.firestore {
     function isMemberOfOrg(orgId) {
       return isAuthenticated() && (
         exists(/databases/$(database)/documents/organizationMembers/$(orgId + '_' + request.auth.uid)) ||
-        isAdmin()
+        getUserData().organizationId == orgId ||
+        request.auth.token.admin == true
       );
     }
 
@@ -33,23 +34,32 @@ service cloud.firestore {
     function isManager() {
       return isAuthenticated() && (
         getUserData().role == 'ROLE_MANAGER' || 
+        getUserData().role == 'teamLeader' || 
         getUserData().role == 'team_leader' || 
         getUserData().role == 'manager'
       );
     }
 
-    // Rules for 'users' collection
+    // Rules for 'users' collection (ORGANIZATION ISOLATION ENFORCED)
     match /users/{userId} {
-      allow read: if isAuthenticated();
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId ||
+        (resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId))
+      );
       allow create: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isManager());
-      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin() || isManager() || request.auth.token.admin == true);
+      allow update: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        (resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager())) ||
+        request.auth.token.admin == true
+      );
       allow delete: if isAuthenticated() && (isAdmin() || request.auth.token.admin == true);
     }
 
     // Rules for 'organizations' collection
     match /organizations/{orgId} {
-      allow read: if isAuthenticated();
-      allow create, update, delete: if isAdmin();
+      allow read: if isAuthenticated() && isMemberOfOrg(orgId);
+      allow create: if isAuthenticated();
+      allow update, delete: if isAuthenticated() && isMemberOfOrg(orgId) && isAdmin();
     }
 
     // Rules for 'organizationMembers' collection
@@ -57,20 +67,29 @@ service cloud.firestore {
       allow read: if isAuthenticated() && (
         resource.data.userId == request.auth.uid ||
         resource.data.userEmail == request.auth.token.email ||
-        isAdmin() ||
-        isManager()
+        (resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId))
       );
-      allow create, update, delete: if isAdmin() || isManager();
+      allow create, update, delete: if isAuthenticated() && (
+        (request.resource.data.organizationId != null && isMemberOfOrg(request.resource.data.organizationId) && (isAdmin() || isManager())) ||
+        (resource != null && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager()))
+      );
     }
 
     // Rules for 'invitations' collection
     match /invitations/{invitationId} {
       allow read: if isAuthenticated() && (
         resource.data.email == request.auth.token.email ||
-        isAdmin() ||
-        isManager()
+        (resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId))
       );
-      allow create, update, delete: if isAuthenticated() && (isAdmin() || isManager());
+      allow create, update, delete: if isAuthenticated() && (
+        (request.resource.data.organizationId != null && isMemberOfOrg(request.resource.data.organizationId) && (isAdmin() || isManager())) ||
+        (resource != null && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager()))
+      );
+    }
+
+    // Rules for 'team_invitations' collection
+    match /team_invitations/{invId} {
+      allow read, write: if isAuthenticated() && (isAdmin() || isManager());
     }
 
     // Rules for 'projects' collection
@@ -90,8 +109,9 @@ service cloud.firestore {
 
     // Rules for 'teams' collection
     match /teams/{teamId} {
-      allow read: if isAuthenticated() && (resource.data.organizationId == null || isMemberOfOrg(resource.data.organizationId));
-      allow create, update, delete: if isAuthenticated() && (isAdmin() || isManager());
+      allow read: if isAuthenticated() && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId);
+      allow create: if isAuthenticated() && request.resource.data.organizationId != null && isMemberOfOrg(request.resource.data.organizationId) && (isAdmin() || isManager());
+      allow update, delete: if isAuthenticated() && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager());
     }
 
     // Rules for 'notifications' collection
@@ -102,14 +122,14 @@ service cloud.firestore {
 
     // Rules for 'audit_logs' collection
     match /audit_logs/{logId} {
-      allow read: if isAdmin();
+      allow read: if isAuthenticated() && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager());
       allow create: if isAuthenticated();
     }
 
-    // Rules for 'conversations' collection
+    // Rules for 'conversations' collection (ORGANIZATION ISOLATION ENFORCED)
     match /conversations/{convId} {
       allow read: if isAuthenticated() && (
-        resource.data.organizationId == null ||
+        resource.data.organizationId != null &&
         isMemberOfOrg(resource.data.organizationId)
       ) && (
         resource.data.participants == null ||
@@ -118,40 +138,54 @@ service cloud.firestore {
         isManager()
       );
       allow create: if isAuthenticated() && (
-        request.resource.data.organizationId == null ||
+        request.resource.data.organizationId != null &&
         isMemberOfOrg(request.resource.data.organizationId)
       );
       allow update: if isAuthenticated() && (
-        resource.data.organizationId == null ||
+        resource.data.organizationId != null &&
         isMemberOfOrg(resource.data.organizationId)
       );
-      allow delete: if isAuthenticated() && (isAdmin() || isManager());
+      allow delete: if isAuthenticated() && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager());
     }
 
-    // Rules for 'messages' collection
+    // Rules for 'messages' collection (ORGANIZATION ISOLATION ENFORCED)
     match /messages/{messageId} {
       allow read: if isAuthenticated() && (
-        resource.data.organizationId == null ||
+        resource.data.organizationId != null &&
         isMemberOfOrg(resource.data.organizationId)
       );
       allow create: if isAuthenticated() && (
-        request.resource.data.organizationId == null ||
+        request.resource.data.organizationId != null &&
         isMemberOfOrg(request.resource.data.organizationId)
       );
       allow update: if isAuthenticated() && (
+        resource.data.organizationId != null &&
+        isMemberOfOrg(resource.data.organizationId)
+      ) && (
         resource.data.senderId == request.auth.uid ||
         resource.data.receiverId == request.auth.uid ||
         isAdmin() ||
-        isManager() ||
-        (resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId))
+        isManager()
       );
       allow delete: if isAuthenticated() && (
+        resource.data.organizationId != null &&
+        isMemberOfOrg(resource.data.organizationId)
+      ) && (
         resource.data.senderId == request.auth.uid ||
         isAdmin() ||
         isManager()
       );
     }
+
+    // Rules for 'typing' collection
+    match /typing/{typingId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated();
+    }
+
+    // Rules for 'taskSubmissions' collection
+    match /taskSubmissions/{subId} {
+      allow read, write: if isAuthenticated();
+    }
   }
 }
-
-
