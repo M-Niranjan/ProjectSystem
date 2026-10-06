@@ -15,6 +15,7 @@ import api from '../services/api';
 import { signInWithEmailPassword, signInWithGoogle, fetchFirestoreUserDoc } from '../services/firebase';
 import { getDashboardPathForRole, normalizeRole } from '../services/authRoles';
 import { useScrollLock } from '../hooks/useScrollLock';
+import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 
 // Validation Schemas
 const loginSchema = z.object({
@@ -39,6 +40,8 @@ export default function Login() {
   const [otpCode, setOtpCode] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showForgotNewPassword, setShowForgotNewPassword] = useState(false);
+  const [showForgotConfirmPassword, setShowForgotConfirmPassword] = useState(false);
 
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotSuccessMsg, setForgotSuccessMsg] = useState('');
@@ -696,26 +699,52 @@ export default function Login() {
               {otpStep === 3 && (
                 <form onSubmit={handleResetPasswordSubmit} className="space-y-3">
                   <p className="text-xs text-slate-600 dark:text-slate-300 font-normal">
-                    Enter your new password below.
+                    Enter your new password below. You can include letters, numbers, and special characters.
                   </p>
-                  <input
-                    type="password"
-                    required
-                    placeholder="New Password"
-                    value={newPassword}
-                    onChange={(e) => setNewPassword(e.target.value)}
-                    disabled={forgotLoading}
-                    className="obsidian-input w-full px-3.5 py-2.5 text-xs font-medium outline-none"
-                  />
-                  <input
-                    type="password"
-                    required
-                    placeholder="Confirm New Password"
-                    value={confirmPassword}
-                    onChange={(e) => setConfirmPassword(e.target.value)}
-                    disabled={forgotLoading}
-                    className="obsidian-input w-full px-3.5 py-2.5 text-xs font-medium outline-none"
-                  />
+
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      type={showForgotNewPassword ? 'text' : 'password'}
+                      required
+                      placeholder="New Password (min 6 characters)"
+                      value={newPassword}
+                      onChange={(e) => setNewPassword(e.target.value)}
+                      disabled={forgotLoading}
+                      className="obsidian-input w-full pl-10 pr-10 py-2.5 text-xs font-medium outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotNewPassword(!showForgotNewPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer z-10"
+                    >
+                      {showForgotNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
+                  {/* Visual Password Strength Meter */}
+                  <PasswordStrengthMeter password={newPassword} />
+
+                  <div className="relative">
+                    <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
+                    <input
+                      type={showForgotConfirmPassword ? 'text' : 'password'}
+                      required
+                      placeholder="Confirm New Password"
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      disabled={forgotLoading}
+                      className="obsidian-input w-full pl-10 pr-10 py-2.5 text-xs font-medium outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowForgotConfirmPassword(!showForgotConfirmPassword)}
+                      className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer z-10"
+                    >
+                      {showForgotConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+
                   <button
                     type="submit"
                     disabled={forgotLoading || !newPassword || !confirmPassword}

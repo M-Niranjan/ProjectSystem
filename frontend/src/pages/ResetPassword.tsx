@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { Lock, Eye, EyeOff, KeyRound, CheckCircle2, ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { verifyResetCode } from '../services/firebase';
+import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
@@ -164,7 +165,7 @@ export default function ResetPassword() {
                 <input
                   type={showNewPass ? 'text' : 'password'}
                   required
-                  placeholder="••••••••••••"
+                  placeholder="Letters, numbers & special characters"
                   value={newPassword}
                   onChange={(e) => setNewPassword(e.target.value)}
                   className="w-full pl-11 pr-11 py-3 bg-white/95 dark:bg-slate-900/90 border border-slate-200 dark:border-white/20 rounded-2xl text-slate-900 dark:text-white outline-none focus:border-purple-600 focus:ring-4 focus:ring-purple-500/20 transition-all font-semibold text-xs shadow-sm"
@@ -177,6 +178,9 @@ export default function ResetPassword() {
                   {showNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
+
+              {/* Password Strength Meter */}
+              <PasswordStrengthMeter password={newPassword} />
             </div>
 
             {/* Confirm New Password */}

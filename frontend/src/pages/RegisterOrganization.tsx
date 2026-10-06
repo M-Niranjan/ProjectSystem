@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
+import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 
 const registerOrgSchema = z.object({
   organizationName: z.string().min(2, 'Organization name must be at least 2 characters'),
@@ -575,7 +576,7 @@ export default function RegisterOrganization() {
                         <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                         <input
                           type={showPassword ? 'text' : 'password'}
-                          placeholder="At least 6 characters"
+                          placeholder="Letters, numbers & symbols"
                           {...register('password')}
                           className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-white/5 text-slate-900 dark:text-white placeholder-slate-400 text-xs font-medium focus:ring-2 focus:ring-blue-500/40 focus:border-blue-500 outline-none transition"
                         />
@@ -617,6 +618,9 @@ export default function RegisterOrganization() {
                       )}
                     </div>
                   </div>
+
+                  {/* Visual Live Password Strength Meter */}
+                  <PasswordStrengthMeter password={watch('password')} />
                 </div>
 
                 {/* Submit Button */}

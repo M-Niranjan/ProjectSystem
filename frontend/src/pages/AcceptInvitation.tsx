@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import api from '../services/api';
+import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 
 interface InvitationDetails {
   valid: boolean;
@@ -236,7 +237,7 @@ export default function AcceptInvitation() {
                       <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none z-10" />
                       <input
                         type={showPassword ? 'text' : 'password'}
-                        placeholder="Create Password (min 6 characters)"
+                        placeholder="Letters, numbers & symbols (min 6 chars)"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         required
@@ -251,6 +252,9 @@ export default function AcceptInvitation() {
                         {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
+
+                    {/* Password Strength Meter */}
+                    <PasswordStrengthMeter password={password} />
                   </div>
 
                   {/* Confirm Password Field */}
