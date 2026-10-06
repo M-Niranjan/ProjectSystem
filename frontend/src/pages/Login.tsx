@@ -188,7 +188,7 @@ export default function Login() {
       // Navigate FIRST — splash stays alive in global store during unmount
       await routeAfterLogin(targetUserRole);
       // finishLoginSplash fades out and cleans up (450ms fade)
-      finishLoginSplash();
+      await finishLoginSplash();
       return;
     }
 
@@ -223,7 +223,7 @@ export default function Login() {
             await new Promise((r) => setTimeout(r, minDisplayMs - elapsed));
           }
           await routeAfterLogin(role);
-          finishLoginSplash();
+          await finishLoginSplash();
           return;
         }
       }

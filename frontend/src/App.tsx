@@ -242,18 +242,8 @@ function AppContent() {
     }
   }, [activeView]);
 
-  const [showSplash, setShowSplash] = useState(true);
-  const [splashExiting, setSplashExiting] = useState(false);
-
-  useEffect(() => {
-    // Start fade-out 600ms before removing splash
-    const fadeTimer = setTimeout(() => setSplashExiting(true), 2400);
-    const hideTimer = setTimeout(() => setShowSplash(false), 3000);
-    return () => { clearTimeout(fadeTimer); clearTimeout(hideTimer); };
-  }, []);
-
-  const isSplashVisible = showSplash || loginSplashActive;
-  const isSplashExiting = splashExiting || loginSplashExiting;
+  const isSplashVisible = loginSplashActive;
+  const isSplashExiting = loginSplashExiting;
 
   if (isSplashVisible) {
     return (
