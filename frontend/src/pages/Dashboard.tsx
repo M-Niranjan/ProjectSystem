@@ -922,7 +922,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       {/* ========================================================================= */}
       {isTeamLead && (
         <div className="space-y-6 w-full min-w-0">
-          {/* Row 1: Paired Split-Card Dual Capsules (Pair Style 1) */}
+          {/* Row 1: Paired Split-Card Dual Capsules (Alignment Style B: Symmetrical Top-Icon & Dual Bottom Progress Gauges) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
             {/* PAIR 1: Active Projects & Pending Code Reviews */}
             <div className="bg-white/95 dark:bg-[#0b0f19]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group hover:border-blue-400/50 dark:hover:border-blue-500/30 transition-all">
@@ -933,49 +933,53 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-200/80 dark:divide-white/[0.08]">
                 {/* Left Capsule: Active Projects */}
                 <div 
-                  className="flex flex-col justify-between pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity" 
+                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
                   onClick={() => setView('projects')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
-                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-xs shrink-0">
                       <FolderGit2 className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{projectsList.length}</span>
+                  <div className="my-auto py-2">
+                    <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                      {projectsList.length}
                     </div>
-                    <div className="mt-2 inline-flex items-center max-w-full px-2 py-0.5 rounded-md bg-blue-50/80 dark:bg-blue-500/10 border border-blue-200/60 dark:border-blue-500/20 text-[11px] font-semibold text-blue-700 dark:text-blue-300 truncate">
-                      {projectsList.length > 0 ? (projectsList[0]?.name || 'Active Project') : 'No active projects'}
+                  </div>
+                  <div className="h-6 flex items-center">
+                    <div className="inline-flex items-center max-w-full px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30 text-[11px] font-semibold truncate">
+                      <span className="truncate">{projectsList.length > 0 ? (projectsList[0]?.name || 'Active Project') : 'No active projects'}</span>
                     </div>
                   </div>
                 </div>
 
                 {/* Right Capsule: Pending Code Reviews */}
                 <div 
-                  className="flex flex-col justify-between pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity" 
+                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
                   onClick={() => setView('reviews')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Reviews</span>
-                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shadow-xs shrink-0">
                       <Award className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <div className="mt-3">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.pendingTasks > 0 ? stats.pendingTasks : 0}</span>
+                  <div className="my-auto py-2">
+                    <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                      {stats.pendingTasks > 0 ? stats.pendingTasks : 0}
                     </div>
-                    <div className="mt-2 inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/70 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 truncate">
-                      {stats.pendingTasks > 0 ? 'Needs Review' : 'Up to Date'}
+                  </div>
+                  <div className="h-6 flex items-center">
+                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 truncate">
+                      {stats.pendingTasks > 0 ? `${stats.pendingTasks} Needs Review` : 'Up to Date'}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* PAIR 2: Active Tasks & Sprint Velocity / Health */}
+            {/* PAIR 2: Active Tasks & Sprint Health (Dual Matching Bottom Progress Gauges) */}
             <div className="bg-white/95 dark:bg-[#0b0f19]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group hover:border-cyan-400/50 dark:hover:border-emerald-500/30 transition-all">
               {/* Subtle ambient back-glows */}
               <div className="absolute -top-12 -left-12 w-36 h-36 bg-cyan-500/10 dark:bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
@@ -984,22 +988,27 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
               <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-200/80 dark:divide-white/[0.08]">
                 {/* Left Capsule: Active Tasks */}
                 <div 
-                  className="flex flex-col justify-between pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity" 
+                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
                   onClick={() => setView('tasks')}
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Tasks</span>
-                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shadow-xs shrink-0">
                       <CheckSquare className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <div className="mt-3">
+                  <div className="my-auto py-2">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">{stats.totalTasks || 0}</span>
-                      <span className="text-[11px] font-medium text-slate-500 dark:text-slate-400 truncate">{stats.completedTasks || 0} done</span>
+                      <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                        {stats.totalTasks || 0}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        {stats.completedTasks || 0} done
+                      </span>
                     </div>
-                    {/* Glowing gradient progress bar */}
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-full mt-2.5 overflow-hidden">
+                  </div>
+                  <div className="h-6 flex flex-col justify-center">
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-full overflow-hidden">
                       <div 
                         className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] transition-all duration-500" 
                         style={{ width: `${stats.totalTasks > 0 ? Math.min(100, Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100)) : 0}%` }}
@@ -1008,50 +1017,32 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   </div>
                 </div>
 
-                {/* Right Capsule: Sprint Health with Circular Radial Gauge */}
-                <div className="flex flex-col justify-between pl-3 sm:pl-4">
+                {/* Right Capsule: Sprint Health */}
+                <div 
+                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]"
+                >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Sprint Health</span>
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-xs">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-xs shrink-0">
                       <Activity className="w-3.5 h-3.5" />
                     </div>
                   </div>
-                  <div className="mt-2 flex items-center justify-between gap-1.5">
-                    <div>
-                      <span className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+                  <div className="my-auto py-2">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                         {stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98)}%
                       </span>
-                      <div className="mt-1">
-                        <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200/70 dark:bg-emerald-500/15 dark:text-emerald-400 dark:border-emerald-500/30">
-                          Optimal Health
-                        </span>
-                      </div>
+                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                        Optimal Health
+                      </span>
                     </div>
-
-                    {/* SVG Circular Radial Gauge */}
-                    <div className="relative w-10 h-10 sm:w-11 sm:h-11 shrink-0 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <path
-                          className="text-slate-200 dark:text-slate-800"
-                          strokeWidth="3.5"
-                          stroke="currentColor"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                          className="text-emerald-500 transition-all duration-700 ease-out"
-                          strokeDasharray={`${stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98)}, 100`}
-                          strokeWidth="3.5"
-                          strokeLinecap="round"
-                          stroke="currentColor"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                          style={{ filter: 'drop-shadow(0 0 4px rgba(16, 185, 129, 0.6))' }}
-                        />
-                      </svg>
-                      <span className="absolute text-[8px] sm:text-[9px] font-black text-slate-900 dark:text-white">
-                        {stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98)}%
-                      </span>
+                  </div>
+                  <div className="h-6 flex flex-col justify-center">
+                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-full overflow-hidden">
+                      <div 
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all duration-500" 
+                        style={{ width: `${Math.min(100, stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98))}%` }}
+                      />
                     </div>
                   </div>
                 </div>
