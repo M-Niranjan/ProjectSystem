@@ -531,16 +531,16 @@ export default function Tasks() {
         </div>
       )}
 
-      {/* Project Selector & Status Tabs (Option 2 Design) */}
+      {/* Project Selector & Status Tabs (Executive Obsidian Design) */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
         {/* Left: Project Selector Pill Dropdown */}
         <div className="relative">
           <button
             onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
-            className="bg-white dark:bg-[#0e131f] border border-slate-200/90 dark:border-slate-800/90 hover:border-slate-300 dark:hover:border-slate-700 rounded-xl px-4 py-2 flex items-center gap-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-xs transition-all cursor-pointer"
+            className="bg-white/95 dark:bg-[#0b0f19]/90 backdrop-blur-xl border border-slate-200/90 dark:border-blue-500/30 hover:border-blue-400/50 dark:hover:border-blue-500/50 rounded-xl px-4 py-2 flex items-center gap-2.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-xs dark:shadow-[0_0_15px_rgba(59,130,246,0.1)] transition-all cursor-pointer"
           >
-            <div className="w-5 h-5 rounded-md bg-gradient-to-tr from-amber-500 via-rose-500 to-indigo-500 flex items-center justify-center text-[10px] text-white shadow-xs font-bold">
-              📊
+            <div className="w-5 h-5 rounded-md bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-[10px] text-blue-400 shadow-xs font-bold">
+              <FolderGit2 className="w-3 h-3 text-blue-400" />
             </div>
             <span className="truncate max-w-[200px]">
               {projectsList.find(p => p.id === activeProjectId)?.name || 'All Projects'}
@@ -549,7 +549,7 @@ export default function Tasks() {
           </button>
 
           {isProjectDropdownOpen && (
-            <div className="absolute left-0 mt-2 w-64 bg-white dark:bg-[#0e131f] border border-slate-200 dark:border-slate-800 rounded-xl shadow-2xl z-50 py-1.5 backdrop-blur-xl">
+            <div className="absolute left-0 mt-2 w-64 bg-white/95 dark:bg-[#0b0f19]/95 border border-slate-200 dark:border-blue-500/30 rounded-xl shadow-2xl z-50 py-1.5 backdrop-blur-2xl">
               <button
                 onClick={() => {
                   setActiveProjectId(null);
@@ -561,7 +561,7 @@ export default function Tasks() {
                     : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                 }`}
               >
-                <span>📁</span>
+                <FolderGit2 className="w-3.5 h-3.5 text-blue-400" />
                 <span>All Projects</span>
               </button>
               {projectsList.map(p => (
@@ -577,7 +577,7 @@ export default function Tasks() {
                       : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
-                  <span>📁</span>
+                  <FolderGit2 className="w-3.5 h-3.5 text-blue-400" />
                   <span className="truncate">{p.name}</span>
                 </button>
               ))}
@@ -601,10 +601,10 @@ export default function Tasks() {
               <button
                 key={tab.id}
                 onClick={() => setStatusFilter(tab.id)}
-                className={`px-4 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap ${
                   isActive
-                    ? 'bg-white dark:bg-[#1c2438] text-slate-900 dark:text-white border border-slate-300 dark:border-slate-700/80 shadow-xs font-bold'
-                    : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-white/5'
+                    ? 'bg-blue-600 text-white shadow-[0_0_12px_rgba(37,99,235,0.4)] border border-blue-500 font-bold'
+                    : 'bg-slate-100 dark:bg-[#0b0f19]/80 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 border border-slate-200/80 dark:border-white/[0.06]'
                 }`}
               >
                 {tab.label}
@@ -860,9 +860,16 @@ export default function Tasks() {
                           PM-{task.id}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-slate-900 dark:text-white font-semibold text-xs sm:text-sm group-hover:text-blue-600 dark:group-hover:text-blue-300 transition-colors">
-                            {task.title}
-                          </span>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-slate-900 dark:text-white font-bold text-xs sm:text-sm group-hover:text-blue-500 transition-colors">
+                              {task.title}
+                            </span>
+                            {task.project?.name && (
+                              <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 truncate max-w-[220px]">
+                                {task.project.name}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td
                           className="py-3.5 px-4"
@@ -889,9 +896,19 @@ export default function Tasks() {
                           )}
                         </td>
                         <td className="py-3.5 px-4">
-                          <span className="text-slate-700 dark:text-slate-300 font-medium text-xs">
-                            {task.priority === 'HIGH' || task.priority === 'CRITICAL' ? 'High' : task.priority === 'LOW' ? 'Low' : 'Medium'}
-                          </span>
+                          {task.priority === 'HIGH' || task.priority === 'CRITICAL' ? (
+                            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" /> High
+                            </span>
+                          ) : task.priority === 'LOW' ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-slate-500/15 text-slate-600 dark:text-slate-400 border border-slate-500/30">
+                              Low
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-semibold bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                              Medium
+                            </span>
+                          )}
                         </td>
                         <td className="py-3.5 px-4">
                           {renderStatusBadge(task.status)}
