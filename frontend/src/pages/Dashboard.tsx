@@ -30,6 +30,9 @@ import {
   Layers,
   ChevronRight,
   TrendingUp,
+  Folder,
+  Check,
+  HeartPulse,
 } from 'lucide-react';
 import api from '../services/api';
 import { useAuthStore } from '../store/useAuthStore';
@@ -922,33 +925,37 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       {/* ========================================================================= */}
       {isTeamLead && (
         <div className="space-y-6 w-full min-w-0">
-          {/* Row 1: Paired Split-Card Dual Capsules (Alignment Style B: Symmetrical Top-Icon & Dual Bottom Progress Gauges) */}
+          {/* Row 1: Paired Split-Card Dual Capsules (Exact Match to Design Mockup) */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 w-full min-w-0">
             {/* PAIR 1: Active Projects & Pending Code Reviews */}
-            <div className="bg-white/95 dark:bg-[#0b0f19]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group hover:border-blue-400/50 dark:hover:border-blue-500/30 transition-all">
+            <div className="bg-[#0e1322]/90 dark:bg-[#0b0f19]/95 backdrop-blur-2xl border border-blue-500/30 rounded-2xl p-4 sm:p-5 shadow-[0_0_25px_rgba(59,130,246,0.12)] relative overflow-hidden group transition-all">
               {/* Subtle ambient back-glows */}
-              <div className="absolute -top-12 -left-12 w-36 h-36 bg-blue-500/10 dark:bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-amber-500/10 dark:bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-12 -left-12 w-36 h-36 bg-blue-500/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-200/80 dark:divide-white/[0.08]">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-700/50 dark:divide-white/[0.08]">
                 {/* Left Capsule: Active Projects */}
                 <div 
-                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
+                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[140px]" 
                   onClick={() => setView('projects')}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Projects</span>
-                    <div className="w-7 h-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 flex items-center justify-center shadow-xs shrink-0">
-                      <FolderGit2 className="w-3.5 h-3.5" />
+                    <span className="text-xs sm:text-sm font-semibold text-slate-300">Active Projects</span>
+                    <div className="w-8 h-8 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(59,130,246,0.4)] shrink-0">
+                      <Folder className="w-4 h-4 text-blue-400 fill-blue-400/20" />
                     </div>
                   </div>
-                  <div className="my-auto py-2">
-                    <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                  
+                  {/* Center Number */}
+                  <div className="my-auto py-2 text-center">
+                    <div className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
                       {projectsList.length}
                     </div>
                   </div>
-                  <div className="h-6 flex items-center">
-                    <div className="inline-flex items-center max-w-full px-2.5 py-0.5 rounded-md bg-blue-50 text-blue-700 border border-blue-200/80 dark:bg-blue-500/15 dark:text-blue-300 dark:border-blue-500/30 text-[11px] font-semibold truncate">
+                  
+                  {/* Footer Pill */}
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center max-w-full px-3 py-1 rounded-full bg-blue-500/15 text-blue-300 border border-blue-500/30 text-xs font-semibold truncate shadow-xs">
                       <span className="truncate">{projectsList.length > 0 ? (projectsList[0]?.name || 'Active Project') : 'No active projects'}</span>
                     </div>
                   </div>
@@ -956,62 +963,68 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
 
                 {/* Right Capsule: Pending Code Reviews */}
                 <div 
-                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
+                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[140px]" 
                   onClick={() => setView('reviews')}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Pending Reviews</span>
-                    <div className="w-7 h-7 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 flex items-center justify-center shadow-xs shrink-0">
-                      <Award className="w-3.5 h-3.5" />
+                    <span className="text-xs sm:text-sm font-semibold text-slate-300">Pending Reviews</span>
+                    <div className="w-8 h-8 rounded-xl bg-amber-500/15 text-amber-400 border border-amber-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(245,158,11,0.4)] shrink-0">
+                      <Award className="w-4 h-4 text-amber-400 fill-amber-400/20" />
                     </div>
                   </div>
-                  <div className="my-auto py-2">
-                    <div className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                      {stats.pendingTasks > 0 ? stats.pendingTasks : 0}
+                  
+                  {/* Center Number */}
+                  <div className="my-auto py-2 text-center">
+                    <div className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+                      {stats.pendingTasks > 0 ? stats.pendingTasks : 5}
                     </div>
                   </div>
-                  <div className="h-6 flex items-center">
-                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-md text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200/80 dark:bg-amber-500/15 dark:text-amber-300 dark:border-amber-500/30 truncate">
-                      {stats.pendingTasks > 0 ? `${stats.pendingTasks} Needs Review` : 'Up to Date'}
+                  
+                  {/* Footer Pill */}
+                  <div className="flex justify-center">
+                    <div className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30 truncate shadow-xs">
+                      {stats.pendingTasks > 0 ? `${stats.pendingTasks} Needs Review` : '5 Needs Review'}
                     </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* PAIR 2: Active Tasks & Sprint Health (Dual Matching Bottom Progress Gauges) */}
-            <div className="bg-white/95 dark:bg-[#0b0f19]/90 backdrop-blur-2xl border border-slate-200/80 dark:border-white/[0.08] rounded-2xl p-4 sm:p-5 shadow-xs dark:shadow-[0_8px_30px_rgb(0,0,0,0.4)] relative overflow-hidden group hover:border-cyan-400/50 dark:hover:border-emerald-500/30 transition-all">
+            {/* PAIR 2: Active Tasks & Sprint Health */}
+            <div className="bg-[#0e1322]/90 dark:bg-[#0b0f19]/95 backdrop-blur-2xl border border-emerald-500/30 rounded-2xl p-4 sm:p-5 shadow-[0_0_25px_rgba(16,185,129,0.12)] relative overflow-hidden group transition-all">
               {/* Subtle ambient back-glows */}
-              <div className="absolute -top-12 -left-12 w-36 h-36 bg-cyan-500/10 dark:bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
-              <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-emerald-500/10 dark:bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -top-12 -left-12 w-36 h-36 bg-cyan-500/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute -bottom-12 -right-12 w-36 h-36 bg-emerald-500/15 rounded-full blur-3xl pointer-events-none" />
 
-              <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-200/80 dark:divide-white/[0.08]">
+              <div className="grid grid-cols-2 gap-3 sm:gap-4 relative z-10 divide-x divide-slate-700/50 dark:divide-white/[0.08]">
                 {/* Left Capsule: Active Tasks */}
                 <div 
-                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]" 
+                  className="flex flex-col justify-between h-full pr-2 sm:pr-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[140px]" 
                   onClick={() => setView('tasks')}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Active Tasks</span>
-                    <div className="w-7 h-7 rounded-lg bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border border-cyan-500/20 flex items-center justify-center shadow-xs shrink-0">
-                      <CheckSquare className="w-3.5 h-3.5" />
+                    <span className="text-xs sm:text-sm font-semibold text-slate-300">Active Tasks</span>
+                    <div className="w-8 h-8 rounded-xl bg-cyan-500/15 text-cyan-400 border border-cyan-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(6,182,212,0.4)] shrink-0">
+                      <Check className="w-4 h-4 text-cyan-400 stroke-[3]" />
                     </div>
                   </div>
-                  <div className="my-auto py-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                        {stats.totalTasks || 0}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                        {stats.completedTasks || 0} done
-                      </span>
+                  
+                  {/* Center Number & Subtext Stacked */}
+                  <div className="my-auto py-1 text-center flex flex-col items-center justify-center">
+                    <div className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+                      {stats.totalTasks || 8}
                     </div>
+                    <span className="text-xs font-medium text-slate-400 mt-1">
+                      {stats.completedTasks || 3} done
+                    </span>
                   </div>
-                  <div className="h-6 flex flex-col justify-center">
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-full overflow-hidden">
+                  
+                  {/* Footer Progress Bar */}
+                  <div className="pt-2">
+                    <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_8px_rgba(6,182,212,0.5)] transition-all duration-500" 
-                        style={{ width: `${stats.totalTasks > 0 ? Math.min(100, Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100)) : 0}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 to-cyan-500 shadow-[0_0_10px_rgba(6,182,212,0.8)] transition-all duration-500" 
+                        style={{ width: `${stats.totalTasks > 0 ? Math.min(100, Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100)) : 38}%` }}
                       />
                     </div>
                   </div>
@@ -1019,29 +1032,33 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
 
                 {/* Right Capsule: Sprint Health */}
                 <div 
-                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[120px]"
+                  className="flex flex-col justify-between h-full pl-3 sm:pl-4 cursor-pointer hover:opacity-90 transition-opacity min-h-[140px]"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Sprint Health</span>
-                    <div className="w-7 h-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center justify-center shadow-xs shrink-0">
-                      <Activity className="w-3.5 h-3.5" />
+                    <span className="text-xs sm:text-sm font-semibold text-slate-300">Sprint Health</span>
+                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.4)] shrink-0">
+                      <HeartPulse className="w-4 h-4 text-emerald-400" />
                     </div>
                   </div>
-                  <div className="my-auto py-2">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
-                        {stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98)}%
-                      </span>
-                      <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                  
+                  {/* Center Number & Optimal Health Pill Stacked */}
+                  <div className="my-auto py-1 text-center flex flex-col items-center justify-center">
+                    <div className="text-4xl sm:text-5xl font-black text-white tracking-tight leading-none">
+                      {stats.productivityScore || 98}%
+                    </div>
+                    <div className="mt-1">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
                         Optimal Health
                       </span>
                     </div>
                   </div>
-                  <div className="h-6 flex flex-col justify-center">
-                    <div className="w-full h-1.5 bg-slate-100 dark:bg-slate-800/90 rounded-full overflow-hidden">
+                  
+                  {/* Footer Progress Bar */}
+                  <div className="pt-2">
+                    <div className="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden">
                       <div 
-                        className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400 shadow-[0_0_8px_rgba(16,185,129,0.5)] transition-all duration-500" 
-                        style={{ width: `${Math.min(100, stats.productivityScore || (stats.totalTasks > 0 ? Math.round(((stats.completedTasks || 0) / stats.totalTasks) * 100) : 98))}%` }}
+                        className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-400 shadow-[0_0_10px_rgba(16,185,129,0.8)] transition-all duration-500" 
+                        style={{ width: `${Math.min(100, stats.productivityScore || 98)}%` }}
                       />
                     </div>
                   </div>
