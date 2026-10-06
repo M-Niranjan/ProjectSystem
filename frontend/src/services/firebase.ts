@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
+import { getApiBaseUrl } from './api';
 import { 
   getAuth, 
   GoogleAuthProvider, 
@@ -84,8 +85,9 @@ export const uploadChatAttachment = async (
     formData.append('file', file);
     
     const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-    const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080';
-    const response = await fetch(`${apiBase}/api/attachments/upload`, {
+    const apiBase = getApiBaseUrl();
+    const uploadUrl = apiBase ? `${apiBase}/api/attachments/upload` : '/api/attachments/upload';
+    const response = await fetch(uploadUrl, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),

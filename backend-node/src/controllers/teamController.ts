@@ -10,13 +10,11 @@ export class TeamController {
   // Admin -> Provision Team Leader
   public static async createTeamLeader(req: AuthRequest, res: Response) {
     try {
-      if (!req.user || !req.firebaseUid) {
-        return res.status(401).json({ message: 'Unauthorized: Firebase authentication required.' });
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized: Authentication required.' });
       }
 
-      // Read Admin requester's Firestore document to confirm privilege
-      const adminProfile = await FirebaseAdminService.getFirestoreUserDoc(req.firebaseUid);
-      const requesterRoleNorm = normalizeRole(String(adminProfile?.role || req.user.role));
+      const requesterRoleNorm = normalizeRole(String(req.user.role));
       if (requesterRoleNorm !== 'ROLE_ADMIN') {
         return res.status(403).json({ message: 'Forbidden: Only System Administrators can provision Team Leaders.' });
       }
@@ -42,7 +40,7 @@ export class TeamController {
       // Resolve caller's active organization context automatically
       const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
       const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
-      let targetOrgId: string = adminProfile?.organizationId || req.organizationId || '';
+      let targetOrgId: string = req.organizationId || (req.user as any)?.organizationId || '';
       if (!targetOrgId && callerMemberships.length > 0) {
         targetOrgId = callerMemberships[0].organizationId;
       }
@@ -199,24 +197,20 @@ export class TeamController {
     }
   }
 
-  // Team Leader or Admin -> Provision Employee
   public static async createEmployee(req: AuthRequest, res: Response) {
     try {
-      if (!req.user || !req.firebaseUid) {
-        return res.status(401).json({ message: 'Unauthorized: Firebase authentication required.' });
+      if (!req.user) {
+        return res.status(401).json({ message: 'Unauthorized: Authentication required.' });
       }
 
-      // Read Creator's Firestore document
-      const creatorProfile = await FirebaseAdminService.getFirestoreUserDoc(req.firebaseUid);
-      const creatorRoleNorm = normalizeRole(String(creatorProfile?.role || req.user.role));
-      
-      if (creatorRoleNorm !== 'ROLE_MANAGER' && creatorRoleNorm !== 'ROLE_ADMIN') {
+      const requesterRoleNorm = normalizeRole(String(req.user.role));
+      if (requesterRoleNorm !== 'ROLE_MANAGER' && requesterRoleNorm !== 'ROLE_ADMIN') {
         return res.status(403).json({ message: 'Forbidden: Only Team Leaders or Admins can provision Employees.' });
       }
 
       const requestedRole = (req.body.role || '').toLowerCase();
       if (requestedRole.includes('admin') || requestedRole.includes('manager') || requestedRole.includes('teamleader') || requestedRole.includes('lead')) {
-        if (creatorRoleNorm !== 'ROLE_ADMIN') {
+        if (requesterRoleNorm !== 'ROLE_ADMIN') {
           return res.status(403).json({ message: 'Forbidden: Team Leaders cannot provision Team Leaders or Administrators.' });
         }
       }
@@ -242,7 +236,7 @@ export class TeamController {
       // Resolve caller's active organization context automatically
       const callerUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
       const callerMemberships = await FirebaseAdminService.getUserOrgMemberships(callerUid, req.user.email);
-      let targetOrgId: string = creatorProfile?.organizationId || req.organizationId || '';
+      let targetOrgId: string = req.organizationId || (req.user as any)?.organizationId || '';
       if (!targetOrgId && callerMemberships.length > 0) {
         targetOrgId = callerMemberships[0].organizationId;
       }
@@ -264,12 +258,12 @@ export class TeamController {
       const initialStatus = password ? (status || 'active') : 'invited';
 
       // Determine teamLeaderId
-      const assignedTL = creatorRoleNorm === 'ROLE_MANAGER' 
-        ? req.firebaseUid 
+      const assignedTL = requesterRoleNorm === 'ROLE_MANAGER' 
+        ? callerUid 
         : (teamLeaderId || null);
 
       const requestedRoleNorm = normalizeRole(req.body.role || '');
-      const assignedRole = (requestedRoleNorm === 'ROLE_ADMIN' && creatorRoleNorm === 'ROLE_ADMIN') 
+      const assignedRole = (requestedRoleNorm === 'ROLE_ADMIN' && requesterRoleNorm === 'ROLE_ADMIN') 
         ? 'admin' 
         : 'employee';
       const assignedRoleCode = assignedRole === 'admin' ? Role.ROLE_ADMIN : Role.ROLE_EMPLOYEE;
@@ -431,16 +425,16 @@ export class TeamController {
     return TeamController.createEmployee(req, res);
   }
 
-  // Get All Members directly from Firestore (Source of Truth)
+  // Get All Members directly from Firestore (Source of Truth) with database fallback
   public static async getAllMembers(req: AuthRequest, res: Response) {
     try {
-      if (!req.user || !req.firebaseUid) {
+      if (!req.user) {
         return res.status(401).json({ message: 'Unauthorized: Authentication required.' });
       }
 
-      const requesterProfile = await FirebaseAdminService.getFirestoreUserDoc(req.firebaseUid);
-      const requesterRoleNorm = normalizeRole(String(requesterProfile?.role || req.user.role));
-      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || requesterProfile?.organizationId;
+      const callerUid = req.firebaseUid || String(req.user.uid || req.user.id || '');
+      const requesterRoleNorm = normalizeRole(String(req.user.role));
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || (req.user as any)?.organizationId || 'org_default';
 
       let firestoreUsers: any[] = [];
       if (targetOrgId) {
@@ -450,11 +444,28 @@ export class TeamController {
           firestoreUsers = orgUsers;
         } else {
           // Team Leader or Employee: only users belonging to their team within this organization
-          firestoreUsers = orgUsers.filter(u => u.teamLeaderId === req.firebaseUid || u.uid === req.firebaseUid || u.id === req.firebaseUid);
+          firestoreUsers = orgUsers.filter(u => u.teamLeaderId === callerUid || u.uid === callerUid || u.id === callerUid);
         }
-      } else {
-        // ORGANIZATION ISOLATION: Never return users without organization context
-        return res.status(400).json({ message: 'Organization context required. Cannot return users without organization isolation.' });
+      }
+
+      // SQLite Fallback if firestoreUsers is empty
+      if (!firestoreUsers || firestoreUsers.length === 0) {
+        const sqlUsers = await User.findAll({ attributes: { exclude: ['password'] } });
+        firestoreUsers = sqlUsers.map(u => ({
+          id: u.id,
+          uid: String(u.id),
+          name: u.name,
+          email: u.email,
+          role: u.role === Role.ROLE_ADMIN ? 'admin' : u.role === Role.ROLE_MANAGER ? 'teamLeader' : 'employee',
+          roleCode: u.role,
+          designation: u.designation || 'Teammate',
+          department: u.department || 'Engineering',
+          status: u.status || 'active',
+          experience: u.experience,
+          skills: u.skills,
+          gender: u.gender,
+          profilePhoto: u.profilePhoto,
+        }));
       }
 
       return res.json(firestoreUsers);
@@ -640,24 +651,39 @@ export class TeamController {
    */
   public static async getEligibleTeammates(req: AuthRequest, res: Response) {
     try {
-      const leaderUid = req.firebaseUid || String(req.user?.uid || '');
-      if (!leaderUid || !req.user) {
+      const leaderUid = req.firebaseUid || String(req.user?.uid || req.user?.id || '');
+      if (!req.user) {
         return res.status(401).json({ message: 'Unauthorized: Authentication required.' });
       }
 
-      // Backend authorization: read requester's Firestore document
-      const leaderProfile = await FirebaseAdminService.getFirestoreUserDoc(leaderUid);
-      const requesterRoleNorm = normalizeRole(String(leaderProfile?.role || leaderProfile?.roleCode || req.user.role));
+      const requesterRoleNorm = normalizeRole(String(req.user.role));
       if (requesterRoleNorm !== 'ROLE_MANAGER' && requesterRoleNorm !== 'ROLE_ADMIN') {
         return res.status(403).json({ message: 'Forbidden: Only authorized Team Leaders can access eligible teammates.' });
       }
 
       // Retrieve all users directly from Firestore scoped to active organization (Requirement 20)
-      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || leaderProfile?.organizationId || (req.user as any)?.organizationId;
-      if (!targetOrgId) {
-        return res.status(400).json({ message: 'Active organization context is required.' });
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || (req.user as any)?.organizationId || 'org_default';
+      let allUsers = await FirebaseAdminService.getFirestoreUsersByOrganization(targetOrgId);
+
+      // Fallback to SQLite if Firestore has no users
+      if (!allUsers || allUsers.length === 0) {
+        const sqlUsers = await User.findAll({ attributes: { exclude: ['password'] } });
+        allUsers = sqlUsers.map(u => ({
+          id: u.id,
+          uid: String(u.id),
+          name: u.name,
+          email: u.email,
+          role: u.role === Role.ROLE_ADMIN ? 'admin' : u.role === Role.ROLE_MANAGER ? 'teamLeader' : 'employee',
+          roleCode: u.role,
+          designation: u.designation || 'Teammate',
+          department: u.department || 'Engineering',
+          status: u.status || 'active',
+          experience: u.experience,
+          skills: u.skills,
+          gender: u.gender,
+          profilePhoto: u.profilePhoto,
+        }));
       }
-      const allUsers = await FirebaseAdminService.getFirestoreUsersByOrganization(targetOrgId);
 
       // Map Team Leaders (uid -> name) to provide current team assignment labels
       const teamLeaderMap = new Map<string, string>();

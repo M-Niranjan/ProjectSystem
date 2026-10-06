@@ -576,22 +576,24 @@ export const getApiBaseUrl = (): string => {
     return customUrl.trim();
   }
 
-  const envUrl = import.meta.env.VITE_API_BASE_URL || '';
-
-  // If running in Capacitor on Android, localhost points to the phone itself.
-  // Replace localhost / 127.0.0.1 with the host computer's LAN IP.
-  if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android') {
-    if (!envUrl || envUrl.includes('localhost') || envUrl.includes('127.0.0.1')) {
-      return 'http://192.168.29.230:8080';
-    }
+  // If running in Capacitor on Android or iOS, localhost points to the device itself.
+  // Use the host computer's LAN IP or configured base URL.
+  if (Capacitor.isNativePlatform() || Capacitor.getPlatform() === 'android' || Capacitor.getPlatform() === 'ios') {
+    const envUrl = import.meta.env.VITE_API_BASE_URL || '';
+    return envUrl || 'http://192.168.29.230:8080';
   }
 
-  return envUrl;
+  // If running in browser on localhost or 127.0.0.1, use relative URL so Vite dev proxy forwards /api cleanly without CORS/network errors
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return '';
+  }
+
+  return import.meta.env.VITE_API_BASE_URL || '';
 };
 
 const api = axios.create({
   baseURL: getApiBaseUrl(),
-  timeout: 5000,
+  timeout: 15000,
 });
 
 // Interceptor to append JWT token and ensure dynamic baseURL

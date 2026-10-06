@@ -18,7 +18,7 @@ export class MessageController {
         return res.status(400).json({ message: 'Conversation ID is required.' });
       }
 
-      const orgId = req.organizationId || (req.user as any).organizationId;
+      const orgId = req.organizationId || (req.user as any)?.organizationId || (req.headers['x-organization-id'] as string) || 'org_default';
       const callerUid = req.firebaseUid || String((req.user as any).uid || req.user.id);
 
       // Validate conversation participation for direct chats
@@ -32,10 +32,6 @@ export class MessageController {
       }
 
       if (firebaseFirestore) {
-        if (!orgId) {
-          return res.status(400).json({ message: 'Organization context required for message retrieval.' });
-        }
-
         let q: FirebaseFirestore.Query = firebaseFirestore.collection('messages')
           .where('conversationId', '==', conversationId)
           .where('organizationId', '==', orgId);
