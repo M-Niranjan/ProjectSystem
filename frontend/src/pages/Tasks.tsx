@@ -22,7 +22,9 @@ import {
   Filter,
   Layers,
   MoreHorizontal,
-  FolderGit2
+  FolderGit2,
+  Trash2,
+  MessageSquare
 } from 'lucide-react';
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
@@ -93,6 +95,16 @@ export default function Tasks() {
 
   // Lock background scroll when assigning task modal is open
   useScrollLock(assigningTaskId !== null);
+
+  // Row actions menu state
+  const [activeMenuTaskId, setActiveMenuTaskId] = useState<number | null>(null);
+
+  // Close active row menu on outside click
+  useEffect(() => {
+    const handleCloseMenu = () => setActiveMenuTaskId(null);
+    window.addEventListener('click', handleCloseMenu);
+    return () => window.removeEventListener('click', handleCloseMenu);
+  }, []);
 
   const [actionModal, setActionModal] = useState<{
     isOpen: boolean;
@@ -285,8 +297,35 @@ export default function Tasks() {
     }
   };
 
-  const openTaskDetail = (task: Task) => {
+  const openTaskEdit = (task: Task, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveMenuTaskId(null);
+    setTaskModalOpen(true, task.status, true, task);
+  };
+
+  const openTaskDoubt = (task: Task, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveMenuTaskId(null);
+    window.dispatchEvent(new CustomEvent('open-task-detail', { detail: { ...task, focusComments: true } }));
+  };
+
+  const openTaskDetail = (task: Task, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveMenuTaskId(null);
     window.dispatchEvent(new CustomEvent('open-task-detail', { detail: task }));
+  };
+
+  const handleDeleteTask = async (taskId: number, taskTitle: string, e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    setActiveMenuTaskId(null);
+    if (!window.confirm(`Are you sure you want to permanently delete task "${taskTitle}"?`)) return;
+    try {
+      await api.delete(`/api/tasks/${taskId}`);
+      showToastMsg(`Task "${taskTitle}" deleted successfully.`, 'success');
+      fetchTasks();
+    } catch (err) {
+      showToastMsg('Failed to delete task.', 'error');
+    }
   };
 
   // Filter tasks based on Search Query, Status, Assignee, and Role permissions
@@ -918,21 +957,88 @@ export default function Tasks() {
                           {formatDisplayDate(task.dueDate)}
                         </td>
                         <td className="py-3.5 px-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
-                          <div className="flex items-center justify-end gap-2 text-slate-400">
+                          <div className="flex items-center justify-end gap-1.5 text-slate-400 relative">
+                            {/* 1. Direct Edit Button */}
                             <button
-                              onClick={() => openTaskDetail(task)}
-                              className="p-1 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                              title="Edit task"
+                              onClick={(e) => openTaskEdit(task, e)}
+                              className="p-1.5 hover:text-blue-500 dark:hover:text-blue-400 hover:bg-blue-500/10 rounded-lg transition-all cursor-pointer"
+                              title="Edit Task Details"
                             >
                               <Pencil className="w-3.5 h-3.5" />
                             </button>
-                            <button
-                              onClick={() => openTaskDetail(task)}
-                              className="p-1 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
-                              title="More options"
-                            >
-                              <MoreHorizontal className="w-4 h-4" />
-                            </button>
+
+                            {/* 2. Options / Doubt Dropdown Button */}
+                            <div className="relative">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setActiveMenuTaskId(activeMenuTaskId === task.id ? null : task.id);
+                                }}
+                                className={`p-1.5 rounded-lg transition-all cursor-pointer ${
+                                  activeMenuTaskId === task.id
+                                    ? 'text-blue-500 bg-blue-500/15'
+                                    : 'hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-white/10'
+                                }`}
+                                title="More options & Doubt"
+                              >
+                                <MoreHorizontal className="w-4 h-4" />
+                              </button>
+
+                              {/* Interactive Luxury Dropdown Menu */}
+                              {activeMenuTaskId === task.id && (
+                                <div
+                                  className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-[#0b0f19] backdrop-blur-2xl border border-slate-200 dark:border-blue-500/30 rounded-xl shadow-2xl z-[100] py-1.5 text-left divide-y divide-slate-100 dark:divide-slate-800/60"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <div className="py-1">
+                                    <button
+                                      onClick={(e) => openTaskEdit(task, e)}
+                                      className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-blue-600/15 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                    >
+                                      <Pencil className="w-3.5 h-3.5 text-blue-500" />
+                                      <span>Edit Task Details</span>
+                                    </button>
+                                    <button
+                                      onClick={(e) => openTaskDoubt(task, e)}
+                                      className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-amber-600/15 hover:text-amber-600 dark:hover:text-amber-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                    >
+                                      <MessageSquare className="w-3.5 h-3.5 text-amber-500" />
+                                      <span>Ask Doubt / Discuss</span>
+                                    </button>
+                                    <button
+                                      onClick={(e) => openTaskDetail(task, e)}
+                                      className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-600/15 hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-purple-500" />
+                                      <span>View Steps & Evidence</span>
+                                    </button>
+                                  </div>
+
+                                  {(isTeamLeader || user?.role === 'ROLE_ADMIN') && (
+                                    <div className="py-1">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          setActiveMenuTaskId(null);
+                                          setAssigningTaskId(task.id);
+                                        }}
+                                        className="w-full px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-white/5 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                      >
+                                        <UserCheck className="w-3.5 h-3.5 text-emerald-500" />
+                                        <span>Reassign Teammate</span>
+                                      </button>
+                                      <button
+                                        onClick={(e) => handleDeleteTask(task.id, task.title, e)}
+                                        className="w-full px-3.5 py-2 text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/15 flex items-center gap-2.5 transition-colors cursor-pointer"
+                                      >
+                                        <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                                        <span>Delete Task</span>
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </td>
                       </tr>

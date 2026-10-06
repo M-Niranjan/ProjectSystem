@@ -62,6 +62,8 @@ export default function TaskDetailModal() {
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const commentsSectionRef = useRef<HTMLDivElement>(null);
 
   // PDF Viewer Modal State
   const [viewingPdf, setViewingPdf] = useState<{
@@ -89,6 +91,13 @@ export default function TaskDetailModal() {
       setTask(taskData);
       setIsOpen(true);
       fetchDetails(taskData.id);
+
+      if (taskData.focusComments) {
+        setTimeout(() => {
+          commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          commentInputRef.current?.focus();
+        }, 300);
+      }
     };
 
     window.addEventListener('open-task-detail', handleOpenDetail);
@@ -345,10 +354,10 @@ export default function TaskDetailModal() {
                 <TaskStepPipeline taskId={task.id} taskTitle={task.title} />
               </div>
 
-              {/* Comments Stream */}
-              <div className="space-y-3.5 border-t border-slate-200/30 dark:border-white/5 pt-6">
+              {/* Comments & Doubts Stream */}
+              <div ref={commentsSectionRef} className="space-y-3.5 border-t border-slate-200/30 dark:border-white/5 pt-6">
                 <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
-                  <MessageSquare className="w-4.5 h-4.5 text-blue-500" /> Collaboration stream
+                  <MessageSquare className="w-4.5 h-4.5 text-blue-500" /> Collaboration & Doubts Stream
                 </h4>
 
                 <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
@@ -386,8 +395,9 @@ export default function TaskDetailModal() {
 
                 <form onSubmit={handlePostComment} className="flex gap-2">
                   <input
+                    ref={commentInputRef}
                     type="text"
-                    placeholder="Write a message to teammates..."
+                    placeholder="Ask a doubt or write a message to teammates..."
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     className="flex-1 px-4 py-2 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-xl text-slate-800 dark:text-white outline-none focus:border-blue-500/50 transition-all font-semibold text-xs"
