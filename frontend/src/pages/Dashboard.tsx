@@ -195,9 +195,6 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
         // 3. Organization Projects
         const projectsRes = await api.get('/api/projects');
         setProjectsList(projectsRes.data || []);
-        if (projectsRes.data.length > 0 && !newTaskProjectId) {
-          setNewTaskProjectId(projectsRes.data[0].id.toString());
-        }
 
         // 4. Organization Tasks (Dynamically scoped to active organization)
         try {
@@ -303,6 +300,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
       setFormSuccess('Task successfully assigned!');
       setNewTaskTitle('');
       setNewTaskDesc('');
+      setNewTaskProjectId('');
       setNewTaskAssigneeId('');
       loadDashboardData();
       window.dispatchEvent(new Event('task-status-updated'));
@@ -1242,7 +1240,7 @@ export default function Dashboard({ forcedRole }: DashboardProps = {}) {
                   <LuxurySelect
                     value={newTaskProjectId}
                     onChange={(val) => setNewTaskProjectId(val)}
-                    placeholder="Project"
+                    placeholder="Select Project..."
                     options={projectsList.map(p => ({
                       value: String(p.id),
                       label: p.name,
