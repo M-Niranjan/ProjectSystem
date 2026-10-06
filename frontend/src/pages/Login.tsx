@@ -179,9 +179,9 @@ export default function Login() {
     }
 
     if (success && targetUserRole) {
-      // Ensure splash is visible for at least 1500ms so the animation plays fully
+      // Ensure splash is visible for at least 2000ms (2.0s) so the animation plays fully
       const elapsed = Date.now() - startTime;
-      const minDisplayMs = 1500;
+      const minDisplayMs = 2000;
       if (elapsed < minDisplayMs) {
         await new Promise((r) => setTimeout(r, minDisplayMs - elapsed));
       }
@@ -218,7 +218,7 @@ export default function Login() {
           const currentUser = useAuthStore.getState().user;
           const role = normalizeRole(currentUser?.role);
           const elapsed = Date.now() - startTime;
-          const minDisplayMs = 1500;
+          const minDisplayMs = 2000;
           if (elapsed < minDisplayMs) {
             await new Promise((r) => setTimeout(r, minDisplayMs - elapsed));
           }
