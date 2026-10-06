@@ -21,7 +21,8 @@ import {
   AlertCircle,
   Filter,
   Layers,
-  MoreHorizontal
+  MoreHorizontal,
+  FolderGit2
 } from 'lucide-react';
 import api from '../services/api';
 import { useUIStore } from '../store/useUIStore';
