@@ -68,6 +68,7 @@ import { resolveAvatar } from '../services/avatar';
 import LuxurySelect from '../components/common/LuxurySelect';
 import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 import EmployeeSettingsView from '../components/settings/EmployeeSettingsView';
+import TeamLeaderSettingsView from '../components/settings/TeamLeaderSettingsView';
 
 // Settings Category ID Type
 type SettingsCategoryId =
@@ -270,6 +271,22 @@ export default function Settings() {
   if (isEmployee) {
     return (
       <EmployeeSettingsView
+        initialTab={(searchParams.get('tab') as any) || null}
+        onTabChange={(tab) => {
+          if (tab) {
+            setSearchParams({ tab });
+          } else {
+            setSearchParams({});
+          }
+        }}
+      />
+    );
+  }
+
+  // If user is Team Leader (Manager), render dedicated Team Leader Settings with all 12 modules
+  if (isTeamLead) {
+    return (
+      <TeamLeaderSettingsView
         initialTab={(searchParams.get('tab') as any) || null}
         onTabChange={(tab) => {
           if (tab) {
