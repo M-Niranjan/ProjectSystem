@@ -247,6 +247,8 @@ const TEAM_LEADER_MODULE_GROUPS: ModuleGroup[] = [
   },
 ];
 
+const TEAM_LEADER_ALL_MODULES = TEAM_LEADER_MODULE_GROUPS.flatMap((g) => g.modules);
+
 const TIMEZONE_OPTIONS = [
   { value: 'UTC+05:30', label: 'UTC+05:30 (India Standard Time - IST)', subLabel: 'New Delhi, Mumbai, Bengaluru' },
   { value: 'UTC+00:00', label: 'UTC+00:00 (Greenwich Mean Time - GMT)', subLabel: 'London, Dublin, Lisbon' },
@@ -296,16 +298,14 @@ export default function TeamLeaderSettingsView({
     setSignOutModalOpen,
   } = useUIStore();
 
-  const [activeTab, setActiveTab] = useState<TeamLeaderSettingsTab | null>(initialTab || 'account');
+  const [activeTab, setActiveTab] = useState<TeamLeaderSettingsTab | null>(initialTab);
   const [searchFilter, setSearchFilter] = useState('');
   const [isDirty, setIsDirty] = useState(false);
   const [saving, setSaving] = useState(false);
 
   // Sync activeTab when parent changes
   useEffect(() => {
-    if (initialTab) {
-      setActiveTab(initialTab);
-    }
+    setActiveTab(initialTab);
   }, [initialTab]);
 
   const handleSelectTab = (tab: TeamLeaderSettingsTab | null) => {
@@ -1062,21 +1062,46 @@ export default function TeamLeaderSettingsView({
 
         {/* RIGHT PANEL: Selected Module Content */}
         <div className={`lg:col-span-8 ${!activeTab ? 'hidden lg:block' : 'block'}`}>
-          <div className="space-y-6">
-            {/* Mobile Back Button Header */}
-            <div className="lg:hidden flex items-center justify-between bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/10 rounded-2xl p-3 shadow-xs">
-              <button
-                type="button"
-                onClick={() => handleSelectTab(null)}
-                className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer"
-              >
-                <ArrowLeft className="w-4 h-4" />
-                <span>Back to Modules</span>
-              </button>
-              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                {activeModule?.title}
-              </span>
+          {!activeTab ? (
+            /* Desktop Empty State placeholder when no module selected */
+            <div className="h-full min-h-[420px] flex flex-col items-center justify-center p-8 bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/10 rounded-2xl text-center shadow-xs">
+              <div className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-500/10 border border-indigo-500/20 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mb-4">
+                <Sliders className="w-7 h-7" />
+              </div>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white mb-1">
+                Select a Settings Module
+              </h2>
+              <p className="text-xs text-slate-400 max-w-sm mb-6">
+                Choose any category from the left menu to manage your team roster, workflow verification rules, notification channels, and workspace preferences.
+              </p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 w-full max-w-md">
+                {TEAM_LEADER_ALL_MODULES.slice(0, 6).map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => handleSelectTab(m.id)}
+                    className="p-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.03] hover:bg-indigo-50 dark:hover:bg-indigo-500/10 border border-slate-200/80 dark:border-white/5 text-xs font-semibold text-slate-700 dark:text-slate-300 hover:text-indigo-600 dark:hover:text-indigo-400 transition text-left cursor-pointer"
+                  >
+                    {m.title}
+                  </button>
+                ))}
+              </div>
             </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Mobile Back Button Header */}
+              <div className="lg:hidden flex items-center justify-between bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/10 rounded-2xl p-3 shadow-xs">
+                <button
+                  type="button"
+                  onClick={() => handleSelectTab(null)}
+                  className="flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 cursor-pointer"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  <span>Back to Modules</span>
+                </button>
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  {activeModule?.title}
+                </span>
+              </div>
 
             {/* Module 1: ACCOUNT & PROFILE */}
             {activeTab === 'account' && (
@@ -2677,7 +2702,8 @@ export default function TeamLeaderSettingsView({
                 </div>
               </div>
             )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
