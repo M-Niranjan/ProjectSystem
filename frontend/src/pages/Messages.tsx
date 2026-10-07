@@ -377,6 +377,9 @@ export default function Messages() {
   const [showThreadSearch, setShowThreadSearch] = useState(false);
   const [isHeaderMenuOpen, setIsHeaderMenuOpen] = useState(false);
 
+  const threadSearchContainerRef = useRef<HTMLDivElement>(null);
+  const threadSearchButtonRef = useRef<HTMLButtonElement>(null);
+
   // Close context menu & emoji tray on click outside
   useEffect(() => {
     const handleDocumentClick = () => {
@@ -386,6 +389,41 @@ export default function Messages() {
     document.addEventListener('click', handleDocumentClick);
     return () => document.removeEventListener('click', handleDocumentClick);
   }, []);
+
+  // Auto-close In-Thread Search when clicking anywhere outside the search bar
+  useEffect(() => {
+    if (!showThreadSearch) return;
+
+    const handleOutsideClick = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node;
+      if (
+        threadSearchContainerRef.current &&
+        !threadSearchContainerRef.current.contains(target) &&
+        threadSearchButtonRef.current &&
+        !threadSearchButtonRef.current.contains(target)
+      ) {
+        setShowThreadSearch(false);
+        setMessageSearchQuery('');
+      }
+    };
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowThreadSearch(false);
+        setMessageSearchQuery('');
+      }
+    };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    document.addEventListener('touchstart', handleOutsideClick);
+    document.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handleOutsideClick);
+      document.removeEventListener('touchstart', handleOutsideClick);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [showThreadSearch, setMessageSearchQuery]);
 
   // Edit Profile Form State
   const [editName, setEditName] = useState(user?.name || '');
@@ -1030,6 +1068,8 @@ export default function Messages() {
     // Step 2: Synchronously purge previous messages state so no messages bleed across users (Requirement 6)
     setMessages([]);
     setIsLoadingMessages(true);
+    setShowThreadSearch(false);
+    setMessageSearchQuery('');
 
     // Step 3: Compute deterministic 1-to-1 conversationId (Requirement 2)
     const convId = getConversationId(type, orgId, targetId, currentUid);
@@ -3025,11 +3065,16 @@ export default function Messages() {
                   <Video className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => setShowThreadSearch(!showThreadSearch)}
+                  ref={threadSearchButtonRef}
+                  onClick={() => {
+                    const next = !showThreadSearch;
+                    setShowThreadSearch(next);
+                    if (!next) setMessageSearchQuery('');
+                  }}
                   className={`p-2 rounded-full transition-colors cursor-pointer ${
-                    showThreadSearch ? 'bg-blue-600 text-white' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
+                    showThreadSearch ? 'bg-blue-600 text-white shadow-sm' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
                   }`}
-                  title="Search in conversation"
+                  title={showThreadSearch ? "Close search" : "Search in conversation"}
                 >
                   <Search className="w-5 h-5" />
                 </button>
@@ -3040,10 +3085,11 @@ export default function Messages() {
             <AnimatePresence>
               {showThreadSearch && (
                 <motion.div
+                  ref={threadSearchContainerRef}
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
                   exit={{ height: 0, opacity: 0 }}
-                  className="px-4 py-2 border-b border-[#2a3942] bg-[#202c33] flex items-center gap-2"
+                  className="px-4 py-2 border-b border-[#2a3942] bg-[#202c33] flex items-center gap-2.5 z-10 shrink-0 shadow-inner"
                 >
                   <Search className="w-4 h-4 text-[#8696a0] shrink-0" />
                   <input
@@ -3051,14 +3097,26 @@ export default function Messages() {
                     placeholder="Search in this chat..."
                     value={messageSearchQuery}
                     onChange={(e) => setMessageSearchQuery(e.target.value)}
-                    className="w-full bg-transparent text-xs font-medium outline-none text-[#d1d7db]"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        setShowThreadSearch(false);
+                        setMessageSearchQuery('');
+                      }
+                    }}
+                    className="w-full bg-transparent text-xs font-medium outline-none text-[#e9edef] placeholder:text-[#8696a0]"
                     autoFocus
                   />
-                  {messageSearchQuery && (
-                    <button onClick={() => setMessageSearchQuery('')} className="text-[#8696a0] hover:text-white">
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setShowThreadSearch(false);
+                      setMessageSearchQuery('');
+                    }} 
+                    className="p-1 rounded-full text-[#8696a0] hover:text-white hover:bg-[#2a3942] transition-colors cursor-pointer shrink-0"
+                    title="Close search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
                 </motion.div>
               )}
             </AnimatePresence>
