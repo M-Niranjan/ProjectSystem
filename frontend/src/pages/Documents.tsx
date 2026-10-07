@@ -1235,10 +1235,10 @@ export default function Documents() {
 <meta charset="utf-8">
 <title>${item.title}</title>
 <style>
-  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; max-width: 820px; margin: 40px auto; padding: 24px; line-height: 1.7; color: #1e293b; }
-  h1 { font-size: 2rem; font-weight: 800; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; }
-  h2 { font-size: 1.4rem; color: #2563eb; margin-top: 24px; font-weight: 700; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; }
-  h3 { font-size: 1.15rem; font-weight: 700; margin-top: 18px; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; letter-spacing: -0.01em; max-width: 820px; margin: 40px auto; padding: 24px; line-height: 1.65; color: #1e293b; }
+  h1 { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 2rem; font-weight: 700; letter-spacing: -0.024em; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 16px; }
+  h2 { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 1.4rem; color: #2563eb; margin-top: 24px; font-weight: 600; letter-spacing: -0.018em; border-bottom: 1px solid #f1f5f9; padding-bottom: 4px; }
+  h3 { font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Arial, sans-serif; font-size: 1.15rem; font-weight: 600; letter-spacing: -0.014em; margin-top: 18px; }
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 0.9rem; }
   th, td { border: 1px solid #cbd5e1; padding: 10px 12px; text-align: left; }
   th { background: #f8fafc; font-weight: 700; }

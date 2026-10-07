@@ -1,5 +1,22 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+@theme {
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* Apple HIG Controlled Typography Weight Hierarchy */
+  --font-weight-thin: 100;
+  --font-weight-extralight: 200;
+  --font-weight-light: 300;
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+  --font-weight-extrabold: 700;
+  --font-weight-black: 700;
+}
 
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -35,9 +52,10 @@
     --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 12px 32px -4px rgba(15, 23, 42, 0.08);
     --blur-glass: 16px;
     
-    --font-heading: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-    --font-mono: 'Geist Mono', 'JetBrains Mono', monospace;
+    /* Apple / iOS Inspired System Font Tokens */
+    --font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "SF Pro", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --font-mono: "SF Mono", ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
 
   .dark, :root.dark {
@@ -62,6 +80,7 @@
 
   /* Android & Mobile Default 100% Scale Enforcement */
   html {
+    font-family: var(--font-body);
     font-size: 16px;
     -webkit-text-size-adjust: 100%;
     -moz-text-size-adjust: 100%;
@@ -69,6 +88,10 @@
     text-size-adjust: 100%;
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     width: 100%;
     min-height: 100%;
   }
@@ -87,6 +110,9 @@
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    letter-spacing: -0.011em;
+    line-height: 1.5;
     transition: background-color 0.25s ease, color 0.25s ease;
     overflow-x: hidden;
     width: 100%;
@@ -136,10 +162,67 @@
     background-attachment: fixed;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  /* Controlled Apple / iOS Typography Hierarchy */
+  h1 {
     font-family: var(--font-heading);
-    letter-spacing: -0.025em;
     font-weight: 700;
+    letter-spacing: -0.024em;
+    line-height: 1.25;
+  }
+
+  h2 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.3;
+  }
+
+  h3 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    line-height: 1.35;
+  }
+
+  h4, h5, h6 {
+    font-family: var(--font-heading);
+    font-weight: 600;
+    letter-spacing: -0.012em;
+    line-height: 1.4;
+  }
+
+  p, span, div, li, td, th, label {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  button, .btn {
+    font-family: var(--font-body);
+    font-weight: 500;
+    letter-spacing: -0.005em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  input, textarea, select {
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  input::placeholder, textarea::placeholder {
+    letter-spacing: -0.005em;
+    opacity: 0.65;
+  }
+
+  nav, .nav-item {
+    font-family: var(--font-body);
+    letter-spacing: -0.01em;
+  }
+
+  .font-black, .font-extrabold {
+    font-weight: 700 !important;
   }
 
   .font-mono-code {
@@ -296,8 +379,8 @@ aside.glass-panel {
 .pms-brand-line1 span {
   display: inline-block;
   font-size: 1.35rem;
-  font-weight: 900;
-  letter-spacing: -0.02em;
+  font-weight: 700;
+  letter-spacing: -0.024em;
   color: #1e2d5a;
   line-height: 1.2;
 }
@@ -305,8 +388,8 @@ aside.glass-panel {
 .pms-brand-line2 span {
   display: inline-block;
   font-size: 1.35rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.018em;
   color: #2a8fa4;
   line-height: 1.2;
 }
@@ -478,12 +561,12 @@ aside.glass-panel {
   line-height: 1.2;
 }
 
-/* "Project Management" — crisp white, very bold */
+/* "Project Management" — crisp white, clean bold */
 .pms-splash-line1 span {
   display: inline-block;
   font-size: 1.75rem;
-  font-weight: 900;
-  letter-spacing: -0.03em;
+  font-weight: 700;
+  letter-spacing: -0.028em;
   color: #f0f4ff;
   white-space: nowrap;
   text-shadow: 0 2px 20px rgba(99, 179, 237, 0.3);
@@ -493,8 +576,8 @@ aside.glass-panel {
 .pms-splash-line2 span {
   display: inline-block;
   font-size: 1.75rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
+  font-weight: 700;
+  letter-spacing: -0.015em;
   color: #22d9f0;
   white-space: nowrap;
   text-shadow: 0 2px 24px rgba(34, 217, 240, 0.45);
@@ -546,9 +629,9 @@ aside.glass-panel {
   font-size: 0.65rem;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.22em;
+  letter-spacing: 0.18em;
   text-transform: uppercase;
-  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-family: var(--font-mono);
   animation: pms-caption-breathe-in 1.6s ease 1.5s both;
 }
 
@@ -1058,7 +1141,8 @@ select option {
    ============================================================ */
 .rich-editor-canvas {
   font-family: var(--font-body);
-  line-height: 1.7;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
 }
 
 .rich-editor-canvas:empty:before {
@@ -1069,16 +1153,20 @@ select option {
 }
 
 .rich-editor-canvas h1 {
+  font-family: var(--font-heading);
   font-size: 1.75rem;
-  font-weight: 800;
+  font-weight: 700;
+  letter-spacing: -0.024em;
   margin-top: 1.25rem;
   margin-bottom: 0.75rem;
   line-height: 1.3;
 }
 
 .rich-editor-canvas h2 {
+  font-family: var(--font-heading);
   font-size: 1.35rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.018em;
   margin-top: 1.1rem;
   margin-bottom: 0.5rem;
   padding-bottom: 0.35rem;
@@ -1086,8 +1174,10 @@ select option {
 }
 
 .rich-editor-canvas h3 {
+  font-family: var(--font-heading);
   font-size: 1.15rem;
-  font-weight: 700;
+  font-weight: 600;
+  letter-spacing: -0.014em;
   margin-top: 0.9rem;
   margin-bottom: 0.4rem;
 }

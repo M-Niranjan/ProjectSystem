@@ -760,8 +760,8 @@ export default function Calendar() {
         }
         .custom-calendar-container .fc-col-header-cell-cushion {
           font-size: 0.72rem !important;
-          font-weight: 800 !important;
-          letter-spacing: 0.06em !important;
+          font-weight: 600 !important;
+          letter-spacing: 0.04em !important;
           text-transform: uppercase !important;
           color: var(--text-tertiary, #94a3b8) !important;
           text-decoration: none !important;
@@ -770,7 +770,7 @@ export default function Calendar() {
         /* Day Numbers */
         .custom-calendar-container .fc-daygrid-day-number {
           font-size: 0.78rem !important;
-          font-weight: 700 !important;
+          font-weight: 600 !important;
           color: var(--text-secondary, #64748b) !important;
           padding: 6px 8px !important;
           text-decoration: none !important;
@@ -798,7 +798,7 @@ export default function Calendar() {
         }
         .custom-calendar-container .fc-day-today .fc-daygrid-day-number {
           color: #38bdf8 !important;
-          font-weight: 900 !important;
+          font-weight: 700 !important;
           display: inline-flex;
           align-items: center;
           justify-content: center;
@@ -830,7 +830,7 @@ export default function Calendar() {
         /* View more link */
         .custom-calendar-container .fc-daygrid-more-link {
           font-size: 0.7rem !important;
-          font-weight: 800 !important;
+          font-weight: 600 !important;
           color: #38bdf8 !important;
           padding: 1px 4px !important;
           border-radius: 4px !important;
