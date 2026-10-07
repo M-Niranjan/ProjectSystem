@@ -917,8 +917,8 @@ export default function Tasks() {
         )
       ) : (
         /* ================= OPTION 2 TABLE LIST VIEW ================= */
-        <div className="bg-white dark:bg-[#0e131f]/70 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl shadow-xs dark:shadow-xl overflow-hidden w-full">
-          <div className="overflow-x-auto w-full custom-scrollbar">
+        <div className="bg-white dark:bg-[#0e131f]/70 backdrop-blur-xl border border-slate-200/90 dark:border-slate-800/80 rounded-2xl shadow-xs dark:shadow-xl w-full">
+          <div className="overflow-x-auto w-full custom-scrollbar min-h-[340px] pb-16">
             <table className="w-full text-left text-xs border-collapse min-w-[850px]">
               <thead>
                 <tr className="border-b border-slate-200/90 dark:border-slate-800/80 bg-slate-50/90 dark:bg-slate-900/40 text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wider">
@@ -939,8 +939,9 @@ export default function Tasks() {
                     </td>
                   </tr>
                 ) : (
-                  filteredTasks.map(task => {
+                  filteredTasks.map((task, taskIdx) => {
                     const initial = task.assignee ? task.assignee.name.charAt(0).toUpperCase() : '?';
+                    const openUpwards = taskIdx >= Math.max(0, filteredTasks.length - 2);
                     return (
                       <tr
                         key={task.id}
@@ -1038,7 +1039,7 @@ export default function Tasks() {
                               {/* Interactive Luxury Dropdown Menu */}
                               {activeMenuTaskId === task.id && (
                                 <div
-                                  className="absolute right-0 top-full mt-1.5 w-52 bg-white dark:bg-[#0b0f19] backdrop-blur-2xl border border-slate-200 dark:border-blue-500/30 rounded-xl shadow-2xl z-[100] py-1.5 text-left divide-y divide-slate-100 dark:divide-slate-800/60"
+                                  className={`absolute right-0 ${openUpwards ? 'bottom-full mb-1.5' : 'top-full mt-1.5'} w-52 bg-white dark:bg-[#0b0f19] backdrop-blur-2xl border border-slate-200 dark:border-blue-500/30 rounded-xl shadow-2xl z-[100] py-1.5 text-left divide-y divide-slate-100 dark:divide-slate-800/60 animate-in fade-in zoom-in-95 duration-100`}
                                   onClick={(e) => e.stopPropagation()}
                                 >
                                   <div className="py-1">
