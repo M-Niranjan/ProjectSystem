@@ -903,21 +903,25 @@ export default function EmployeeSettingsView({
             })}
           </div>
 
-          {/* Quick Sign Out Card */}
-          <div className="p-4 rounded-2xl bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/10 shadow-xs flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-rose-50 dark:bg-rose-500/10 text-rose-500 border border-rose-200 dark:border-rose-500/20 flex items-center justify-center">
-                <LogOut className="w-4 h-4" />
+          {/* Quick Sign Out Card (Concept A: Apple Crimson Pill) */}
+          <div className="p-3.5 sm:p-4 rounded-2xl bg-white dark:bg-[#0e1322] border border-slate-200/80 dark:border-white/10 shadow-xs hover:border-rose-500/30 dark:hover:border-rose-500/30 transition-all flex items-center justify-between gap-3 group">
+            <div className="flex items-center gap-3 min-w-0">
+              <div className="w-9.5 h-9.5 rounded-xl bg-gradient-to-tr from-rose-500/15 to-red-500/20 text-rose-500 dark:text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0 shadow-xs group-hover:scale-105 transition-transform">
+                <LogOut className="w-4.5 h-4.5 stroke-[2.2]" />
               </div>
-              <div>
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Sign Out</span>
-                <span className="text-[11px] text-slate-400 block">End current session</span>
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
+                  Sign Out
+                </span>
+                <span className="text-[11px] text-slate-400 dark:text-slate-500 block">
+                  End current session
+                </span>
               </div>
             </div>
             <button
               type="button"
               onClick={() => setSignOutModalOpen(true)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition cursor-pointer"
+              className="px-4 py-2 rounded-xl text-xs font-bold text-white bg-gradient-to-r from-rose-600 via-rose-500 to-red-600 hover:from-rose-500 hover:to-red-500 shadow-[0_4px_14px_rgba(244,63,94,0.35)] dark:shadow-[0_4px_16px_rgba(244,63,94,0.45)] hover:shadow-[0_6px_20px_rgba(244,63,94,0.55)] transition-all duration-200 active:scale-95 cursor-pointer shrink-0"
             >
               Sign Out
             </button>
