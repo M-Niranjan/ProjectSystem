@@ -2926,103 +2926,109 @@ export default function Messages() {
                   <ChevronLeft className="w-6 h-6 stroke-[2.5]" />
                 </button>
 
-                {/* Avatar and Channel/Team/Contact Details */}
-                {selectedConversationType === 'channel' ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0">
-                      {activeChannelObj?.isPrivate ? <Lock className="w-5 h-5 text-amber-400" /> : <Hash className="w-5 h-5" />}
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-[#e9edef] truncate">
-                        #{activeChannelObj?.name || 'channel'}
-                      </h3>
-                      <p className="text-[11px] text-[#8696a0] truncate">
-                        {activeChannelObj?.description || `${activeChannelObj?.membersCount || 6} members`}
-                      </p>
-                    </div>
-                  </div>
-                ) : selectedConversationType === 'team' ? (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 shadow-sm">
-                      <Users className="w-5 h-5" />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-[#e9edef] truncate flex items-center gap-2">
-                        <span>{activeTeamObj?.name || 'Team Workspace'}</span>
-                        <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">
-                          {activeTeamObj?.department || 'Team'}
-                        </span>
-                      </h3>
-                      <p className="text-[11px] text-[#8696a0] truncate">
-                        {activeTeamObj?.description || `${activeTeamObj?.membersCount || 4} team members`}
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="relative shrink-0">
-                      <img
-                        src={resolveAvatar(activeContactObj?.profilePhoto, activeContactObj?.name || 'Contact', (activeContactObj as any)?.gender)}
-                        alt="avatar"
-                        className="w-10 h-10 rounded-full object-cover ring-1 ring-[#2a3942]"
-                      />
-                      <span
-                        className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#202c33] ${
-                          activeContactObj?.id === AI_ASSISTANT_ID
-                            ? 'bg-purple-500'
-                            : (activeContactObj as any)?.status === 'busy'
-                            ? 'bg-rose-500'
-                            : (activeContactObj as any)?.status === 'away'
-                            ? 'bg-amber-400'
-                            : activeContactObj?.isOnline
-                            ? 'bg-emerald-500'
-                            : 'bg-[#8696a0]'
-                        }`}
-                      />
-                    </div>
-                    <div className="min-w-0">
-                      <h3 className="text-sm font-bold text-[#e9edef] truncate">
-                        {activeContactObj?.name || 'Teammate'}
-                      </h3>
-                      <div className="text-[11px] truncate flex items-center gap-1.5">
-                        {activeContactObj?.id === AI_ASSISTANT_ID ? (
-                          <span className="text-purple-400 font-medium">AI Copilot Active</span>
-                        ) : typingUserInActiveConv ? (
-                          <span className="text-blue-400 font-medium flex items-center gap-1">
-                            <span>typing</span>
-                            <span className="flex items-center gap-0.5 ml-0.5">
-                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                              <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" />
-                            </span>
-                          </span>
-                        ) : (activeContactObj as any)?.status === 'busy' ? (
-                          <span className="text-rose-400 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                            Busy • Do Not Disturb
-                          </span>
-                        ) : (activeContactObj as any)?.status === 'away' ? (
-                          <span className="text-amber-400 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                            Away
-                          </span>
-                        ) : activeContactObj?.isOnline ? (
-                          <span className="text-emerald-400 font-medium flex items-center gap-1">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            Online
-                          </span>
-                        ) : (
-                          <span className="text-[#8696a0]">
-                            {formatLastSeen((activeContactObj as any)?.lastSeen)}
-                          </span>
-                        )}
+                {/* Avatar and Channel/Team/Contact Details (Click to open conversation details) */}
+                <div 
+                  onClick={toggleDetailsPanel}
+                  className="cursor-pointer group flex items-center gap-3 min-w-0 select-none"
+                  title="View conversation info"
+                >
+                  {selectedConversationType === 'channel' ? (
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        {activeChannelObj?.isPrivate ? <Lock className="w-5 h-5 text-amber-400" /> : <Hash className="w-5 h-5" />}
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-[#e9edef] group-hover:text-blue-400 transition-colors truncate">
+                          #{activeChannelObj?.name || 'channel'}
+                        </h3>
+                        <p className="text-[11px] text-[#8696a0] truncate">
+                          {activeChannelObj?.description || `${activeChannelObj?.membersCount || 6} members`}
+                        </p>
                       </div>
                     </div>
-                  </div>
-                )}
+                  ) : selectedConversationType === 'team' ? (
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-full bg-[#1e293b] border border-blue-500/30 text-blue-400 flex items-center justify-center shrink-0 shadow-sm group-hover:scale-105 transition-transform">
+                        <Users className="w-5 h-5" />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-[#e9edef] group-hover:text-blue-400 transition-colors truncate flex items-center gap-2">
+                          <span>{activeTeamObj?.name || 'Team Workspace'}</span>
+                          <span className="px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 text-[10px] font-bold">
+                            {activeTeamObj?.department || 'Team'}
+                          </span>
+                        </h3>
+                        <p className="text-[11px] text-[#8696a0] truncate">
+                          {activeTeamObj?.description || `${activeTeamObj?.membersCount || 4} team members`}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="relative shrink-0 group-hover:scale-105 transition-transform">
+                        <img
+                          src={resolveAvatar(activeContactObj?.profilePhoto, activeContactObj?.name || 'Contact', (activeContactObj as any)?.gender)}
+                          alt="avatar"
+                          className="w-10 h-10 rounded-full object-cover ring-1 ring-[#2a3942]"
+                        />
+                        <span
+                          className={`absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2 border-[#202c33] ${
+                            activeContactObj?.id === AI_ASSISTANT_ID
+                              ? 'bg-purple-500'
+                              : (activeContactObj as any)?.status === 'busy'
+                              ? 'bg-rose-500'
+                              : (activeContactObj as any)?.status === 'away'
+                              ? 'bg-amber-400'
+                              : activeContactObj?.isOnline
+                              ? 'bg-emerald-500'
+                              : 'bg-[#8696a0]'
+                          }`}
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-[#e9edef] group-hover:text-blue-400 transition-colors truncate">
+                          {activeContactObj?.name || 'Teammate'}
+                        </h3>
+                        <div className="text-[11px] truncate flex items-center gap-1.5">
+                          {activeContactObj?.id === AI_ASSISTANT_ID ? (
+                            <span className="text-purple-400 font-medium">AI Copilot Active</span>
+                          ) : typingUserInActiveConv ? (
+                            <span className="text-blue-400 font-medium flex items-center gap-1">
+                              <span>typing</span>
+                              <span className="flex items-center gap-0.5 ml-0.5">
+                                <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.3s]" />
+                                <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce [animation-delay:-0.15s]" />
+                                <span className="w-1 h-1 bg-blue-400 rounded-full animate-bounce" />
+                              </span>
+                            </span>
+                          ) : (activeContactObj as any)?.status === 'busy' ? (
+                            <span className="text-rose-400 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                              Busy • Do Not Disturb
+                            </span>
+                          ) : (activeContactObj as any)?.status === 'away' ? (
+                            <span className="text-amber-400 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+                              Away
+                            </span>
+                          ) : activeContactObj?.isOnline ? (
+                            <span className="text-emerald-400 font-medium flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Online
+                            </span>
+                          ) : (
+                            <span className="text-[#8696a0]">
+                              {formatLastSeen((activeContactObj as any)?.lastSeen)}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
 
-              {/* Header Action Icons */}
+              {/* Header Action Icons — Clean & Essential Only */}
               <div className="flex items-center gap-1 sm:gap-2 shrink-0">
                 <button
                   onClick={() => startCall('video', activeContactObj?.name || activeChannelObj?.name || 'Workspace', activeContactObj?.profilePhoto)}
@@ -3032,14 +3038,6 @@ export default function Messages() {
                   <Video className="w-5 h-5" />
                 </button>
                 <button
-                  onClick={() => startCall('audio', activeContactObj?.name || activeChannelObj?.name || 'Workspace', activeContactObj?.profilePhoto)}
-                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#aebac1] hover:text-blue-400 transition-colors cursor-pointer"
-                  title="Voice Call"
-                >
-                  <Phone className="w-5 h-5" />
-                </button>
-                <div className="w-px h-5 bg-[#2a3942] mx-1" />
-                <button
                   onClick={() => setShowThreadSearch(!showThreadSearch)}
                   className={`p-2 rounded-full transition-colors cursor-pointer ${
                     showThreadSearch ? 'bg-blue-600 text-white' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
@@ -3047,28 +3045,6 @@ export default function Messages() {
                   title="Search in conversation"
                 >
                   <Search className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={toggleDetailsPanel}
-                  className={`p-2 rounded-full transition-colors cursor-pointer ${
-                    detailsPanelOpen ? 'bg-blue-600 text-white' : 'hover:bg-[#2a3942] text-[#aebac1] hover:text-white'
-                  }`}
-                  title="Conversation Details"
-                >
-                  <Info className="w-5 h-5" />
-                </button>
-                
-                <button
-                  onClick={() => {
-                    setSelectedConversationId(null);
-                    setSelectedConversationType(null);
-                    setSelectedChannelId(null);
-                    setSelectedUserId(null);
-                  }}
-                  className="p-2 rounded-full hover:bg-[#2a3942] text-[#8696a0] hover:text-rose-400 transition-colors cursor-pointer"
-                  title="Close chat"
-                >
-                  <X className="w-5 h-5" />
                 </button>
               </div>
             </div>
