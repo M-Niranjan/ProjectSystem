@@ -27,6 +27,7 @@ export interface UserAttributes {
   education?: string;
   resumeBase64?: string;
   resumeFileName?: string;
+  preferences?: string | null;
   otp?: string | null;
   otpExpiresAt?: Date | null;
   createdAt?: Date;
@@ -55,6 +56,7 @@ export class User extends Model<UserAttributes, UserCreationAttributes> implemen
   declare education: string;
   declare resumeBase64: string;
   declare resumeFileName: string;
+  declare preferences: string | null;
   declare otp: string | null;
   declare otpExpiresAt: Date | null;
 
@@ -105,6 +107,7 @@ User.init(
     education: DataTypes.TEXT,
     resumeBase64: DataTypes.TEXT,
     resumeFileName: DataTypes.STRING,
+    preferences: DataTypes.TEXT,
     otp: DataTypes.STRING,
     otpExpiresAt: DataTypes.DATE,
   },

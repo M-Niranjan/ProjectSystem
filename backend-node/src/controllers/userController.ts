@@ -2,6 +2,7 @@ import { Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { User } from '../models/User';
 import { AuthRequest } from '../middleware/auth';
+import { FirebaseAdminService, firebaseFirestore, FieldValue } from '../config/firebaseAdmin';
 
 export class UserController {
   public static async getUserProfile(req: AuthRequest, res: Response) {
@@ -61,18 +62,97 @@ export class UserController {
       if (profileDetails.resumeBase64 !== undefined) user.resumeBase64 = profileDetails.resumeBase64;
       if (profileDetails.resumeFileName !== undefined) user.resumeFileName = profileDetails.resumeFileName;
 
+      if (profileDetails.preferences !== undefined) {
+        user.preferences = typeof profileDetails.preferences === 'object'
+          ? JSON.stringify(profileDetails.preferences)
+          : String(profileDetails.preferences);
+      }
+
       if (profileDetails.password && profileDetails.password.trim()) {
         user.password = await bcrypt.hash(profileDetails.password.trim(), 10);
       }
 
       await user.save();
 
-      const userObj = user.toJSON();
+      // Sync to Firestore user document if available
+      const resolvedUid = req.user.uid || String(user.id);
+      try {
+        await FirebaseAdminService.setFirestoreUserDoc(resolvedUid, {
+          name: user.name,
+          designation: user.designation,
+          department: user.department,
+          phone: user.phone,
+          bio: user.bio,
+          skills: user.skills,
+          profilePhoto: user.profilePhoto,
+          preferences: profileDetails.preferences !== undefined ? profileDetails.preferences : undefined,
+        });
+      } catch (fe) {
+        // Firestore sync is non-blocking
+      }
+
+      const userObj: any = user.toJSON();
       delete userObj.password;
+
+      // Parse JSON preferences if available
+      if (userObj.preferences) {
+        try {
+          userObj.preferences = JSON.parse(userObj.preferences);
+        } catch {}
+      }
 
       return res.json(userObj);
     } catch (err: any) {
       console.error('Error in updateProfile:', err);
+      return res.status(500).json({ error: err.message });
+    }
+  }
+
+  public static async submitSupportTicket(req: AuthRequest, res: Response) {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: 'Authentication required.' });
+      }
+
+      const { title, category, severity, description, attachmentName, attachmentBase64 } = req.body;
+      if (!title || !description) {
+        return res.status(400).json({ message: 'Title and description are required for support tickets.' });
+      }
+
+      const ticketId = `TKT-${Math.floor(1000 + Math.random() * 9000)}-${Date.now().toString().slice(-4)}`;
+      const newTicket = {
+        id: ticketId,
+        ticketId,
+        title: title.trim(),
+        category: category || 'General',
+        severity: severity || 'Medium',
+        description: description.trim(),
+        attachmentName: attachmentName || null,
+        status: 'open',
+        userId: req.user.id,
+        userUid: req.user.uid || String(req.user.id),
+        userEmail: req.user.email,
+        userName: req.user.name,
+        organizationId: req.organizationId || 'default',
+        createdAt: new Date().toISOString(),
+      };
+
+      // Persist to Firestore if available
+      if (firebaseFirestore) {
+        try {
+          await firebaseFirestore.collection('support_tickets').doc(ticketId).set(newTicket);
+        } catch (fe) {
+          console.warn('Could not write ticket to Firestore:', fe);
+        }
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Support ticket submitted successfully.',
+        ticket: newTicket,
+      });
+    } catch (err: any) {
+      console.error('Error submitting support ticket:', err);
       return res.status(500).json({ error: err.message });
     }
   }

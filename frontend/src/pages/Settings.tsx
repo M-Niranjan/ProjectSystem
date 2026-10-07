@@ -67,6 +67,7 @@ import { formatRoleName, normalizeRole } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
 import LuxurySelect from '../components/common/LuxurySelect';
 import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
+import EmployeeSettingsView from '../components/settings/EmployeeSettingsView';
 
 // Settings Category ID Type
 type SettingsCategoryId =
@@ -264,6 +265,22 @@ export default function Settings() {
   const isAdmin = role === 'ROLE_ADMIN';
   const isTeamLead = role === 'ROLE_MANAGER';
   const isEmployee = role === 'ROLE_EMPLOYEE';
+
+  // If user is Employee, render dedicated Employee Settings with all 11 modules
+  if (isEmployee) {
+    return (
+      <EmployeeSettingsView
+        initialTab={(searchParams.get('tab') as any) || null}
+        onTabChange={(tab) => {
+          if (tab) {
+            setSearchParams({ tab });
+          } else {
+            setSearchParams({});
+          }
+        }}
+      />
+    );
+  }
 
   // Read initial category from query param if provided (e.g. /settings?tab=workflow)
   const initialCategory = (searchParams.get('tab') as SettingsCategoryId) || null;

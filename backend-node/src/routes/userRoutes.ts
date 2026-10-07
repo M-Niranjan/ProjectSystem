@@ -12,5 +12,6 @@ router.post('/employees', authenticateToken, requireRole(Role.ROLE_ADMIN, Role.R
 
 router.get('/:id', authenticateToken, UserController.getUserProfile);
 router.put('/profile', authenticateToken, UserController.updateProfile);
+router.post('/support-ticket', authenticateToken, UserController.submitSupportTicket);
 
 export default router;
