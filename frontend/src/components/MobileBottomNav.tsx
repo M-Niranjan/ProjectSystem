@@ -42,11 +42,12 @@ export default function MobileBottomNav() {
 
   // Active tab detection
   const isDashboardActive = location.pathname === '/' || location.pathname.includes('/dashboard');
+  const isProjectsActive = location.pathname.startsWith('/projects');
+  const isBoardsActive = location.pathname.startsWith('/boards');
   const isTasksActive =
     location.pathname.startsWith('/tasks') ||
-    location.pathname.startsWith('/my-tasks') ||
-    location.pathname.startsWith('/projects') ||
-    location.pathname.startsWith('/boards');
+    location.pathname.startsWith('/my-tasks');
+  const isWorkActive = isTasksActive || isProjectsActive || isBoardsActive;
   const isChatActive = location.pathname === '/messages';
   const isSettingsActive =
     location.pathname.startsWith('/settings') ||
@@ -54,13 +55,17 @@ export default function MobileBottomNav() {
 
   const activeTabIndex = isDashboardActive
     ? 0
-    : isTasksActive
+    : isWorkActive
     ? 1
     : isChatActive
     ? 2
     : isSettingsActive
     ? 3
     : -1;
+
+  // Dynamic context for Tab 2
+  const workTabLabel = isProjectsActive ? 'Projects' : isBoardsActive ? 'Boards' : 'Tasks';
+  const WorkTabIcon = isProjectsActive ? FolderGit2 : isBoardsActive ? CheckSquare : List;
 
   const [isInMobileChat, setIsInMobileChat] = useState(() =>
     typeof document !== 'undefined' && document.body.classList.contains('mobile-chat-open')
@@ -87,7 +92,13 @@ export default function MobileBottomNav() {
 
   const handleTasksClick = () => {
     setShowCreateSheet(false);
-    navigate('/tasks');
+    if (isProjectsActive) {
+      navigate('/projects');
+    } else if (isBoardsActive) {
+      navigate('/boards');
+    } else {
+      navigate('/tasks');
+    }
   };
 
   const handleChatClick = () => {
@@ -230,26 +241,26 @@ export default function MobileBottomNav() {
               </span>
             </button>
 
-            {/* Tab 2: Tasks */}
+            {/* Tab 2: Work (Tasks / Projects / Boards) */}
             <button
               onClick={handleTasksClick}
               className="relative z-10 w-1/4 h-full flex flex-col items-center justify-center cursor-pointer outline-none focus:outline-none select-none active:scale-95 transition-transform"
             >
-              <List
+              <WorkTabIcon
                 className={`w-[22px] h-[22px] transition-colors ${
-                  isTasksActive
+                  isWorkActive
                     ? 'text-white stroke-[2.2]'
                     : 'text-slate-400 dark:text-slate-400 group-hover:text-white stroke-[1.8]'
                 }`}
               />
               <span
                 className={`text-[11px] mt-1 tracking-tight transition-colors ${
-                  isTasksActive
+                  isWorkActive
                     ? 'text-white font-medium'
                     : 'text-slate-400 dark:text-slate-400 font-normal'
                 }`}
               >
-                Tasks
+                {workTabLabel}
               </span>
             </button>
 
