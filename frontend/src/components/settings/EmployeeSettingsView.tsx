@@ -265,7 +265,16 @@ export default function EmployeeSettingsView({
   const handleSelectTab = (tab: EmployeeSettingsTab | null) => {
     setActiveTab(tab);
     if (onTabChange) onTabChange(tab);
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
+
+  useEffect(() => {
+    if (activeTab && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeTab]);
 
   // Safe parse preferences from user object or fallback
   const userPreferences = useMemo(() => {
@@ -834,9 +843,9 @@ export default function EmployeeSettingsView({
 
       {/* Main Grid: Master / Detail on Desktop, Dynamic on Mobile */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* LEFT PANEL: Module Navigation List (Hidden on mobile if a tab is open) */}
+        {/* LEFT PANEL: Module Navigation List (Sticky on desktop, hidden on mobile if a tab is open) */}
         <div
-          className={`lg:col-span-4 space-y-2 ${
+          className={`lg:col-span-4 space-y-2 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] lg:overflow-y-auto custom-scroll-area pr-1 ${
             activeTab ? 'hidden lg:block' : 'block'
           }`}
         >

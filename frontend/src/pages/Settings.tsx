@@ -809,7 +809,16 @@ export default function Settings() {
   const handleSelectCategory = (categoryId: SettingsCategoryId) => {
     setActiveCategory(categoryId);
     setSearchParams({ tab: categoryId });
+    if (typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
+
+  useEffect(() => {
+    if (activeCategory && typeof window !== 'undefined') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeCategory]);
 
   // Back to Main Settings Menu
   const handleBackToMenu = () => {
