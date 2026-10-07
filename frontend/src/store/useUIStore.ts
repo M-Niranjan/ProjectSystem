@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 
 export type AccentColor = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'teal';
-export type ThemeMode = 'light' | 'dark' | 'system';
+export type ThemeMode = 'light' | 'dark';
 
 export const ACCENT_PRESETS: Record<AccentColor, { color: string; hover: string; light: string; gradient: string; glow: string }> = {
   blue: {
@@ -207,15 +207,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
 
   setThemeMode: (mode: ThemeMode) => {
-    let isDark = false;
-    if (mode === 'dark') {
-      isDark = true;
-    } else if (mode === 'light') {
-      isDark = false;
-    } else {
-      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
-
+    const isDark = mode === 'dark';
     set({ themeMode: mode, darkMode: isDark });
     localStorage.setItem('themeMode', mode);
     localStorage.setItem('theme', isDark ? 'dark' : 'light');
@@ -240,14 +232,12 @@ export const useUIStore = create<UIState>((set, get) => ({
   },
 
   initTheme: () => {
-    const savedMode = (localStorage.getItem('themeMode') || 'light') as ThemeMode;
+    const rawMode = localStorage.getItem('themeMode');
+    const savedMode: ThemeMode = rawMode === 'dark' ? 'dark' : 'light';
     const savedAccent = (localStorage.getItem('accentColor') || 'blue') as AccentColor;
     const savedPrefs = localStorage.getItem('dashboardPrefs');
 
-    let isDark = savedMode === 'dark';
-    if (savedMode === 'system') {
-      isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    }
+    const isDark = savedMode === 'dark';
 
     set({
       themeMode: savedMode,

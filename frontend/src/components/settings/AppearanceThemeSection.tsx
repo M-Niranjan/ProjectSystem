@@ -3,7 +3,6 @@ import {
   Palette, 
   Sun, 
   Moon, 
-  Monitor, 
   Check, 
   Sparkles, 
   Layers, 
@@ -83,7 +82,7 @@ export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThem
             </span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             
             {/* 1.1 LIGHT MODE CARD */}
             <div
@@ -237,66 +236,6 @@ export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThem
                     : 'border border-slate-300 dark:border-white/20'
                 }`}>
                   {themeMode === 'dark' && <Check className="w-3 h-3 stroke-[3]" />}
-                </div>
-              </div>
-            </div>
-
-            {/* 1.3 AUTO SYSTEM CARD */}
-            <div
-              onClick={() => handleThemeSelect('system')}
-              className={`group relative rounded-2xl border p-3.5 flex flex-col justify-between transition-all duration-200 cursor-pointer overflow-hidden ${
-                themeMode === 'system'
-                  ? 'border-indigo-500 dark:border-indigo-400 bg-indigo-50/40 dark:bg-indigo-950/20 shadow-md ring-2 ring-indigo-500/20'
-                  : 'border-slate-200/80 dark:border-white/10 bg-slate-50/60 dark:bg-white/[0.02] hover:border-slate-300 dark:hover:border-white/20'
-              }`}
-            >
-              {/* Miniature Split Window Preview */}
-              <div className="w-full h-28 rounded-xl border border-slate-300 dark:border-slate-700 shadow-inner overflow-hidden flex flex-col select-none mb-3 pointer-events-none transition-transform group-hover:scale-[1.02]">
-                {/* Titlebar */}
-                <div className="h-4.5 bg-gradient-to-r from-white via-slate-200 to-[#0e1019] border-b border-slate-200 dark:border-white/10 px-2 flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-red-400" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                  </div>
-                  <div className="w-12 h-1.5 rounded-full bg-slate-400/40" />
-                </div>
-                {/* Split Canvas Body */}
-                <div className="flex-1 grid grid-cols-2">
-                  {/* Left Side: Light Preview */}
-                  <div className="bg-[#f8fafc] p-1.5 border-r border-slate-300 space-y-1">
-                    <div className="w-8 h-1.5 rounded bg-slate-800" />
-                    <div className="p-1 rounded bg-white border border-slate-200/80 shadow-2xs">
-                      <div className="w-4 h-1 rounded bg-indigo-500" />
-                      <div className="w-6 h-1 rounded bg-slate-200 mt-1" />
-                    </div>
-                  </div>
-                  {/* Right Side: Dark Preview */}
-                  <div className="bg-[#07080c] p-1.5 space-y-1">
-                    <div className="w-8 h-1.5 rounded bg-white/90" />
-                    <div className="p-1 rounded bg-white/[0.04] border border-white/[0.06] shadow-2xs">
-                      <div className="w-4 h-1 rounded bg-indigo-400" />
-                      <div className="w-6 h-1 rounded bg-white/20 mt-1" />
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Label & Radio Indicator */}
-              <div className="flex items-center justify-between pt-1">
-                <div className="flex items-center gap-2">
-                  <Monitor className={`w-4 h-4 ${themeMode === 'system' ? 'text-indigo-500' : 'text-slate-400'}`} />
-                  <div>
-                    <span className="text-xs font-bold text-slate-900 dark:text-white block">Auto System</span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 block">Synchronizes with OS schedule</span>
-                  </div>
-                </div>
-                <div className={`w-5 h-5 rounded-full flex items-center justify-center transition-all ${
-                  themeMode === 'system'
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'border border-slate-300 dark:border-white/20'
-                }`}>
-                  {themeMode === 'system' && <Check className="w-3 h-3 stroke-[3]" />}
                 </div>
               </div>
             </div>
