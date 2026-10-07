@@ -25,7 +25,6 @@ import {
   Building2,
   Network,
   ScrollText,
-  UserPlus,
   Settings as SettingsIcon,
   X
 } from 'lucide-react';
@@ -108,7 +107,6 @@ export default function Sidebar() {
     { name: 'Team Leaders', view: 'teams', icon: Users, section: 'Team' },
     { name: 'Employees', view: 'users', icon: Network },
     { name: 'Chat', view: 'messages', icon: MessageSquare },
-    { name: 'Invitations', view: 'teams', icon: UserPlus },
 
     // Organization section
     { name: 'Organization', view: 'organization', icon: Building2, section: 'Organization' },
@@ -116,9 +114,8 @@ export default function Sidebar() {
     { name: 'Activity', view: 'workspace-activity', icon: Clock },
 
     // Settings section
-    { name: 'Organization Settings', view: 'organization', icon: Building2, section: 'Settings' },
-    { name: 'Roles & Permissions', view: 'roles', icon: KeyRound },
-    { name: 'Security', view: 'settings', icon: Shield },
+    { name: 'Roles & Permissions', view: 'roles', icon: KeyRound, section: 'Settings' },
+    { name: 'Security & Settings', view: 'settings', icon: Shield },
   ];
 
   const teamLeadMenuItems: SidebarItem[] = [
