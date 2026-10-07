@@ -66,6 +66,7 @@ import api from '../../services/api';
 import { formatDisplayId } from '../../services/authRoles';
 import PasswordStrengthMeter from '../common/PasswordStrengthMeter';
 import LuxurySelect from '../common/LuxurySelect';
+import AppearanceThemeSection from './AppearanceThemeSection';
 
 export type TeamLeaderSettingsTab =
   | 'account'
@@ -2252,129 +2253,7 @@ export default function TeamLeaderSettingsView({
 
             {/* Module 9: APPEARANCE & THEME */}
             {activeTab === 'appearance' && (
-              <div className="bg-white dark:bg-[#0e1322] border border-slate-200 dark:border-white/10 rounded-2xl p-5 sm:p-6 shadow-xs space-y-6">
-                <div className="border-b border-slate-100 dark:border-white/10 pb-4">
-                  <h2 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-pink-500" />
-                    Appearance &amp; Theme
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-0.5">
-                    Customize your visual environment, light / dark mode and accent colors.
-                  </p>
-                </div>
-
-                {/* Theme Selector */}
-                <div className="space-y-3">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Color Theme Mode
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {[
-                      { id: 'light', label: 'Light Mode', desc: 'Crisp daylight background', icon: Sun },
-                      { id: 'dark', label: 'Dark Mode', desc: 'Obsidian dark palette', icon: Moon },
-                      { id: 'system', label: 'System Default', desc: 'Syncs with OS settings', icon: Monitor },
-                    ].map((t) => {
-                      const IconComponent = t.icon;
-                      const isSelected = themeMode === t.id;
-                      return (
-                        <button
-                          key={t.id}
-                          type="button"
-                          onClick={() => {
-                            setThemeMode(t.id as ThemeMode);
-                            setIsDirty(true);
-                          }}
-                          className={`p-4 rounded-2xl border text-left transition cursor-pointer ${
-                            isSelected
-                              ? 'bg-indigo-500/10 border-indigo-500 shadow-xs'
-                              : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200/80 dark:border-white/10'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${
-                              isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-200 dark:bg-white/10 text-slate-600 dark:text-slate-300'
-                            }`}>
-                              <IconComponent className="w-4 h-4" />
-                            </div>
-                            {isSelected && <Check className="w-4 h-4 text-indigo-500" />}
-                          </div>
-                          <span className="text-xs font-bold text-slate-900 dark:text-white block">{t.label}</span>
-                          <span className="text-[10px] text-slate-400 block mt-0.5">{t.desc}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Accent Colors */}
-                <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-white/10">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Primary Accent Color
-                  </label>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {ACCENT_PRESETS.map((preset) => {
-                      const isSelected = accentColor === preset.id;
-                      return (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => {
-                            setAccentColor(preset.id);
-                            setIsDirty(true);
-                          }}
-                          className={`p-2.5 rounded-xl border flex items-center gap-2.5 transition cursor-pointer text-xs font-bold ${
-                            isSelected
-                              ? 'bg-slate-100 dark:bg-white/10 border-slate-400 dark:border-white/30'
-                              : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5'
-                          }`}
-                        >
-                          <span className={`w-4 h-4 rounded-full ${preset.bg}`} />
-                          <span className="text-slate-800 dark:text-slate-200">{preset.name}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-
-                {/* Density */}
-                <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-white/10">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                    Interface Density
-                  </label>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDensity('comfortable');
-                        setIsDirty(true);
-                      }}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition ${
-                        density === 'comfortable'
-                          ? 'bg-indigo-500/10 border-indigo-500'
-                          : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5'
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Comfortable View</span>
-                      <span className="text-[11px] text-slate-400 block mt-0.5">Spacious touch targets for mobile and tablets.</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDensity('compact');
-                        setIsDirty(true);
-                      }}
-                      className={`p-3 rounded-xl border text-left cursor-pointer transition ${
-                        density === 'compact'
-                          ? 'bg-indigo-500/10 border-indigo-500'
-                          : 'bg-slate-50 dark:bg-white/[0.02] border-slate-200 dark:border-white/5'
-                      }`}
-                    >
-                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">Compact View</span>
-                      <span className="text-[11px] text-slate-400 block mt-0.5">Dense layout to view more sprint items simultaneously.</span>
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <AppearanceThemeSection onDirtyChange={setIsDirty} />
             )}
 
             {/* Module 10: LANGUAGE & REGION */}

@@ -69,6 +69,7 @@ import LuxurySelect from '../components/common/LuxurySelect';
 import PasswordStrengthMeter from '../components/common/PasswordStrengthMeter';
 import EmployeeSettingsView from '../components/settings/EmployeeSettingsView';
 import TeamLeaderSettingsView from '../components/settings/TeamLeaderSettingsView';
+import AppearanceThemeSection from '../components/settings/AppearanceThemeSection';
 
 // Settings Category ID Type
 type SettingsCategoryId =
@@ -2205,80 +2206,7 @@ export default function Settings() {
           {/* 9. APPEARANCE & THEME SUB-PAGE                               */}
           {/* ------------------------------------------------------------- */}
           {activeCategory === 'appearance' && (
-            <div className="space-y-4">
-              <div className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-[#0e1322]/90 border border-slate-200/80 dark:border-white/10 shadow-xs space-y-4">
-                <div className="border-b border-slate-100 dark:border-white/10 pb-3">
-                  <h2 className="text-sm font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                    <Palette className="w-4 h-4 text-purple-500" />
-                    Theme Mode
-                  </h2>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  {[
-                    { id: 'light', label: 'Light Theme', icon: Sun },
-                    { id: 'dark', label: 'Dark Theme', icon: Moon },
-                    { id: 'system', label: 'System Default', icon: Monitor },
-                  ].map((th) => {
-                    const isSelected = themeMode === th.id;
-                    const Icon = th.icon;
-                    return (
-                      <button
-                        key={th.id}
-                        type="button"
-                        onClick={() => {
-                          setThemeMode(th.id as ThemeMode);
-                          setIsDirty(true);
-                        }}
-                        className={`p-3.5 rounded-xl border text-left transition-all cursor-pointer ${
-                          isSelected
-                            ? 'border-blue-600 bg-blue-50/50 dark:bg-blue-950/20 shadow-xs'
-                            : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          <Icon className={`w-4 h-4 ${isSelected ? 'text-blue-600 dark:text-cyan-400' : 'text-slate-400'}`} />
-                          <span className="text-xs font-bold text-slate-900 dark:text-white">{th.label}</span>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Accent Color Swatches */}
-                <div className="pt-2">
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2">Accent Color</label>
-                  <div className="flex flex-wrap gap-2">
-                    {(Object.keys(ACCENT_PRESETS) as AccentColor[]).map((key) => {
-                      const preset = ACCENT_PRESETS[key];
-                      const isSelected = accentColor === key;
-                      const label = key.charAt(0).toUpperCase() + key.slice(1);
-                      return (
-                        <button
-                          key={key}
-                          type="button"
-                          onClick={() => {
-                            setAccentColor(key);
-                            setIsDirty(true);
-                          }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 border transition-all cursor-pointer ${
-                            isSelected
-                              ? 'border-slate-900 dark:border-white bg-slate-100 dark:bg-white/10 shadow-xs'
-                              : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5'
-                          }`}
-                        >
-                          <span
-                            className="w-3 h-3 rounded-full shrink-0 shadow-xs"
-                            style={{ backgroundColor: preset.color }}
-                          />
-                          <span className="text-slate-900 dark:text-white">{label}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <AppearanceThemeSection onDirtyChange={setIsDirty} />
           )}
 
           {/* ------------------------------------------------------------- */}
