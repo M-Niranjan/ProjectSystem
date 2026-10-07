@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useUIStore } from '../store/useUIStore';
-import { formatRoleName, normalizeRole } from '../services/authRoles';
+import { formatRoleName, normalizeRole, formatDisplayId } from '../services/authRoles';
 import { resolveAvatar } from '../services/avatar';
 
 export default function Profile() {
@@ -38,7 +38,7 @@ export default function Profile() {
   const department = user?.department || 'Development';
   const designation =
     user?.designation || (isTeamLead ? 'Team Lead' : isAdmin ? 'System Administrator' : 'Software Developer');
-  const employeeId = (user as any)?.employeeId || (user?.id ? `EMP-${user.id}` : (user?.uid ? `EMP-${user.uid}` : 'EMP-00124'));
+  const employeeId = formatDisplayId((user as any)?.employeeId || user?.uid || user?.id, isTeamLead ? 'TL' : isAdmin ? 'ADM' : 'EMP');
   const formatJoiningDate = (dateVal: any) => {
     if (!dateVal) return '15 Aug 2024';
     try {
@@ -197,8 +197,8 @@ export default function Profile() {
               </div>
               <div className="flex-1 min-w-0 relative">
                 <div className="w-full pl-3.5 pr-8 py-2.5 rounded-xl border border-slate-200/70 dark:border-white/5 bg-slate-100/80 dark:bg-white/[0.03] text-xs font-mono font-medium text-slate-600 dark:text-slate-400 truncate flex items-center justify-between">
-                  <span>{employeeId}</span>
-                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <span className="truncate" title={String((user as any)?.employeeId || user?.uid || user?.id || employeeId)}>{employeeId}</span>
+                  <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-2" />
                 </div>
               </div>
             </div>

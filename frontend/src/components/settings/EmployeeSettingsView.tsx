@@ -58,6 +58,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { resolveAvatar } from '../../services/avatar';
 import { sendResetPasswordEmail } from '../../services/firebase';
 import api from '../../services/api';
+import { formatDisplayId } from '../../services/authRoles';
 import PasswordStrengthMeter from '../common/PasswordStrengthMeter';
 import LuxurySelect from '../common/LuxurySelect';
 
@@ -292,7 +293,7 @@ export default function EmployeeSettingsView({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Read-only enterprise attributes
-  const employeeId = user?.employeeId || (user?.id ? `EMP-00${user.id}` : 'EMP-00124');
+  const employeeId = formatDisplayId(user?.employeeId || user?.uid || user?.id, 'EMP');
   const organizationName = activeOrganization?.organizationName || user?.organizationName || 'ABC Technology';
   const organizationCode = activeOrganization?.organizationCode || activeOrganizationId || 'ABC_123';
   const userEmail = user?.email || '';
@@ -1127,39 +1128,41 @@ export default function EmployeeSettingsView({
                     </h3>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Role</span>
-                        <span className="font-bold text-blue-600 dark:text-blue-400">Employee</span>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Role</span>
+                        <span className="font-bold text-blue-600 dark:text-blue-400 truncate block">Employee</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Employee ID</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{employeeId}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Organization</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">{organizationName}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Workspace Code</span>
-                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{organizationCode}</span>
-                      </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Account Status</span>
-                        <span className="inline-flex items-center gap-1 font-bold text-emerald-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Employee ID</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block" title={String(user?.employeeId || user?.uid || user?.id || employeeId)}>
+                          {employeeId}
                         </span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Date Joined</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">{dateJoined}</span>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Organization</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={organizationName}>{organizationName}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Account Ownership</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">Organization Member</span>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Workspace Code</span>
+                        <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block" title={organizationCode}>{organizationCode}</span>
                       </div>
-                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                        <span className="text-[10px] text-slate-400 block mb-0.5">Authentication</span>
-                        <span className="font-bold text-slate-800 dark:text-slate-200">Firebase Auth</span>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Account Status</span>
+                        <span className="inline-flex items-center gap-1 font-bold text-emerald-500 truncate">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" /> Active
+                        </span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Date Joined</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">{dateJoined}</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Account Ownership</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">Organization Member</span>
+                      </div>
+                      <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                        <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Authentication</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">Firebase Auth</span>
                       </div>
                     </div>
                   </div>

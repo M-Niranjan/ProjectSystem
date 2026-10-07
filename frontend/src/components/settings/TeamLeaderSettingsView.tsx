@@ -63,6 +63,7 @@ import { useScrollLock } from '../../hooks/useScrollLock';
 import { resolveAvatar } from '../../services/avatar';
 import { sendResetPasswordEmail } from '../../services/firebase';
 import api from '../../services/api';
+import { formatDisplayId } from '../../services/authRoles';
 import PasswordStrengthMeter from '../common/PasswordStrengthMeter';
 import LuxurySelect from '../common/LuxurySelect';
 
@@ -339,7 +340,7 @@ export default function TeamLeaderSettingsView({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Read-only enterprise attributes
-  const leaderId = user?.employeeId || (user?.id ? `TL-00${user.id}` : (user?.uid ? `TL-${user.uid.slice(0, 5)}` : 'TL-00102'));
+  const leaderId = formatDisplayId(user?.employeeId || user?.uid || user?.id, 'TL');
   const organizationName = activeOrganization?.organizationName || user?.organizationName || 'ABC Technology';
   const organizationCode = activeOrganization?.organizationCode || activeOrganizationId || 'ABC_123';
   const userEmail = user?.email || '';
@@ -1246,21 +1247,27 @@ export default function TeamLeaderSettingsView({
                   </h3>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Role</span>
-                      <span className="font-bold text-indigo-600 dark:text-indigo-400">Team Leader</span>
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                      <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Role</span>
+                      <span className="font-bold text-indigo-600 dark:text-indigo-400 truncate block">Team Leader</span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Team Leader ID</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{leaderId}</span>
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                      <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Team Leader ID</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block" title={String(user?.employeeId || user?.uid || user?.id || leaderId)}>
+                        {leaderId}
+                      </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Organization</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate block">{organizationName}</span>
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                      <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Organization</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 truncate block" title={organizationName}>
+                        {organizationName}
+                      </span>
                     </div>
-                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5">
-                      <span className="text-[10px] text-slate-400 block mb-0.5">Workspace Code</span>
-                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{organizationCode}</span>
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-white/[0.02] border border-slate-200/60 dark:border-white/5 min-w-0 overflow-hidden">
+                      <span className="text-[10px] text-slate-400 block mb-0.5 truncate">Workspace Code</span>
+                      <span className="font-mono font-bold text-slate-800 dark:text-slate-200 truncate block" title={organizationCode}>
+                        {organizationCode}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -1570,7 +1577,7 @@ export default function TeamLeaderSettingsView({
                             >
                               <div className="flex items-center gap-3 min-w-0">
                                 <img
-                                  src={resolveAvatar(member.profilePhoto, member.gender, member.name || member.email)}
+                                  src={resolveAvatar(member.profilePhoto, member.name || member.email, member.gender)}
                                   alt={member.name}
                                   className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-white/10 shrink-0"
                                 />
@@ -2746,7 +2753,7 @@ export default function TeamLeaderSettingsView({
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <img
-                          src={resolveAvatar(emp.profilePhoto, emp.gender, emp.name || emp.email)}
+                          src={resolveAvatar(emp.profilePhoto, emp.name || emp.email, emp.gender)}
                           alt={emp.name}
                           className="w-9 h-9 rounded-xl object-cover border shrink-0"
                         />
