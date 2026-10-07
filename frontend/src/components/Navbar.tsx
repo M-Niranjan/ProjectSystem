@@ -2,22 +2,73 @@ import { getAvatarByName, resolveAvatar } from '../services/avatar';
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { createPortal } from 'react-dom';
-import { Bell, Search, Mic, Sun, Moon, Plus, Globe, Check, Trash2, ArrowRight, Menu, Building2, ChevronDown, User as UserIcon, LogOut } from 'lucide-react';
+import { 
+  Bell, 
+  Search, 
+  Mic, 
+  Sun, 
+  Moon, 
+  Plus, 
+  Globe, 
+  Check, 
+  Trash2, 
+  ArrowRight, 
+  Menu, 
+  Building2, 
+  ChevronDown, 
+  User as UserIcon, 
+  LogOut,
+  CheckSquare,
+  CheckCircle2,
+  AlertCircle,
+  MessageSquare,
+  AtSign,
+  Folder,
+  FileText,
+  ShieldAlert,
+  Sparkles,
+  RefreshCw,
+  CheckCheck,
+  Circle,
+  Eye,
+  EyeOff
+} from 'lucide-react';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useNotificationStore } from '../store/useNotificationStore';
+import { AppNotification } from '../services/notificationService';
 import api from '../services/api';
 import { requestMobilePushPermission } from '../services/mobilePushService';
 import { useScrollLock } from '../hooks/useScrollLock';
 import LiveRefreshControl from './LiveRefreshControl';
-import { useLiveRefresh } from '../hooks/useLiveRefresh';
 
-interface Notification {
-  id: number;
-  title: string;
-  message: string;
-  type: string;
-  isRead: boolean;
-  createdAt: string;
+function formatRelativeTime(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 45) return 'Just now';
+    if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
+    if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
+    if (diffSec < 172800) return 'Yesterday';
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  } catch {
+    return '';
+  }
+}
+
+function isDateToday(dateStr: string): boolean {
+  try {
+    const d = new Date(dateStr);
+    const now = new Date();
+    return (
+      d.getDate() === now.getDate() &&
+      d.getMonth() === now.getMonth() &&
+      d.getFullYear() === now.getFullYear()
+    );
+  } catch {
+    return false;
+  }
 }
 
 export default function Navbar() {
@@ -38,7 +89,23 @@ export default function Navbar() {
     showToast,
     setSignOutModalOpen
   } = useUIStore();
-  const { user, activeOrganization, activeOrganizationId, orgMemberships, switchOrganization, logout } = useAuthStore();
+  const { user, activeOrganization, activeOrganizationId, orgMemberships, switchOrganization } = useAuthStore();
+
+  const {
+    notifications,
+    unreadCount,
+    isLoading: notificationsLoading,
+    error: notificationsError,
+    activeFilter: notifFilter,
+    setActiveFilter: setNotifFilter,
+    initRealtimeListener,
+    stopRealtimeListener,
+    fetchNotificationsFallback,
+    markAsRead,
+    markAsUnread,
+    markAllAsRead,
+    deleteNotification,
+  } = useNotificationStore();
 
   const [showOrgDropdown, setShowOrgDropdown] = useState(false);
   const orgDropdownRef = useRef<HTMLDivElement>(null);
@@ -48,11 +115,10 @@ export default function Navbar() {
   const profileDropdownRef = useRef<HTMLDivElement>(null);
   const profileButtonRef = useRef<HTMLButtonElement>(null);
 
-  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showLanguages, setShowLanguages] = useState(false);
   const [showQuickCreate, setShowQuickCreate] = useState(false);
-  const [processingIds, setProcessingIds] = useState<Set<number>>(new Set());
+  const [processingIds, setProcessingIds] = useState<Set<string | number>>(new Set());
   const [acceptedTaskIds] = useState<Set<number>>(() => {
     try {
       const stored = sessionStorage.getItem('acceptedTaskIds');
@@ -61,7 +127,7 @@ export default function Navbar() {
   });
   const [declineModal, setDeclineModal] = useState<{
     isOpen: boolean;
-    notification: any | null;
+    notification: AppNotification | null;
     task: any | null;
   }>({ isOpen: false, notification: null, task: null });
   const [declineReasonText, setDeclineReasonText] = useState('');
@@ -77,6 +143,24 @@ export default function Navbar() {
   const quickCreateButtonRef = useRef<HTMLButtonElement>(null);
   const languagesRef = useRef<HTMLDivElement>(null);
   const languagesButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Initialize scoped Realtime Notification Listener
+  useEffect(() => {
+    if (user?.uid || user?.id) {
+      const uid = user.uid || String(user.id);
+      initRealtimeListener(uid, activeOrganizationId);
+    }
+    return () => {
+      stopRealtimeListener();
+    };
+  }, [user?.uid, user?.id, activeOrganizationId, initRealtimeListener, stopRealtimeListener]);
+
+  // Request & register Android / Web Push Permission once
+  useEffect(() => {
+    if (user?.uid || user?.id) {
+      requestMobilePushPermission().catch(() => {});
+    }
+  }, [user?.uid, user?.id]);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -119,29 +203,30 @@ export default function Navbar() {
     };
   }, [showNotifications, showQuickCreate, showLanguages, showOrgDropdown, showProfileDropdown]);
 
-  const fetchNotifications = async () => {
-    try {
-      const res = await api.get('/api/notifications');
-      setNotifications(res.data || []);
-    } catch (err) {
-      console.error(err);
+  const handleNotificationItemClick = async (n: AppNotification) => {
+    if (!n.isRead) {
+      await markAsRead(n.id);
     }
-  };
+    setShowNotifications(false);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  // Hook notification polling to global live refresh
-  useLiveRefresh(fetchNotifications);
-
-  const markAsRead = async (id: number, e?: React.MouseEvent) => {
-    if (e) e.stopPropagation();
-    try {
-      await api.put(`/api/notifications/${id}/read`);
-      setNotifications(prev => prev.filter(n => n.id !== id));
-    } catch (err) {
-      console.error(err);
+    // Click Action Navigation
+    if (n.entityType === 'task' || n.type.startsWith('TASK_')) {
+      setView('tasks');
+      navigate('/tasks');
+    } else if (n.entityType === 'conversation' || n.type.includes('MESSAGE') || n.type.includes('CHAT')) {
+      setView('communication');
+      navigate('/messages');
+    } else if (n.entityType === 'project' || n.type.startsWith('PROJECT_')) {
+      setView('projects');
+      navigate('/projects');
+    } else if (n.entityType === 'document' || n.type.includes('STEP_') || n.type.includes('SUBMITTED')) {
+      setView('step-verification');
+      navigate('/step-verification');
+    } else if (n.entityType === 'security' || n.type.includes('SECURITY')) {
+      setView('settings');
+      navigate('/settings');
+    } else if (n.actionUrl) {
+      navigate(n.actionUrl);
     }
   };
 
@@ -155,13 +240,14 @@ export default function Navbar() {
         status: 'DECLINED',
         declineReason: declineReasonText.trim(),
       });
-      await api.put(`/api/notifications/${notification.id}/read`);
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
+      await markAsRead(notification.id);
       setDeclineModal({ isOpen: false, notification: null, task: null });
       setDeclineReasonText('');
       window.dispatchEvent(new Event('task-status-updated'));
+      showToast('Task assignment declined.', 'info');
     } catch (err) {
       console.error('Failed to decline task', err);
+      showToast('Failed to decline task assignment.', 'error');
     } finally {
       setProcessingIds(prev => {
         const next = new Set(prev);
@@ -171,7 +257,7 @@ export default function Navbar() {
     }
   };
 
-  const handleNotificationAction = async (n: Notification, action: 'accept' | 'decline', e: React.MouseEvent) => {
+  const handleNotificationAction = async (n: AppNotification, action: 'accept' | 'decline', e: React.MouseEvent) => {
     e.stopPropagation();
     if (processingIds.has(n.id)) return;
 
@@ -181,33 +267,40 @@ export default function Navbar() {
         const tasksRes = await api.get('/api/tasks');
         const allTasks: any[] = tasksRes.data || [];
         
-        const searchTitle = n.message
-          .replace('You have been assigned: ', '')
-          .trim()
-          .replace(/^["']|["']$/g, '');
+        let matchingTask = null;
+        if (n.entityId && !isNaN(Number(n.entityId))) {
+          matchingTask = allTasks.find(t => t.id === Number(n.entityId));
+        }
+        if (!matchingTask) {
+          const searchTitle = n.message
+            .replace('You have been assigned: ', '')
+            .replace('was assigned to you by', '')
+            .trim()
+            .replace(/^["']|["']$/g, '');
 
-        const matchingTask = allTasks.find(t => {
-          const cleanTitle = t.title.trim().replace(/^["']|["']$/g, '').toLowerCase();
-          return cleanTitle === searchTitle.toLowerCase() && t.status !== 'COMPLETED';
-        });
+          matchingTask = allTasks.find(t => {
+            const cleanTitle = t.title.trim().replace(/^["']|["']$/g, '').toLowerCase();
+            return (cleanTitle === searchTitle.toLowerCase() || searchTitle.toLowerCase().includes(cleanTitle)) && t.status !== 'COMPLETED';
+          });
+        }
 
         if (matchingTask) {
           await api.put(`/api/tasks/${matchingTask.id}/status`, {
             status: 'ACCEPTED',
           });
 
-          await api.put(`/api/notifications/${n.id}/read`);
-          setNotifications(prev => prev.filter(item => item.id !== n.id));
+          await markAsRead(n.id);
 
           const updated = new Set(acceptedTaskIds).add(matchingTask.id);
           sessionStorage.setItem('acceptedTaskIds', JSON.stringify([...updated]));
           window.dispatchEvent(new Event('task-status-updated'));
+          showToast(`Accepted task: "${matchingTask.title}"`, 'success');
         } else {
-          await api.put(`/api/notifications/${n.id}/read`);
+          await markAsRead(n.id);
         }
       } catch (err) {
         console.error('Failed to accept task from notification', err);
-        fetchNotifications();
+        showToast('Failed to accept task.', 'error');
       } finally {
         setProcessingIds(prev => {
           const next = new Set(prev);
@@ -219,34 +312,30 @@ export default function Navbar() {
       try {
         const tasksRes = await api.get('/api/tasks');
         const allTasks: any[] = tasksRes.data || [];
-        const searchTitle = n.message
-          .replace('You have been assigned: ', '')
-          .trim()
-          .replace(/^["']|["']$/g, '');
-        const matchingTask = allTasks.find(t => {
-          const cleanTitle = t.title.trim().replace(/^["']|["']$/g, '').toLowerCase();
-          return cleanTitle === searchTitle.toLowerCase() && t.status !== 'COMPLETED';
-        });
+        let matchingTask = null;
+        if (n.entityId && !isNaN(Number(n.entityId))) {
+          matchingTask = allTasks.find(t => t.id === Number(n.entityId));
+        }
+        if (!matchingTask) {
+          const searchTitle = n.message
+            .replace('You have been assigned: ', '')
+            .replace('was assigned to you by', '')
+            .trim()
+            .replace(/^["']|["']$/g, '');
+          matchingTask = allTasks.find(t => {
+            const cleanTitle = t.title.trim().replace(/^["']|["']$/g, '').toLowerCase();
+            return (cleanTitle === searchTitle.toLowerCase() || searchTitle.toLowerCase().includes(cleanTitle)) && t.status !== 'COMPLETED';
+          });
+        }
         if (matchingTask) {
           setDeclineReasonText('');
           setDeclineModal({ isOpen: true, notification: n, task: matchingTask });
         } else {
-          await api.put(`/api/notifications/${n.id}/read`);
-          setNotifications(prev => prev.filter(item => item.id !== n.id));
+          await markAsRead(n.id);
         }
       } catch (err) {
         console.error('Failed to load task for decline', err);
       }
-    }
-  };
-
-  const markAllAsRead = async () => {
-    try {
-      await api.put('/api/notifications/read-all');
-      setNotifications([]);
-      setShowNotifications(false);
-    } catch (err) {
-      console.error(err);
     }
   };
 
@@ -261,6 +350,79 @@ export default function Navbar() {
 
   const triggerSearchPalette = () => {
     window.dispatchEvent(new Event('open-search-palette'));
+  };
+
+  // Filtered notifications
+  const displayedNotifications = notifFilter === 'unread' 
+    ? notifications.filter(n => !n.isRead) 
+    : notifications;
+
+  const todayList = displayedNotifications.filter(n => isDateToday(n.createdAt));
+  const olderList = displayedNotifications.filter(n => !isDateToday(n.createdAt));
+
+  const renderNotificationIcon = (type: string, priority?: string) => {
+    const t = (type || '').toUpperCase();
+    if (t.includes('ASSIGNED') || t.includes('TASK_NEW')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-blue-500/15 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+          <CheckSquare className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('ACCEPTED') || t.includes('COMPLETED') || t.includes('APPROVED')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+          <CheckCircle2 className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('DECLINED') || t.includes('REJECTED') || t.includes('CHANGES_REQUESTED') || priority === 'HIGH' || priority === 'URGENT') {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-rose-500/15 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0">
+          <AlertCircle className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('MESSAGE') || t.includes('CHAT')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+          <MessageSquare className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('MENTION')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+          <AtSign className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('PROJECT')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-amber-500/15 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+          <Folder className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('SUBMITTED') || t.includes('PDF') || t.includes('DOCUMENT')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0">
+          <FileText className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    if (t.includes('SECURITY') || t.includes('LOGIN') || t.includes('PASSWORD')) {
+      return (
+        <div className="w-7 h-7 rounded-lg bg-red-500/15 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+          <ShieldAlert className="w-3.5 h-3.5" />
+        </div>
+      );
+    }
+    return (
+      <div className="w-7 h-7 rounded-lg bg-slate-500/15 text-slate-600 dark:text-slate-400 flex items-center justify-center shrink-0">
+        <Bell className="w-3.5 h-3.5" />
+      </div>
+    );
   };
 
   return (
@@ -364,7 +526,7 @@ export default function Navbar() {
         )}
       </div>
 
-      {/* Center 1: Tablet Search & Voice Trigger Icons (Clean circular buttons on tablet 640px-1023px, opens Command Palette) */}
+      {/* Center 1: Tablet Search & Voice Trigger Icons */}
       <div className="hidden sm:flex lg:hidden items-center gap-1.5 flex-shrink-0">
         <button
           onClick={triggerSearchPalette}
@@ -382,7 +544,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Center 2: Desktop Search Bar (Large screens >= 1024px) */}
+      {/* Center 2: Desktop Search Bar */}
       <div className="hidden lg:flex items-center gap-2 flex-1 max-w-sm xl:max-w-md min-w-0 mx-3">
         <div 
           onClick={triggerSearchPalette}
@@ -406,7 +568,7 @@ export default function Navbar() {
         </button>
       </div>
 
-      {/* Right Navbar Items: Desktop Utilities + Mobile Notifications & Profile */}
+      {/* Right Navbar Items */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {user?.role !== 'ROLE_EMPLOYEE' && (
           <div className="hidden sm:block relative flex-shrink-0">
@@ -449,12 +611,12 @@ export default function Navbar() {
           </div>
         )}
 
-        {/* Live Refresh Control (Desktop Only) */}
+        {/* Live Refresh Control */}
         <div className="hidden sm:flex">
           <LiveRefreshControl />
         </div>
 
-        {/* Theme Toggle (Desktop Only) */}
+        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
           className="hidden sm:flex w-8.5 h-8.5 items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
@@ -463,7 +625,7 @@ export default function Navbar() {
           {darkMode ? <Sun className="w-4 h-4 text-amber-500 dark:text-amber-400" /> : <Moon className="w-4 h-4 text-slate-700" />}
         </button>
 
-        {/* Language Toggle (Large Desktop Only) */}
+        {/* Language Toggle */}
         <div className="hidden xl:block relative flex-shrink-0">
           <button
             ref={languagesButtonRef}
@@ -495,17 +657,22 @@ export default function Navbar() {
           )}
         </div>
 
+        {/* Production Notification Center Bell & Dropdown */}
         <div className="relative flex-shrink-0">
           <button
             ref={notificationButtonRef}
             onClick={() => setShowNotifications(!showNotifications)}
-            className="relative w-8.5 h-8.5 flex items-center justify-center rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300 transition-colors cursor-pointer flex-shrink-0"
-            title="Notifications"
+            className={`relative w-8.5 h-8.5 flex items-center justify-center rounded-full transition-all cursor-pointer flex-shrink-0 ${
+              showNotifications
+                ? 'bg-blue-500/20 border border-blue-500/40 text-blue-600 dark:text-blue-400'
+                : 'bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200/80 dark:hover:bg-white/10 text-slate-700 dark:text-slate-300'
+            }`}
+            title="Notifications Center"
           >
             <Bell className="w-4 h-4" />
-            {notifications.length > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-[#0a0b0f]">
-                {notifications.length}
+            {unreadCount > 0 && (
+              <span className="absolute -top-0.5 -right-0.5 min-w-4 h-4 px-1 bg-rose-500 text-white rounded-full text-[9px] font-black flex items-center justify-center ring-2 ring-white dark:ring-[#0a0b0f] animate-in fade-in zoom-in-75">
+                {unreadCount > 99 ? '99+' : unreadCount}
               </span>
             )}
           </button>
@@ -513,77 +680,120 @@ export default function Navbar() {
           {showNotifications && (
             <div 
               ref={notificationsRef}
-              className="fixed sm:absolute top-14 sm:top-full left-3 right-3 sm:left-auto sm:right-0 mt-1.5 sm:mt-2 sm:w-80 max-w-sm ml-auto bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden rounded-2xl sm:rounded-xl"
+              className="fixed sm:absolute top-14 sm:top-full left-2 right-2 sm:left-auto sm:right-0 mt-1.5 sm:mt-2 w-auto sm:w-[380px] max-w-[420px] bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl z-50 overflow-hidden rounded-2xl animate-in fade-in zoom-in-95 duration-150"
             >
-              <div className="px-3 py-2 bg-zinc-50 dark:bg-zinc-900 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-900 dark:text-zinc-100">Notifications</span>
+              {/* Header */}
+              <div className="px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-900/90 border-b border-zinc-200 dark:border-zinc-800/80 flex items-center justify-between gap-2">
                 <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">Notifications</span>
+                  {unreadCount > 0 && (
+                    <span className="px-1.5 py-0.5 text-[10px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400 rounded-full">
+                      {unreadCount} unread
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-1.5">
                   <button
                     onClick={async () => {
                       const granted = await requestMobilePushPermission();
                       if (granted) {
-                        showToast("Mobile System & Email Alerts Enabled!", "success");
+                        showToast("Push notifications activated for this device!", "success");
                       } else {
                         showToast("Notification permission requested.", "info");
                       }
                     }}
-                    className="text-[10px] font-medium px-2 py-0.5 bg-indigo-600/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-600/20 rounded cursor-pointer transition-colors"
+                    className="text-[10px] font-semibold px-2 py-0.8 bg-indigo-500/10 hover:bg-indigo-500/20 text-indigo-600 dark:text-indigo-400 rounded-md cursor-pointer transition-colors"
+                    title="Enable push alerts on mobile & desktop"
                   >
-                    Mobile Alerts
+                    Enable Push
                   </button>
-                  {notifications.length > 0 && (
+
+                  {unreadCount > 0 && (
                     <button 
                       onClick={markAllAsRead}
-                      className="text-[10px] text-zinc-500 hover:underline cursor-pointer"
+                      className="text-[10px] font-semibold px-2 py-0.8 bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-md cursor-pointer transition-colors flex items-center gap-1"
+                      title="Mark all notifications as read"
                     >
-                      Clear All
+                      <CheckCheck className="w-3 h-3" />
+                      <span>Mark all read</span>
                     </button>
                   )}
                 </div>
               </div>
-              <div className="max-h-64 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800">
-                {notifications.length === 0 ? (
-                  <div className="p-4 text-center text-xs text-zinc-400">
-                    No new notifications
+
+              {/* Filter Tabs */}
+              <div className="flex items-center px-3 py-1.5 border-b border-zinc-100 dark:border-zinc-800/60 bg-zinc-50/50 dark:bg-zinc-950/40 gap-1.5">
+                <button
+                  onClick={() => setNotifFilter('all')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    notifFilter === 'all'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  All ({notifications.length})
+                </button>
+                <button
+                  onClick={() => setNotifFilter('unread')}
+                  className={`px-2.5 py-1 rounded-md text-[11px] font-bold transition-all cursor-pointer ${
+                    notifFilter === 'unread'
+                      ? 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-xs'
+                      : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  Unread ({unreadCount})
+                </button>
+              </div>
+
+              {/* Notification List Panel */}
+              <div className="max-h-[380px] overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800/80">
+                {notificationsLoading ? (
+                  <div className="p-8 text-center space-y-2">
+                    <RefreshCw className="w-5 h-5 text-blue-500 animate-spin mx-auto" />
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium">Loading notifications...</p>
+                  </div>
+                ) : notificationsError ? (
+                  <div className="p-6 text-center space-y-2">
+                    <AlertCircle className="w-6 h-6 text-rose-500 mx-auto" />
+                    <p className="text-xs text-zinc-600 dark:text-zinc-300 font-semibold">{notificationsError}</p>
+                    <button
+                      onClick={() => fetchNotificationsFallback()}
+                      className="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold cursor-pointer"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : displayedNotifications.length === 0 ? (
+                  <div className="p-8 text-center space-y-2">
+                    <div className="w-10 h-10 rounded-full bg-emerald-500/15 text-emerald-500 flex items-center justify-center mx-auto">
+                      <Sparkles className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-zinc-800 dark:text-zinc-200">You're all caught up!</p>
+                    <p className="text-[11px] text-zinc-400">No new notifications at this time.</p>
                   </div>
                 ) : (
-                  notifications.map((n) => (
-                    <div 
-                      key={n.id} 
-                      onClick={() => setView('tasks')}
-                      className="p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors cursor-pointer flex items-start gap-2.5"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200 truncate">{n.title}</p>
-                        <p className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-0.5 line-clamp-2">{n.message}</p>
-                      </div>
-                      {n.type === 'TASK_ASSIGNED' ? (
-                        <div className="flex flex-col gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={(e) => handleNotificationAction(n, 'accept', e)}
-                            disabled={processingIds.has(n.id)}
-                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
-                          >
-                            Accept
-                          </button>
-                          <button
-                            onClick={(e) => handleNotificationAction(n, 'decline', e)}
-                            disabled={processingIds.has(n.id)}
-                            className="px-2 py-0.5 rounded text-[10px] font-semibold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer"
-                          >
-                            Decline
-                          </button>
+                  <>
+                    {/* TODAY SECTION */}
+                    {todayList.length > 0 && (
+                      <div>
+                        <div className="px-3.5 py-1.5 bg-zinc-100/60 dark:bg-zinc-950/60 sticky top-0 z-10">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Today</p>
                         </div>
-                      ) : (
-                        <button
-                          onClick={(e) => markAsRead(n.id, e)}
-                          className="p-1 text-zinc-400 hover:text-rose-500 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </div>
-                  ))
+                        {todayList.map((n) => renderNotificationCard(n))}
+                      </div>
+                    )}
+
+                    {/* OLDER SECTION */}
+                    {olderList.length > 0 && (
+                      <div>
+                        <div className="px-3.5 py-1.5 bg-zinc-100/60 dark:bg-zinc-950/60 sticky top-0 z-10">
+                          <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Older</p>
+                        </div>
+                        {olderList.map((n) => renderNotificationCard(n))}
+                      </div>
+                    )}
+                  </>
                 )}
               </div>
             </div>
@@ -762,4 +972,87 @@ export default function Navbar() {
       )}
     </header>
   );
+
+  function renderNotificationCard(n: AppNotification) {
+    const isUnread = !n.isRead;
+    return (
+      <div 
+        key={n.id} 
+        onClick={() => handleNotificationItemClick(n)}
+        className={`p-3 transition-colors cursor-pointer flex items-start gap-3 group relative ${
+          isUnread 
+            ? 'bg-blue-50/40 dark:bg-blue-950/20 hover:bg-blue-50/70 dark:hover:bg-blue-950/35' 
+            : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/40'
+        }`}
+      >
+        {/* Unread Status Pill */}
+        {isUnread && (
+          <span className="absolute left-1 top-4 w-1.5 h-1.5 rounded-full bg-blue-500 shrink-0" />
+        )}
+
+        {/* Icon */}
+        {renderNotificationIcon(n.type, n.priority)}
+
+        {/* Content */}
+        <div className="flex-1 min-w-0 pr-1">
+          <div className="flex items-center justify-between gap-1">
+            <p className={`text-xs truncate ${isUnread ? 'font-bold text-zinc-900 dark:text-white' : 'font-medium text-zinc-700 dark:text-zinc-300'}`}>
+              {n.title}
+            </p>
+            <span className="text-[10px] text-zinc-400 shrink-0 font-medium">
+              {formatRelativeTime(n.createdAt)}
+            </span>
+          </div>
+
+          <p className="text-[11px] text-zinc-600 dark:text-zinc-400 mt-0.5 line-clamp-2 leading-relaxed">
+            {n.message}
+          </p>
+
+          {n.senderName && (
+            <p className="text-[10px] text-zinc-400 mt-1 flex items-center gap-1 font-mono">
+              <span>from {n.senderName}</span>
+            </p>
+          )}
+
+          {/* Quick Actions for Task Assigned */}
+          {n.type === 'TASK_ASSIGNED' && (
+            <div className="flex items-center gap-1.5 mt-2" onClick={(e) => e.stopPropagation()}>
+              <button
+                onClick={(e) => handleNotificationAction(n, 'accept', e)}
+                disabled={processingIds.has(n.id)}
+                className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer shadow-xs transition-colors"
+              >
+                Accept
+              </button>
+              <button
+                onClick={(e) => handleNotificationAction(n, 'decline', e)}
+                disabled={processingIds.has(n.id)}
+                className="px-2.5 py-1 rounded-md text-[10px] font-bold bg-rose-600 hover:bg-rose-500 text-white cursor-pointer shadow-xs transition-colors"
+              >
+                Decline
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Action Controls */}
+        <div className="flex flex-col items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0" onClick={(e) => e.stopPropagation()}>
+          <button
+            onClick={() => isUnread ? markAsRead(n.id) : markAsUnread(n.id)}
+            className="p-1 rounded-md text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-200/50 dark:hover:bg-zinc-800 transition-colors"
+            title={isUnread ? 'Mark as read' : 'Mark as unread'}
+          >
+            {isUnread ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+          </button>
+          <button
+            onClick={() => deleteNotification(n.id)}
+            className="p-1 rounded-md text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+            title="Delete notification"
+          >
+            <Trash2 className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 }

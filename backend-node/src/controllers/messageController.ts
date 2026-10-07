@@ -3,6 +3,7 @@ import { DirectMessage, User, Task } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { Op } from 'sequelize';
 import { firebaseFirestore } from '../config/firebaseAdmin';
+import { NotificationService } from '../services/notificationService';
 
 export class MessageController {
   /**
@@ -131,6 +132,53 @@ export class MessageController {
           { model: User, as: 'recipient', attributes: { exclude: ['password'] } },
           { model: Task, as: 'task' },
         ],
+      });
+
+      // Dispatch targeted notification to recipient
+      const targetOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || (req.user as any)?.organizationId || 'org_default';
+      const senderName = req.user.name || 'User';
+
+      // Check for mentions
+      const mentionMatches = (content || '').match(/@([\w.-]+)/g);
+      if (mentionMatches && mentionMatches.length > 0) {
+        for (const match of mentionMatches) {
+          const mentionName = match.replace('@', '').toLowerCase();
+          const mentionedUser = await User.findOne({
+            where: {
+              name: { [Op.like]: `%${mentionName}%` }
+            }
+          });
+          if (mentionedUser && mentionedUser.id !== req.user.id) {
+            await NotificationService.sendNotification({
+              recipientUid: (mentionedUser as any).uid || String(mentionedUser.id),
+              recipientId: mentionedUser.id,
+              recipientEmail: mentionedUser.email,
+              senderUid: req.firebaseUid || String(req.user.id),
+              senderName,
+              organizationId: targetOrgId,
+              type: 'MENTION',
+              title: 'New Mention in Chat',
+              message: `${senderName} mentioned you in a message: "${content.slice(0, 80)}"`,
+              entityId: targetRecipientId,
+              entityType: 'conversation',
+              actionUrl: `/messages?contactId=${req.user.id}`,
+            });
+          }
+        }
+      }
+
+      // Send Direct Message Notification
+      await NotificationService.sendNotification({
+        recipientId: targetRecipientId,
+        senderUid: req.firebaseUid || String(req.user.id),
+        senderName,
+        organizationId: targetOrgId,
+        type: 'NEW_MESSAGE',
+        title: `New message from ${senderName}`,
+        message: content ? (content.length > 100 ? `${content.slice(0, 97)}...` : content) : 'Sent an attachment',
+        entityId: targetRecipientId,
+        entityType: 'conversation',
+        actionUrl: `/messages?contactId=${req.user.id}`,
       });
 
       return res.json(savedDm);

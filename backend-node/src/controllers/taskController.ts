@@ -4,6 +4,7 @@ import { AuthRequest } from '../middleware/auth';
 import { AIService } from '../services/aiService';
 import { Op } from 'sequelize';
 import { firebaseFirestore, FieldValue, FirebaseAdminService } from '../config/firebaseAdmin';
+import { NotificationService } from '../services/notificationService';
 
 export class TaskController {
   public static async getAllTasks(req: AuthRequest, res: Response) {
@@ -128,15 +129,24 @@ export class TaskController {
 
       if (resolvedAssigneeId) {
         const assigneeUser = await User.findByPk(resolvedAssigneeId);
-        const creatorUser = await User.findByPk(creatorId);
-
         if (assigneeUser) {
-          await Notification.create({
-            title: 'Task Assigned',
-            message: `You have been assigned: ${task.title}`,
-            type: 'TASK_ASSIGNED',
-            isRead: false,
+          const taskOrgId = project.organizationId || req.organizationId || 'org_default';
+          await NotificationService.sendNotification({
+            recipientUid: (assigneeUser as any).uid || String(assigneeUser.id),
             recipientId: assigneeUser.id,
+            recipientEmail: assigneeUser.email,
+            senderUid: req.firebaseUid || String(req.user.id),
+            senderName: req.user.name || 'Team Leader',
+            organizationId: taskOrgId,
+            type: 'TASK_ASSIGNED',
+            title: 'New Task Assigned',
+            message: `"${task.title}" was assigned to you by ${req.user.name || 'Team Leader'}.`,
+            entityId: task.id,
+            entityType: 'task',
+            taskId: task.id,
+            projectId: project.id,
+            actionUrl: `/tasks?taskId=${task.id}`,
+            eventId: `TASK_${task.id}_ASSIGNED_${(assigneeUser as any).uid || assigneeUser.id}`,
           });
 
           await DirectMessage.create({
@@ -239,6 +249,7 @@ export class TaskController {
       }
 
       const resolvedAssigneeId = assigneeId !== undefined ? assigneeId : (assignee ? assignee.id : undefined);
+      const taskOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || 'org_default';
 
       if (resolvedAssigneeId !== undefined) {
         if (resolvedAssigneeId === null) {
@@ -251,12 +262,22 @@ export class TaskController {
               if (newAssignee.role === Role.ROLE_EMPLOYEE && incomingStatus !== 'COMPLETED') {
                 task.status = 'PENDING_ACCEPTANCE';
               }
-              await Notification.create({
-                title: 'Task Assigned',
-                message: `You have been assigned: ${task.title}`,
-                type: 'TASK_ASSIGNED',
-                isRead: false,
+              await NotificationService.sendNotification({
+                recipientUid: (newAssignee as any).uid || String(newAssignee.id),
                 recipientId: newAssignee.id,
+                recipientEmail: newAssignee.email,
+                senderUid: req.firebaseUid || String(req.user.id),
+                senderName: req.user.name || 'Team Leader',
+                organizationId: taskOrgId,
+                type: 'TASK_ASSIGNED',
+                title: 'New Task Assigned',
+                message: `"${task.title}" was assigned to you by ${req.user.name || 'Team Leader'}.`,
+                entityId: task.id,
+                entityType: 'task',
+                taskId: task.id,
+                projectId: task.projectId,
+                actionUrl: `/tasks?taskId=${task.id}`,
+                eventId: `TASK_${task.id}_REASSIGNED_${newAssignee.id}`,
               });
 
               await DirectMessage.create({
@@ -293,12 +314,20 @@ export class TaskController {
           isRead: false,
         });
 
-        await Notification.create({
-          title: 'Task Accepted',
-          message: `${oldAssigneeObj?.name || 'Assignee'} accepted: "${task.title}"`,
-          type: 'TASK_ACCEPTED',
-          isRead: false,
+        await NotificationService.sendNotification({
           recipientId: task.creatorId,
+          senderUid: req.firebaseUid || String(req.user.id),
+          senderName: oldAssigneeObj?.name || req.user.name || 'Assignee',
+          organizationId: taskOrgId,
+          type: 'TASK_ACCEPTED',
+          title: 'Task Accepted',
+          message: `${oldAssigneeObj?.name || 'Assignee'} accepted task: "${task.title}".`,
+          entityId: task.id,
+          entityType: 'task',
+          taskId: task.id,
+          projectId: task.projectId,
+          actionUrl: `/tasks?taskId=${task.id}`,
+          eventId: `TASK_${task.id}_ACCEPTED_${Date.now()}`,
         });
       }
 
@@ -319,22 +348,38 @@ export class TaskController {
           isRead: false,
         });
 
-        await Notification.create({
-          title: 'Task Declined',
-          message: `${oldAssigneeObj?.name || 'Assignee'} declined: "${task.title}". Reason: ${reason}`,
-          type: 'TASK_DECLINED',
-          isRead: false,
+        await NotificationService.sendNotification({
           recipientId: task.creatorId,
+          senderUid: req.firebaseUid || String(req.user.id),
+          senderName: oldAssigneeObj?.name || req.user.name || 'Assignee',
+          organizationId: taskOrgId,
+          type: 'TASK_DECLINED',
+          title: 'Task Declined',
+          message: `${oldAssigneeObj?.name || 'Assignee'} declined task: "${task.title}". Reason: ${reason}`,
+          entityId: task.id,
+          entityType: 'task',
+          taskId: task.id,
+          projectId: task.projectId,
+          actionUrl: `/tasks?taskId=${task.id}`,
+          eventId: `TASK_${task.id}_DECLINED_${Date.now()}`,
         });
       }
 
       if (task.status === 'COMPLETED' && oldStatus !== 'COMPLETED') {
-        await Notification.create({
-          title: 'Task Completed',
-          message: `The task: ${task.title} has been marked complete.`,
-          type: 'TASK_COMPLETED',
-          isRead: false,
+        await NotificationService.sendNotification({
           recipientId: task.creatorId,
+          senderUid: req.firebaseUid || String(req.user.id),
+          senderName: req.user.name || 'Team Member',
+          organizationId: taskOrgId,
+          type: 'TASK_COMPLETED',
+          title: 'Task Completed',
+          message: `The task "${task.title}" has been marked complete.`,
+          entityId: task.id,
+          entityType: 'task',
+          taskId: task.id,
+          projectId: task.projectId,
+          actionUrl: `/tasks?taskId=${task.id}`,
+          eventId: `TASK_${task.id}_COMPLETED_${Date.now()}`,
         });
       }
 
@@ -431,13 +476,72 @@ export class TaskController {
         userId: req.user.id,
       });
 
+      const taskOrgId = req.organizationId || (req.headers['x-organization-id'] as string) || 'org_default';
+
+      // 1. Check for @mentions in comment
+      const mentionMatches = (content || '').match(/@([\w.-]+)/g);
+      if (mentionMatches && mentionMatches.length > 0) {
+        for (const match of mentionMatches) {
+          const mentionName = match.replace('@', '').toLowerCase();
+          const mentionedUser = await User.findOne({
+            where: {
+              name: { [Op.like]: `%${mentionName}%` }
+            }
+          });
+          if (mentionedUser && mentionedUser.id !== req.user.id) {
+            await NotificationService.sendNotification({
+              recipientUid: (mentionedUser as any).uid || String(mentionedUser.id),
+              recipientId: mentionedUser.id,
+              recipientEmail: mentionedUser.email,
+              senderUid: req.firebaseUid || String(req.user.id),
+              senderName: req.user.name || 'User',
+              organizationId: taskOrgId,
+              type: 'TASK_MENTION',
+              title: 'You were mentioned in a task comment',
+              message: `${req.user.name || 'User'} mentioned you on "${task.title}": "${content.slice(0, 100)}"`,
+              entityId: task.id,
+              entityType: 'task',
+              taskId: task.id,
+              projectId: task.projectId,
+              actionUrl: `/tasks?taskId=${task.id}`,
+            });
+          }
+        }
+      }
+
+      // 2. Notify task assignee if not the commenter
       if (task.assigneeId && task.assigneeId !== req.user.id) {
-        await Notification.create({
-          title: 'New Comment',
-          message: `${req.user.name || 'User'} commented on: ${task.title}`,
-          type: 'MENTION',
-          isRead: false,
+        await NotificationService.sendNotification({
           recipientId: task.assigneeId,
+          senderUid: req.firebaseUid || String(req.user.id),
+          senderName: req.user.name || 'User',
+          organizationId: taskOrgId,
+          type: 'TASK_COMMENT',
+          title: 'New Comment on Task',
+          message: `${req.user.name || 'User'} commented on "${task.title}": "${(content || '').slice(0, 100)}"`,
+          entityId: task.id,
+          entityType: 'task',
+          taskId: task.id,
+          projectId: task.projectId,
+          actionUrl: `/tasks?taskId=${task.id}`,
+        });
+      }
+
+      // 3. Notify task creator if different from commenter and assignee
+      if (task.creatorId && task.creatorId !== req.user.id && task.creatorId !== task.assigneeId) {
+        await NotificationService.sendNotification({
+          recipientId: task.creatorId,
+          senderUid: req.firebaseUid || String(req.user.id),
+          senderName: req.user.name || 'User',
+          organizationId: taskOrgId,
+          type: 'TASK_COMMENT',
+          title: 'New Comment on Task',
+          message: `${req.user.name || 'User'} commented on "${task.title}": "${(content || '').slice(0, 100)}"`,
+          entityId: task.id,
+          entityType: 'task',
+          taskId: task.id,
+          projectId: task.projectId,
+          actionUrl: `/tasks?taskId=${task.id}`,
         });
       }
 
@@ -655,19 +759,28 @@ export class TaskController {
         console.warn('Error recording attachment in database:', attErr);
       }
 
-      // 7. Dispatch Notification to Team Leader / Manager
+      // 7. Dispatch Notification to the specific Team Leader / Task Creator only (NO BROADCAST)
       try {
-        const tlUsers = await User.findAll({
-          where: {
-            role: { [Op.in]: [Role.ROLE_ADMIN, Role.ROLE_MANAGER] }
-          }
+        const taskObj: any = await Task.findByPk(taskId, {
+          include: [{ model: Project, as: 'project' }]
         });
-        for (const tl of tlUsers) {
-          await Notification.create({
-            title: 'New Task PDF Evidence Submitted',
-            message: `${submissionData.employeeName} uploaded ${file.originalname} (${versionLabel}) for Step #${stepId} on Task #${taskId}.`,
+        const targetLeaderId = taskObj?.creatorId || taskObj?.project?.ownerId;
+        const taskOrgId = taskObj?.project?.organizationId || req.organizationId || 'org_default';
+
+        if (targetLeaderId) {
+          await NotificationService.sendNotification({
+            recipientId: targetLeaderId,
+            senderUid: req.firebaseUid || String(req.user.id),
+            senderName: req.user.name || 'Employee',
+            organizationId: taskOrgId,
             type: 'TASK_SUBMITTED',
-            recipientId: tl.id,
+            title: 'Task Step PDF Evidence Submitted',
+            message: `${submissionData.employeeName} uploaded ${file.originalname} (${versionLabel}) for Step #${stepId} on Task "${taskObj?.title || taskId}".`,
+            entityId: taskId,
+            entityType: 'document',
+            taskId: Number(taskId),
+            projectId: taskObj?.projectId,
+            actionUrl: `/step-verification?taskId=${taskId}`,
           });
         }
       } catch (notifErr) {
@@ -743,15 +856,27 @@ export class TaskController {
         }
       }
 
-      // Notify the employee
+      // Notify the employee only
       try {
-        const task = await Task.findByPk(taskId);
+        const task: any = await Task.findByPk(taskId, {
+          include: [{ model: Project, as: 'project' }]
+        });
         if (task && task.assigneeId) {
-          await Notification.create({
-            title: action === 'APPROVE' ? 'Task Step Approved!' : 'Changes Requested on Task Step',
-            message: `Your submitted PDF for Step #${stepId} on Task #${taskId} has been ${newStatus.replace('_', ' ')}.${notes ? ` Note: ${notes}` : ''}`,
-            type: action === 'APPROVE' ? 'STEP_APPROVED' : 'CHANGES_REQUESTED',
+          const taskOrgId = task.project?.organizationId || req.organizationId || 'org_default';
+          const isApproved = action === 'APPROVE';
+          await NotificationService.sendNotification({
             recipientId: task.assigneeId,
+            senderUid: req.firebaseUid || String(req.user.id),
+            senderName: req.user.name || 'Team Leader',
+            organizationId: taskOrgId,
+            type: isApproved ? 'STEP_APPROVED' : 'CHANGES_REQUESTED',
+            title: isApproved ? 'Task Step Approved!' : 'Changes Requested on Task Step',
+            message: `Your submitted PDF for Step #${stepId} on "${task.title}" has been ${newStatus.replace('_', ' ')}.${notes ? ` Note: ${notes}` : ''}`,
+            entityId: taskId,
+            entityType: 'document',
+            taskId: Number(taskId),
+            projectId: task.projectId,
+            actionUrl: `/step-verification?taskId=${taskId}`,
           });
         }
       } catch (notifErr) {

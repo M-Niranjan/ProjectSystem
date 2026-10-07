@@ -114,10 +114,22 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && resource.data.organizationId != null && isMemberOfOrg(resource.data.organizationId) && (isAdmin() || isManager());
     }
 
-    // Rules for 'notifications' collection
+    // Rules for 'notifications' collection (STRICT RECIPIENT & ORGANIZATION ISOLATION)
     match /notifications/{notifId} {
-      allow read, update, delete: if isAuthenticated() && (resource.data.userId == request.auth.uid || resource.data.recipientId == request.auth.uid);
+      allow read, update, delete: if isAuthenticated() && (
+        (resource.data.recipientId == request.auth.uid || resource.data.recipientUid == request.auth.uid || resource.data.userId == request.auth.uid) &&
+        (resource.data.organizationId == null || isMemberOfOrg(resource.data.organizationId))
+      );
       allow create: if isAuthenticated();
+    }
+
+    // Rules for 'userDevices' collection (FCM Android Push Registry)
+    match /userDevices/{deviceId} {
+      allow read, write, delete: if isAuthenticated() && (
+        (request.resource != null && request.resource.data.userId == request.auth.uid) ||
+        (resource != null && resource.data.userId == request.auth.uid) ||
+        deviceId.matches(request.auth.uid + '.*')
+      );
     }
 
     // Rules for 'audit_logs' collection

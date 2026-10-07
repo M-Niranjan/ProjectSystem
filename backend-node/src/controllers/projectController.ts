@@ -3,6 +3,7 @@ import { Project, User, Role } from '../models';
 import { AuthRequest } from '../middleware/auth';
 import { Op } from 'sequelize';
 import { FirebaseAdminService } from '../config/firebaseAdmin';
+import { NotificationService } from '../services/notificationService';
 
 export class ProjectController {
   public static async getProjects(req: AuthRequest, res: Response) {
@@ -268,6 +269,25 @@ export class ProjectController {
 
       await (project as any).addMember(userToAdd);
 
+      // Targeted notification to added member
+      const targetOrgId = project.organizationId || req.organizationId || 'org_default';
+      await NotificationService.sendNotification({
+        recipientUid: (userToAdd as any).uid || String(userToAdd.id),
+        recipientId: userToAdd.id,
+        recipientEmail: userToAdd.email,
+        senderUid: req.firebaseUid || String(req.user.id),
+        senderName: req.user.name || 'Project Lead',
+        organizationId: targetOrgId,
+        type: 'PROJECT_MEMBER_ADDED',
+        title: 'Added to Project',
+        message: `You have been added to project "${project.name}" by ${req.user.name || 'Project Lead'}.`,
+        entityId: project.id,
+        entityType: 'project',
+        projectId: project.id,
+        actionUrl: `/projects?projectId=${project.id}`,
+        eventId: `PROJECT_${project.id}_MEMBER_ADD_${userToAdd.id}`,
+      });
+
       const updatedProject = await Project.findByPk(id, {
         include: [
           { model: User, as: 'owner', attributes: { exclude: ['password'] } },
@@ -300,6 +320,25 @@ export class ProjectController {
       if (!userToRemove) return res.status(404).send(`User not found with ID: ${userId}`);
 
       await (project as any).removeMember(userToRemove);
+
+      // Targeted notification to removed member
+      const targetOrgId = project.organizationId || req.organizationId || 'org_default';
+      await NotificationService.sendNotification({
+        recipientUid: (userToRemove as any).uid || String(userToRemove.id),
+        recipientId: userToRemove.id,
+        recipientEmail: userToRemove.email,
+        senderUid: req.firebaseUid || String(req.user.id),
+        senderName: req.user.name || 'Project Lead',
+        organizationId: targetOrgId,
+        type: 'PROJECT_MEMBER_REMOVED',
+        title: 'Removed from Project',
+        message: `You were removed from project "${project.name}".`,
+        entityId: project.id,
+        entityType: 'project',
+        projectId: project.id,
+        actionUrl: `/projects`,
+        eventId: `PROJECT_${project.id}_MEMBER_REM_${userToRemove.id}`,
+      });
 
       const updatedProject = await Project.findByPk(id, {
         include: [

@@ -416,12 +416,20 @@ const mockAdapter = async (config: any) => {
     } else {
       resData = getMessages();
     }
-  } else if (url.match(/\/api\/notifications\/(\d+)\/read/)) {
+  } else if (url.match(/\/api\/notifications\/([^\/]+)\/read/)) {
     // Mark individual notification as read
-    const match = url.match(/\/api\/notifications\/(\d+)\/read/);
-    const nId = match ? parseInt(match[1]) : 0;
+    const match = url.match(/\/api\/notifications\/([^\/]+)\/read/);
+    const nId = match ? match[1] : '';
     const notifications = getNotifications();
-    const updated = notifications.map((n: any) => n.id === nId ? { ...n, isRead: true } : n);
+    const updated = notifications.map((n: any) => (String(n.id) === nId || String(n.notificationId) === nId) ? { ...n, isRead: true } : n);
+    setNotifications(updated);
+    resData = { success: true };
+  } else if (url.match(/\/api\/notifications\/([^\/]+)\/unread/)) {
+    // Mark individual notification as unread
+    const match = url.match(/\/api\/notifications\/([^\/]+)\/unread/);
+    const nId = match ? match[1] : '';
+    const notifications = getNotifications();
+    const updated = notifications.map((n: any) => (String(n.id) === nId || String(n.notificationId) === nId) ? { ...n, isRead: false } : n);
     setNotifications(updated);
     resData = { success: true };
   } else if (url.includes('/api/notifications/read-all') || url.includes('mark-all-read')) {
@@ -430,6 +438,26 @@ const mockAdapter = async (config: any) => {
     const updated = notifications.map((n: any) => ({ ...n, isRead: true }));
     setNotifications(updated);
     resData = { success: true };
+  } else if (url.includes('/api/notifications/device-token')) {
+    resData = { success: true, message: 'Device token registered.' };
+  } else if (url.includes('/api/notifications/preferences')) {
+    if (method === 'put') {
+      resData = { success: true, preferences: data?.preferences };
+    } else {
+      resData = {
+        inApp: true,
+        push: true,
+        email: true,
+        categories: {
+          tasks: { inApp: true, push: true, email: true },
+          projects: { inApp: true, push: true, email: true },
+          communication: { inApp: true, push: true, email: true },
+          mentions: { inApp: true, push: true, email: true },
+          security: { inApp: true, push: true, email: true },
+          approvals: { inApp: true, push: true, email: true },
+        },
+      };
+    }
   } else if (url.includes('/api/notifications/unread')) {
     const storedUser = localStorage.getItem('mock_user');
     const currentUser = storedUser ? JSON.parse(storedUser) : { id: 999 };
@@ -451,18 +479,28 @@ const mockAdapter = async (config: any) => {
     if (method === 'post') {
       const notifications = getNotifications();
       const newNotification = {
-        id: Date.now() + Math.floor(Math.random() * 1000),
-        title: data?.title || 'Team Leader Update',
-        message: data?.message || 'Team Leader made changes in the workspace.',
+        id: `notif_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        notificationId: `notif_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        title: data?.title || 'Notification Alert',
+        message: data?.message || 'Workspace update',
         type: data?.type || 'SYSTEM_ALERT',
         isRead: false,
-        recipientId: data?.recipientId || 'ALL',
+        recipientId: data?.recipientId || data?.recipientUid || 'ALL',
         recipientName: data?.recipientName || 'ALL',
+        entityId: data?.entityId,
+        entityType: data?.entityType || 'system',
         createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       };
       notifications.unshift(newNotification);
       setNotifications(notifications);
       resData = newNotification;
+    } else if (method === 'delete') {
+      const match = url.match(/\/api\/notifications\/([^\/]+)/);
+      const delId = match ? match[1] : '';
+      const notifications = getNotifications();
+      setNotifications(notifications.filter((n: any) => String(n.id) !== delId && String(n.notificationId) !== delId));
+      resData = { success: true };
     } else {
       resData = getNotifications();
     }

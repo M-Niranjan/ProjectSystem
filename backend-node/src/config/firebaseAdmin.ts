@@ -1,12 +1,14 @@
 import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
 import { getAuth, Auth } from 'firebase-admin/auth';
 import { getFirestore, Firestore, FieldValue } from 'firebase-admin/firestore';
+import { getMessaging, Messaging } from 'firebase-admin/messaging';
 import fs from 'fs';
 import path from 'path';
 
 let appInstance: App | null = null;
 let firebaseAdminAuth: Auth | null = null;
 let firebaseFirestore: Firestore | null = null;
+let firebaseMessaging: Messaging | null = null;
 
 try {
   const currentApps = getApps();
@@ -43,12 +45,13 @@ try {
   if (appInstance) {
     firebaseAdminAuth = getAuth(appInstance);
     firebaseFirestore = getFirestore(appInstance);
+    firebaseMessaging = getMessaging(appInstance);
   }
 } catch (err) {
   console.warn('Firebase Admin SDK initialization warning:', err);
 }
 
-export { firebaseAdminAuth, firebaseFirestore, FieldValue };
+export { firebaseAdminAuth, firebaseFirestore, firebaseMessaging, FieldValue };
 
 export class FirebaseAdminService {
   public static async verifyIdToken(idToken: string) {
@@ -810,7 +813,7 @@ export class FirebaseAdminService {
   }
 
   // =========================================================================
-  // FIRESTORE NOTIFICATIONS PERSISTENCE
+  // FIRESTORE NOTIFICATIONS & FCM PUSH PERSISTENCE
   // =========================================================================
   public static async createFirestoreNotification(notificationId: string | number, data: any) {
     if (!firebaseFirestore) return null;
@@ -819,6 +822,20 @@ export class FirebaseAdminService {
       const payload = {
         ...data,
         id: docId,
+        notificationId: docId,
+        recipientId: String(data.recipientId || data.recipientUid || data.userId || ''),
+        senderId: String(data.senderId || 'SYSTEM'),
+        senderName: data.senderName || 'System Alert',
+        organizationId: data.organizationId || 'org_default',
+        type: data.type || 'SYSTEM_ALERT',
+        title: data.title || 'Notification Alert',
+        message: data.message || '',
+        entityId: data.entityId ? String(data.entityId) : null,
+        entityType: data.entityType || 'system',
+        actionUrl: data.actionUrl || null,
+        priority: data.priority || 'MEDIUM',
+        metadata: data.metadata || null,
+        eventId: data.eventId || null,
         isRead: false,
         createdAt: data.createdAt || FieldValue.serverTimestamp(),
         updatedAt: FieldValue.serverTimestamp(),
@@ -831,14 +848,24 @@ export class FirebaseAdminService {
     }
   }
 
-  public static async getFirestoreNotifications(recipientId: string | number): Promise<Record<string, any>[]> {
-    if (!firebaseFirestore) return [];
+  public static async getFirestoreNotifications(recipientUid: string, orgId?: string, limitCount: number = 60): Promise<Record<string, any>[]> {
+    if (!firebaseFirestore || !recipientUid) return [];
     try {
-      const snap = await firebaseFirestore.collection('notifications')
-        .where('recipientId', '==', String(recipientId))
-        .limit(50)
-        .get();
-      return snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      let q: FirebaseFirestore.Query = firebaseFirestore.collection('notifications')
+        .where('recipientId', '==', String(recipientUid));
+      
+      if (orgId) {
+        q = q.where('organizationId', '==', String(orgId));
+      }
+
+      const snap = await q.limit(limitCount).get();
+      const notifs = snap.docs.map((d: any) => ({ id: d.id, ...d.data() }));
+      notifs.sort((a: any, b: any) => {
+        const timeA = a.createdAt?.toDate ? a.createdAt.toDate().getTime() : new Date(a.createdAt || 0).getTime();
+        const timeB = b.createdAt?.toDate ? b.createdAt.toDate().getTime() : new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
+      return notifs;
     } catch (err) {
       console.error('Error fetching notifications from Firestore:', err);
       return [];
@@ -854,6 +881,269 @@ export class FirebaseAdminService {
       }, { merge: true });
     } catch (err) {
       console.error(`Error updating notification ${notificationId} in Firestore:`, err);
+    }
+  }
+
+  public static async markFirestoreNotificationAsUnread(notificationId: string | number) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('notifications').doc(String(notificationId)).set({
+        isRead: false,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+    } catch (err) {
+      console.error(`Error marking notification ${notificationId} unread in Firestore:`, err);
+    }
+  }
+
+  public static async markAllFirestoreNotificationsAsRead(recipientUid: string, orgId?: string) {
+    if (!firebaseFirestore || !recipientUid) return;
+    try {
+      let q: FirebaseFirestore.Query = firebaseFirestore.collection('notifications')
+        .where('recipientId', '==', String(recipientUid))
+        .where('isRead', '==', false);
+
+      if (orgId) {
+        q = q.where('organizationId', '==', String(orgId));
+      }
+
+      const snap = await q.get();
+      if (snap.empty) return;
+
+      const batch = firebaseFirestore.batch();
+      snap.docs.forEach((docSnap) => {
+        batch.update(docSnap.ref, {
+          isRead: true,
+          updatedAt: FieldValue.serverTimestamp(),
+        });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Error marking all notifications read in Firestore:', err);
+    }
+  }
+
+  public static async deleteFirestoreNotification(notificationId: string | number) {
+    if (!firebaseFirestore) return;
+    try {
+      await firebaseFirestore.collection('notifications').doc(String(notificationId)).delete();
+    } catch (err) {
+      console.error(`Error deleting notification ${notificationId} in Firestore:`, err);
+    }
+  }
+
+  // =========================================================================
+  // FCM DEVICE TOKENS REGISTRATION & PUSH DISPATCH
+  // =========================================================================
+  public static async saveUserDeviceToken(userId: string, data: {
+    organizationId: string;
+    fcmToken: string;
+    platform?: string;
+    deviceName?: string;
+  }) {
+    if (!firebaseFirestore || !userId || !data.fcmToken) return null;
+    try {
+      // Deterministic key based on userId and hashed token segment
+      const cleanToken = data.fcmToken.trim();
+      const tokenHash = cleanToken.slice(-16).replace(/[^a-zA-Z0-9]/g, '_');
+      const docId = `${userId}_${data.platform || 'android'}_${tokenHash}`;
+
+      const payload = {
+        id: docId,
+        userId: String(userId),
+        organizationId: data.organizationId || 'org_default',
+        fcmToken: cleanToken,
+        platform: data.platform || 'android',
+        deviceName: data.deviceName || (data.platform === 'android' ? 'Android Device' : 'Web Browser'),
+        isActive: true,
+        lastSeenAt: FieldValue.serverTimestamp(),
+        updatedAt: FieldValue.serverTimestamp(),
+        createdAt: FieldValue.serverTimestamp(),
+      };
+
+      await firebaseFirestore.collection('userDevices').doc(docId).set(payload, { merge: true });
+      return payload;
+    } catch (err) {
+      console.error(`Error saving user device token for user ${userId}:`, err);
+      return null;
+    }
+  }
+
+  public static async removeUserDeviceToken(userId: string, fcmToken?: string) {
+    if (!firebaseFirestore || !userId) return;
+    try {
+      let q: FirebaseFirestore.Query = firebaseFirestore.collection('userDevices')
+        .where('userId', '==', String(userId));
+      
+      if (fcmToken) {
+        q = q.where('fcmToken', '==', fcmToken.trim());
+      }
+
+      const snap = await q.get();
+      if (!snap.empty) {
+        const batch = firebaseFirestore.batch();
+        snap.docs.forEach((docSnap) => {
+          batch.delete(docSnap.ref);
+        });
+        await batch.commit();
+      }
+    } catch (err) {
+      console.error(`Error removing user device token for user ${userId}:`, err);
+    }
+  }
+
+  public static async getUserDeviceTokens(userId: string, organizationId?: string): Promise<string[]> {
+    if (!firebaseFirestore || !userId) return [];
+    try {
+      let q: FirebaseFirestore.Query = firebaseFirestore.collection('userDevices')
+        .where('userId', '==', String(userId))
+        .where('isActive', '==', true);
+
+      if (organizationId) {
+        q = q.where('organizationId', '==', String(organizationId));
+      }
+
+      const snap = await q.get();
+      const tokens: string[] = [];
+      snap.forEach((docSnap) => {
+        const d = docSnap.data();
+        if (d.fcmToken && typeof d.fcmToken === 'string') {
+          tokens.push(d.fcmToken.trim());
+        }
+      });
+      return Array.from(new Set(tokens));
+    } catch (err) {
+      console.error(`Error fetching device tokens for user ${userId}:`, err);
+      return [];
+    }
+  }
+
+  public static async sendMulticastPushNotification(
+    tokens: string[],
+    notification: { title: string; body: string },
+    data?: Record<string, string>
+  ) {
+    if (!firebaseMessaging || !tokens || tokens.length === 0) {
+      return { successCount: 0, failureCount: 0 };
+    }
+
+    try {
+      const uniqueTokens = Array.from(new Set(tokens.filter(t => t && typeof t === 'string' && t.length > 10)));
+      if (uniqueTokens.length === 0) return { successCount: 0, failureCount: 0 };
+
+      const stringifiedData: Record<string, string> = {};
+      if (data) {
+        for (const [key, value] of Object.entries(data)) {
+          stringifiedData[key] = typeof value === 'string' ? value : JSON.stringify(value);
+        }
+      }
+
+      const response = await firebaseMessaging.sendEachForMulticast({
+        tokens: uniqueTokens,
+        notification: {
+          title: notification.title,
+          body: notification.body,
+        },
+        data: stringifiedData,
+        android: {
+          priority: 'high',
+          notification: {
+            sound: 'default',
+            clickAction: 'FLUTTER_NOTIFICATION_CLICK',
+            channelId: 'pms_notifications_channel',
+          },
+        },
+      });
+
+      // Cleanup expired or invalid device tokens
+      if (response.failureCount > 0 && firebaseFirestore) {
+        const tokensToRemove: string[] = [];
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success && resp.error) {
+            const errCode = resp.error.code;
+            if (
+              errCode === 'messaging/registration-token-not-registered' ||
+              errCode === 'messaging/invalid-registration-token' ||
+              errCode === 'messaging/invalid-argument'
+            ) {
+              tokensToRemove.push(uniqueTokens[idx]);
+            }
+          }
+        });
+
+        if (tokensToRemove.length > 0) {
+          for (const deadToken of tokensToRemove) {
+            try {
+              const deadSnap = await firebaseFirestore.collection('userDevices')
+                .where('fcmToken', '==', deadToken)
+                .get();
+              if (!deadSnap.empty) {
+                const batch = firebaseFirestore.batch();
+                deadSnap.docs.forEach((docSnap) => batch.delete(docSnap.ref));
+                await batch.commit();
+                console.log(`Cleaned up invalid FCM device token: ${deadToken.slice(0, 12)}...`);
+              }
+            } catch (_cleanErr) {}
+          }
+        }
+      }
+
+      return {
+        successCount: response.successCount,
+        failureCount: response.failureCount,
+      };
+    } catch (err) {
+      console.warn('FCM Multicast push dispatch error (non-fatal):', err);
+      return { successCount: 0, failureCount: tokens.length };
+    }
+  }
+
+  // =========================================================================
+  // USER NOTIFICATION PREFERENCES
+  // =========================================================================
+  public static async getUserNotificationPreferences(userId: string): Promise<Record<string, any>> {
+    const defaultPreferences = {
+      inApp: true,
+      push: true,
+      email: true,
+      categories: {
+        tasks: { inApp: true, push: true, email: true },
+        projects: { inApp: true, push: true, email: true },
+        communication: { inApp: true, push: true, email: true },
+        mentions: { inApp: true, push: true, email: true },
+        security: { inApp: true, push: true, email: true },
+        approvals: { inApp: true, push: true, email: true },
+      },
+    };
+
+    if (!firebaseFirestore || !userId) return defaultPreferences;
+
+    try {
+      const userDoc = await firebaseFirestore.collection('users').doc(userId).get();
+      if (userDoc.exists && userDoc.data()?.notificationPreferences) {
+        return {
+          ...defaultPreferences,
+          ...userDoc.data()?.notificationPreferences,
+        };
+      }
+      return defaultPreferences;
+    } catch (err) {
+      console.error(`Error getting notification preferences for user ${userId}:`, err);
+      return defaultPreferences;
+    }
+  }
+
+  public static async setUserNotificationPreferences(userId: string, preferences: any): Promise<boolean> {
+    if (!firebaseFirestore || !userId) return false;
+    try {
+      await firebaseFirestore.collection('users').doc(userId).set({
+        notificationPreferences: preferences,
+        updatedAt: FieldValue.serverTimestamp(),
+      }, { merge: true });
+      return true;
+    } catch (err) {
+      console.error(`Error saving notification preferences for user ${userId}:`, err);
+      return false;
     }
   }
 
