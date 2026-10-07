@@ -36,7 +36,6 @@ import {
   ExternalLink,
   Download,
   Loader2,
-  Phone,
   Video,
   FileText,
   Star,
@@ -2468,37 +2467,25 @@ export default function Messages() {
                 Chat
               </h1>
             </div>
-            <div className="flex items-center gap-3.5 text-[#e9edef]">
+            <div className="flex items-center gap-1.5 text-[#e9edef]">
               <button
+                type="button"
                 onClick={() => {
-                  const target = contacts.find((c) => c.id !== currentUid && c.id !== AI_ASSISTANT_ID);
-                  if (target) {
-                    setActiveCall({
-                      type: 'audio',
-                      contactName: target.name,
-                      contactAvatar: target.profilePhoto,
-                      status: 'ringing',
-                      duration: 0
-                    });
+                  if (chatFilter === 'channels') {
+                    setIsCreateChannelOpen(true);
                   } else {
-                    showToast('No contacts available for call');
+                    setIsAddContactModalOpen(true);
                   }
                 }}
-                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
-                title="Start Voice Call"
+                className="w-8 h-8 rounded-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white flex items-center justify-center shadow-md transition-transform hover:scale-105 active:scale-95 cursor-pointer"
+                title={chatFilter === 'channels' ? 'New Channel' : 'New Direct Message'}
               >
-                <Phone className="w-5 h-5 stroke-[1.8]" />
+                <Plus className="w-5 h-5 font-black stroke-[3]" />
               </button>
               <button
-                onClick={() => setIsDocumentPickerOpen(true)}
-                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
-                title="Camera / Send Media"
-              >
-                <Camera className="w-5 h-5 stroke-[1.8]" />
-              </button>
-              <button
+                type="button"
                 onClick={() => setIsHeaderMenuOpen(!isHeaderMenuOpen)}
-                className="p-1 text-[#8696a0] hover:text-blue-400 transition-colors cursor-pointer"
+                className="p-1.5 rounded-full hover:bg-[#202c33] text-[#8696a0] hover:text-[#e9edef] transition-colors cursor-pointer"
                 title="More options"
               >
                 <MoreVertical className="w-5 h-5" />
@@ -2617,7 +2604,7 @@ export default function Messages() {
               <Search className="w-4 h-4 text-[#8696a0] mr-2.5 shrink-0" />
               <input
                 type="text"
-                placeholder="Search unread chats"
+                placeholder="Search chats, contacts, or channels..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-transparent text-xs font-normal outline-none text-[#e9edef] placeholder:text-[#8696a0]"
