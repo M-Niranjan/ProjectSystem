@@ -248,6 +248,8 @@ export default function EmployeeSettingsView({
     setAccentColor,
     showToast,
     setSignOutModalOpen,
+    commitAppearance,
+    discardAppearance,
   } = useUIStore();
 
   const [activeTab, setActiveTab] = useState<EmployeeSettingsTab | null>(initialTab);
@@ -762,6 +764,7 @@ export default function EmployeeSettingsView({
 
       const success = await updateProfile(profilePayload);
       if (success) {
+        commitAppearance();
         setIsDirty(false);
         showToast('Settings & preferences saved successfully.', 'success');
       } else {
@@ -782,6 +785,7 @@ export default function EmployeeSettingsView({
     setSkills(user?.skills || '');
     setProfilePhoto(user?.profilePhoto || '');
     setPhotoPreview(null);
+    discardAppearance();
     setIsDirty(false);
     showToast('Changes discarded.', 'info');
   };
@@ -2414,25 +2418,28 @@ export default function EmployeeSettingsView({
         </div>
       </div>
 
-      {/* Floating Save Action Bar (Displays whenever user modifies settings) */}
+      {/* Floating Save Action Bar in Header Section */}
       <AnimatePresence>
         {isDirty && (
           <motion.div
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 30 }}
-            className="fixed bottom-6 inset-x-4 max-w-xl mx-auto z-50 p-3.5 px-5 rounded-2xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-2xl flex items-center justify-between gap-4 border border-white/20"
+            initial={{ opacity: 0, y: -24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl mx-auto px-4 py-2 sm:py-2.5 rounded-full bg-slate-950/92 dark:bg-[#070913]/95 backdrop-blur-2xl text-white shadow-[0_16px_50px_rgba(0,0,0,0.65),0_0_25px_rgba(59,130,246,0.25)] flex items-center justify-between gap-3 border border-blue-500/35"
           >
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-              <span className="text-xs font-bold">You have unsaved changes</span>
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+              <span className="text-xs font-bold whitespace-nowrap truncate text-slate-100">
+                You have unsaved changes
+              </span>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <button
                 type="button"
                 onClick={handleDiscardChanges}
-                className="px-3 py-1.5 rounded-xl text-xs font-bold text-slate-300 dark:text-slate-600 hover:text-white dark:hover:text-black transition cursor-pointer"
+                className="px-3 py-1 rounded-full text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
               >
                 Discard
               </button>
@@ -2440,7 +2447,7 @@ export default function EmployeeSettingsView({
                 type="button"
                 onClick={handleSaveAllPreferences}
                 disabled={saving}
-                className="px-4 py-1.5 rounded-xl text-xs font-extrabold bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer shadow-md disabled:opacity-50"
+                className="px-4 py-1.5 rounded-full text-xs font-extrabold bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
               >
                 {saving ? 'Saving...' : 'Save Preferences'}
               </button>

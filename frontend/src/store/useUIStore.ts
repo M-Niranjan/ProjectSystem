@@ -64,6 +64,14 @@ interface DashboardPrefs {
   landingPage: string;
 }
 
+export interface AppearanceSnapshot {
+  themeMode: ThemeMode;
+  accentColor: AccentColor;
+  glassEffects: boolean;
+  livePulse: boolean;
+  compactMode: boolean;
+}
+
 interface UIState {
   sidebarExpanded: boolean;
   darkMode: boolean;
@@ -86,8 +94,8 @@ interface UIState {
   hideToast: () => void;
   toggleSidebar: () => void;
   toggleTheme: () => void;
-  setThemeMode: (mode: ThemeMode) => void;
-  setAccentColor: (color: AccentColor) => void;
+  setThemeMode: (mode: ThemeMode, persist?: boolean) => void;
+  setAccentColor: (color: AccentColor, persist?: boolean) => void;
   setDashboardPrefs: (prefs: Partial<DashboardPrefs>) => void;
   initTheme: () => void;
   setLanguage: (lang: string) => void;
@@ -100,9 +108,12 @@ interface UIState {
   glassEffects: boolean;
   livePulse: boolean;
   compactMode: boolean;
-  setGlassEffects: (enabled: boolean) => void;
-  setLivePulse: (enabled: boolean) => void;
-  setCompactMode: (enabled: boolean) => void;
+  savedAppearance: AppearanceSnapshot;
+  setGlassEffects: (enabled: boolean, persist?: boolean) => void;
+  setLivePulse: (enabled: boolean, persist?: boolean) => void;
+  setCompactMode: (enabled: boolean, persist?: boolean) => void;
+  commitAppearance: () => void;
+  discardAppearance: () => void;
   signOutModalOpen: boolean;
   setSignOutModalOpen: (isOpen: boolean) => void;
   loginSplashActive: boolean;
@@ -241,8 +252,7 @@ export const useUIStore = create<UIState>((set, get) => ({
     const nextDark = !get().darkMode;
     const nextMode: ThemeMode = nextDark ? 'dark' : 'light';
     set({ darkMode: nextDark, themeMode: nextMode });
-    localStorage.setItem('theme', nextMode);
-    localStorage.setItem('themeMode', nextMode);
+    get().commitAppearance();
     if (nextDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -250,12 +260,12 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   },
 
-  setThemeMode: (mode: ThemeMode) => {
+  setThemeMode: (mode: ThemeMode, persist = false) => {
     const isDark = mode === 'dark';
     set({ themeMode: mode, darkMode: isDark });
-    localStorage.setItem('themeMode', mode);
-    localStorage.setItem('theme', isDark ? 'dark' : 'light');
-
+    if (persist) {
+      get().commitAppearance();
+    }
     if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
@@ -267,28 +277,98 @@ export const useUIStore = create<UIState>((set, get) => ({
   livePulse: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_live_pulse') !== 'false' : true,
   compactMode: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_compact_mode') === 'true' : false,
 
-  setGlassEffects: (enabled: boolean) => {
+  savedAppearance: {
+    themeMode: typeof localStorage !== 'undefined' && localStorage.getItem('themeMode') === 'dark' ? 'dark' : 'light',
+    accentColor: (typeof localStorage !== 'undefined' ? localStorage.getItem('accentColor') || 'blue' : 'blue') as AccentColor,
+    glassEffects: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_glass_effects') !== 'false' : true,
+    livePulse: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_live_pulse') !== 'false' : true,
+    compactMode: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_compact_mode') === 'true' : false,
+  },
+
+  setGlassEffects: (enabled: boolean, persist = false) => {
     set({ glassEffects: enabled });
-    localStorage.setItem('pms_glass_effects', String(enabled));
     applyInterfaceStyles(enabled, get().livePulse, get().compactMode);
+    if (persist) {
+      get().commitAppearance();
+    }
   },
 
-  setLivePulse: (enabled: boolean) => {
+  setLivePulse: (enabled: boolean, persist = false) => {
     set({ livePulse: enabled });
-    localStorage.setItem('pms_live_pulse', String(enabled));
     applyInterfaceStyles(get().glassEffects, enabled, get().compactMode);
+    if (persist) {
+      get().commitAppearance();
+    }
   },
 
-  setCompactMode: (enabled: boolean) => {
+  setCompactMode: (enabled: boolean, persist = false) => {
     set({ compactMode: enabled });
-    localStorage.setItem('pms_compact_mode', String(enabled));
     applyInterfaceStyles(get().glassEffects, get().livePulse, enabled);
+    if (persist) {
+      get().commitAppearance();
+    }
   },
 
-  setAccentColor: (color: AccentColor) => {
+  setAccentColor: (color: AccentColor, persist = false) => {
     set({ accentColor: color });
-    localStorage.setItem('accentColor', color);
     applyAccentStyles(color);
+    if (persist) {
+      get().commitAppearance();
+    }
+  },
+
+  commitAppearance: () => {
+    const { themeMode, darkMode, accentColor, glassEffects, livePulse, compactMode } = get();
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('themeMode', themeMode);
+      localStorage.setItem('theme', darkMode ? 'dark' : 'light');
+      localStorage.setItem('accentColor', accentColor);
+      localStorage.setItem('pms_glass_effects', String(glassEffects));
+      localStorage.setItem('pms_live_pulse', String(livePulse));
+      localStorage.setItem('pms_compact_mode', String(compactMode));
+    }
+    set({
+      savedAppearance: {
+        themeMode,
+        accentColor,
+        glassEffects,
+        livePulse,
+        compactMode,
+      },
+    });
+  },
+
+  discardAppearance: () => {
+    const { savedAppearance } = get();
+    const isDark = savedAppearance.themeMode === 'dark';
+
+    set({
+      themeMode: savedAppearance.themeMode,
+      darkMode: isDark,
+      accentColor: savedAppearance.accentColor,
+      glassEffects: savedAppearance.glassEffects,
+      livePulse: savedAppearance.livePulse,
+      compactMode: savedAppearance.compactMode,
+    });
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('themeMode', savedAppearance.themeMode);
+      localStorage.setItem('theme', isDark ? 'dark' : 'light');
+      localStorage.setItem('accentColor', savedAppearance.accentColor);
+      localStorage.setItem('pms_glass_effects', String(savedAppearance.glassEffects));
+      localStorage.setItem('pms_live_pulse', String(savedAppearance.livePulse));
+      localStorage.setItem('pms_compact_mode', String(savedAppearance.compactMode));
+    }
+
+    if (typeof document !== 'undefined') {
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    }
+    applyAccentStyles(savedAppearance.accentColor);
+    applyInterfaceStyles(savedAppearance.glassEffects, savedAppearance.livePulse, savedAppearance.compactMode);
   },
 
   setDashboardPrefs: (prefs: Partial<DashboardPrefs>) => {
@@ -308,7 +388,16 @@ export const useUIStore = create<UIState>((set, get) => ({
 
     const isDark = savedMode === 'dark';
 
+    const snapshot: AppearanceSnapshot = {
+      themeMode: savedMode,
+      accentColor: savedAccent,
+      glassEffects: savedGlass,
+      livePulse: savedPulse,
+      compactMode: savedCompact,
+    };
+
     set({
+      savedAppearance: snapshot,
       themeMode: savedMode,
       darkMode: isDark,
       accentColor: savedAccent,

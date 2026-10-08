@@ -261,6 +261,8 @@ export default function Settings() {
     accentColor,
     setAccentColor,
     showToast,
+    commitAppearance,
+    discardAppearance,
   } = useUIStore();
 
   const role = normalizeRole(user?.role);
@@ -790,6 +792,7 @@ export default function Settings() {
       };
       setAuditLogsList((prev) => [newAuditLog, ...prev]);
 
+      commitAppearance();
       setIsDirty(false);
       showToast('Settings updated successfully.', 'success');
     } catch (err: any) {
@@ -801,6 +804,7 @@ export default function Settings() {
 
   // Revert changes
   const handleCancelChanges = () => {
+    discardAppearance();
     setIsDirty(false);
     showToast('Changes discarded.', 'info');
   };
@@ -2315,6 +2319,7 @@ export default function Settings() {
                     } else if (confirmModal.actionType === 'reset-notifications') {
                       handleResetNotifications();
                     } else if (confirmModal.actionType === 'unsaved') {
+                      discardAppearance();
                       setIsDirty(false);
                       setActiveCategory(confirmModal.targetCategory || null);
                       setConfirmModal((prev) => ({ ...prev, isOpen: false }));
@@ -2327,6 +2332,43 @@ export default function Settings() {
               </div>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+      {/* Floating Save Action Bar in Header Section */}
+      <AnimatePresence>
+        {isDirty && (
+          <motion.div
+            initial={{ opacity: 0, y: -24, scale: 0.96 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -24, scale: 0.96 }}
+            transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+            className="fixed top-5 left-1/2 -translate-x-1/2 z-50 w-[calc(100%-2rem)] max-w-xl mx-auto px-4 py-2 sm:py-2.5 rounded-full bg-slate-950/92 dark:bg-[#070913]/95 backdrop-blur-2xl text-white shadow-[0_16px_50px_rgba(0,0,0,0.65),0_0_25px_rgba(59,130,246,0.25)] flex items-center justify-between gap-3 border border-blue-500/35"
+          >
+            <div className="flex items-center gap-2.5 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse shrink-0 shadow-[0_0_8px_rgba(251,191,36,0.8)]" />
+              <span className="text-xs font-bold whitespace-nowrap truncate text-slate-100">
+                You have unsaved changes
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleCancelChanges}
+                className="px-3 py-1 rounded-full text-xs font-bold text-slate-300 hover:text-white hover:bg-white/10 transition cursor-pointer"
+              >
+                Discard
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAllChanges}
+                disabled={saving}
+                className="px-4 py-1.5 rounded-full text-xs font-extrabold bg-blue-600 hover:bg-blue-500 text-white transition cursor-pointer shadow-md disabled:opacity-50 flex items-center gap-1.5 whitespace-nowrap"
+              >
+                {saving ? 'Saving...' : 'Save Changes'}
+              </button>
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
     </div>
