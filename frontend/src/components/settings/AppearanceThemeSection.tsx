@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { 
   Palette, 
   Sun, 
@@ -20,11 +20,34 @@ interface AppearanceThemeSectionProps {
 }
 
 export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThemeSectionProps) {
-  const { themeMode, setThemeMode, accentColor, setAccentColor, darkMode } = useUIStore();
-  
-  const [glassEffects, setGlassEffects] = useState(true);
-  const [livePulse, setLivePulse] = useState(true);
-  const [compactMode, setCompactMode] = useState(false);
+  const { 
+    themeMode, 
+    setThemeMode, 
+    accentColor, 
+    setAccentColor, 
+    darkMode,
+    glassEffects,
+    setGlassEffects,
+    livePulse,
+    setLivePulse,
+    compactMode,
+    setCompactMode
+  } = useUIStore();
+
+  const handleToggleGlass = (val: boolean) => {
+    setGlassEffects(val);
+    onDirtyChange?.(true);
+  };
+
+  const handleTogglePulse = (val: boolean) => {
+    setLivePulse(val);
+    onDirtyChange?.(true);
+  };
+
+  const handleToggleCompact = (val: boolean) => {
+    setCompactMode(val);
+    onDirtyChange?.(true);
+  };
 
   const handleThemeSelect = (mode: ThemeMode) => {
     setThemeMode(mode);
@@ -312,7 +335,7 @@ export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThem
                 </div>
                 <button
                   type="button"
-                  onClick={() => setGlassEffects(!glassEffects)}
+                  onClick={() => handleToggleGlass(!glassEffects)}
                   className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
                     glassEffects ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
                   }`}
@@ -336,7 +359,7 @@ export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThem
                 </div>
                 <button
                   type="button"
-                  onClick={() => setLivePulse(!livePulse)}
+                  onClick={() => handleTogglePulse(!livePulse)}
                   className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
                     livePulse ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
                   }`}
@@ -360,7 +383,7 @@ export default function AppearanceThemeSection({ onDirtyChange }: AppearanceThem
                 </div>
                 <button
                   type="button"
-                  onClick={() => setCompactMode(!compactMode)}
+                  onClick={() => handleToggleCompact(!compactMode)}
                   className={`w-11 h-6 rounded-full p-0.5 transition-colors cursor-pointer flex items-center ${
                     compactMode ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-700'
                   }`}

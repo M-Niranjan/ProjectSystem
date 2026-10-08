@@ -97,6 +97,12 @@ interface UIState {
   setProjectModalOpen: (isOpen: boolean) => void;
   setTaskModalOpen: (isOpen: boolean, status?: string | null, isEdit?: boolean, task?: any | null) => void;
   setChatContactId: (id: string | number | null) => void;
+  glassEffects: boolean;
+  livePulse: boolean;
+  compactMode: boolean;
+  setGlassEffects: (enabled: boolean) => void;
+  setLivePulse: (enabled: boolean) => void;
+  setCompactMode: (enabled: boolean) => void;
   signOutModalOpen: boolean;
   setSignOutModalOpen: (isOpen: boolean) => void;
   loginSplashActive: boolean;
@@ -105,6 +111,44 @@ interface UIState {
   finishLoginSplash: () => Promise<void>;
   cancelLoginSplash: () => void;
 }
+
+export const applyInterfaceStyles = (glass: boolean, pulse: boolean, compact: boolean) => {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+
+  // 1. Glass effects
+  if (!glass) {
+    root.classList.add('disable-glass');
+    root.setAttribute('data-glass', 'false');
+    root.style.setProperty('--blur-glass', '0px');
+  } else {
+    root.classList.remove('disable-glass');
+    root.removeAttribute('data-glass');
+    root.style.removeProperty('--blur-glass');
+  }
+
+  // 2. Live sync pulse beacon
+  if (!pulse) {
+    root.classList.add('disable-pulse');
+    root.setAttribute('data-pulse', 'false');
+  } else {
+    root.classList.remove('disable-pulse');
+    root.removeAttribute('data-pulse');
+  }
+
+  // 3. Compact interface spacing density
+  if (compact) {
+    root.setAttribute('data-density', 'compact');
+    root.classList.add('compact-density');
+    root.style.setProperty('--density-padding', '0.5rem');
+    root.style.setProperty('--density-scale', '0.94');
+  } else {
+    root.removeAttribute('data-density');
+    root.classList.remove('compact-density');
+    root.style.removeProperty('--density-padding');
+    root.style.removeProperty('--density-scale');
+  }
+};
 
 const applyAccentStyles = (accent: AccentColor) => {
   const preset = ACCENT_PRESETS[accent] || ACCENT_PRESETS.blue;
@@ -219,6 +263,28 @@ export const useUIStore = create<UIState>((set, get) => ({
     }
   },
 
+  glassEffects: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_glass_effects') !== 'false' : true,
+  livePulse: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_live_pulse') !== 'false' : true,
+  compactMode: typeof localStorage !== 'undefined' ? localStorage.getItem('pms_compact_mode') === 'true' : false,
+
+  setGlassEffects: (enabled: boolean) => {
+    set({ glassEffects: enabled });
+    localStorage.setItem('pms_glass_effects', String(enabled));
+    applyInterfaceStyles(enabled, get().livePulse, get().compactMode);
+  },
+
+  setLivePulse: (enabled: boolean) => {
+    set({ livePulse: enabled });
+    localStorage.setItem('pms_live_pulse', String(enabled));
+    applyInterfaceStyles(get().glassEffects, enabled, get().compactMode);
+  },
+
+  setCompactMode: (enabled: boolean) => {
+    set({ compactMode: enabled });
+    localStorage.setItem('pms_compact_mode', String(enabled));
+    applyInterfaceStyles(get().glassEffects, get().livePulse, enabled);
+  },
+
   setAccentColor: (color: AccentColor) => {
     set({ accentColor: color });
     localStorage.setItem('accentColor', color);
@@ -235,6 +301,9 @@ export const useUIStore = create<UIState>((set, get) => ({
     const rawMode = localStorage.getItem('themeMode');
     const savedMode: ThemeMode = rawMode === 'dark' ? 'dark' : 'light';
     const savedAccent = (localStorage.getItem('accentColor') || 'blue') as AccentColor;
+    const savedGlass = localStorage.getItem('pms_glass_effects') !== 'false';
+    const savedPulse = localStorage.getItem('pms_live_pulse') !== 'false';
+    const savedCompact = localStorage.getItem('pms_compact_mode') === 'true';
     const savedPrefs = localStorage.getItem('dashboardPrefs');
 
     const isDark = savedMode === 'dark';
@@ -243,16 +312,14 @@ export const useUIStore = create<UIState>((set, get) => ({
       themeMode: savedMode,
       darkMode: isDark,
       accentColor: savedAccent,
+      glassEffects: savedGlass,
+      livePulse: savedPulse,
+      compactMode: savedCompact,
       dashboardPrefs: savedPrefs ? JSON.parse(savedPrefs) : get().dashboardPrefs,
     });
 
     applyAccentStyles(savedAccent);
-
-    if (typeof document !== 'undefined') {
-      document.documentElement.removeAttribute('data-density');
-      document.documentElement.style.removeProperty('--density-scale');
-      document.documentElement.style.removeProperty('--density-padding');
-    }
+    applyInterfaceStyles(savedGlass, savedPulse, savedCompact);
 
     if (isDark) {
       document.documentElement.classList.add('dark');
