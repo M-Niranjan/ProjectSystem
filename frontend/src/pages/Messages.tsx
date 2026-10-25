@@ -2601,7 +2601,7 @@ export default function Messages() {
           >
             <MessageSquare className="w-5 h-5" />
             {dmUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center">
                 {dmUnreadCount > 9 ? '9+' : dmUnreadCount}
               </span>
             )}
@@ -2622,7 +2622,7 @@ export default function Messages() {
           >
             <Users className="w-5 h-5" />
             {teamUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center">
                 {teamUnreadCount > 9 ? '9+' : teamUnreadCount}
               </span>
             )}
@@ -2643,7 +2643,7 @@ export default function Messages() {
           >
             <Hash className="w-5 h-5" />
             {channelUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center">
                 {channelUnreadCount > 9 ? '9+' : channelUnreadCount}
               </span>
             )}
@@ -3136,16 +3136,11 @@ export default function Messages() {
                         )}
                         <span className="truncate">{item.previewText}</span>
                       </p>
-                      {!isSelected && item.unreadCount > 0 ? (
-                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                      {!isSelected && item.unreadCount > 0 && (
+                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-sm">
                           {item.unreadCount > 9 ? '9+' : item.unreadCount}
                         </span>
-                      ) : (!isSelected && !item.isLastRead && !item.isLastMe && item.previewText) ? (
-                        <span className="ml-2 relative flex h-2 w-2 shrink-0" title="Unread message">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
-                        </span>
-                      ) : null}
+                      )}
                     </div>
                   </div>
                 </button>

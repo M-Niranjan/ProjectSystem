@@ -25,7 +25,7 @@ export const ChatNotificationBadge: React.FC<ChatNotificationBadgeProps> = ({
   max = 9,
   size = 'sm',
   className = '',
-  showPulse = true,
+  showPulse = false,
 }) => {
   const isCountVisible = typeof count === 'number' && count > 0;
   const isDotVisible = !isCountVisible && Boolean(hasUnread);
@@ -38,9 +38,6 @@ export const ChatNotificationBadge: React.FC<ChatNotificationBadgeProps> = ({
     const dotSizeClass = size === 'xs' ? 'h-2 w-2' : size === 'sm' ? 'h-2.5 w-2.5' : 'h-3 w-3';
     return (
       <span className={`relative inline-flex items-center justify-center shrink-0 ${dotSizeClass} ${className}`}>
-        {showPulse && (
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
-        )}
         <span className={`relative inline-flex rounded-full ${dotSizeClass} bg-gradient-to-tr from-cyan-400 to-blue-500 ring-2 ring-white dark:ring-[#070913] shadow-[0_0_8px_rgba(6,182,212,0.8)]`} />
       </span>
     );
