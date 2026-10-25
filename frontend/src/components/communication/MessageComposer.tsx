@@ -13,7 +13,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, ContactItem } from '../../store/useCommunicationStore';
 import EmojiPickerPopover from './EmojiPickerPopover';
-import { uploadChatAttachment } from '../../services/firebase';
+import { uploadChatAttachment, compressImageToDataUrl } from '../../services/firebase';
 
 interface MessageComposerProps {
   onSendMessage: (content: string, file?: { name: string; url: string; size: number }) => void;
@@ -159,13 +159,31 @@ export default function MessageComposer({
       });
     } catch (err: any) {
       console.error('File upload error:', err);
-      // Fallback local blob URL
-      const localUrl = URL.createObjectURL(file);
-      setAttachedFile({
-        name: file.name,
-        url: localUrl,
-        size: file.size,
-      });
+      try {
+        const isImage = file.type.startsWith('image/') || Boolean(file.name.match(/\.(png|jpe?g|webp|gif|svg|bmp)$/i));
+        let fallbackUrl = '';
+        if (isImage) {
+          fallbackUrl = await compressImageToDataUrl(file);
+        } else {
+          fallbackUrl = await new Promise((res) => {
+            const r = new FileReader();
+            r.onload = () => res(r.result as string);
+            r.onerror = () => res(URL.createObjectURL(file));
+            r.readAsDataURL(file);
+          });
+        }
+        setAttachedFile({
+          name: file.name,
+          url: fallbackUrl,
+          size: file.size,
+        });
+      } catch (_e) {
+        setAttachedFile({
+          name: file.name,
+          url: URL.createObjectURL(file),
+          size: file.size,
+        });
+      }
     } finally {
       setIsUploading(false);
       setTimeout(() => setUploadProgress(null), 500);

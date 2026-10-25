@@ -57,6 +57,7 @@ export class AttachmentController {
         fileName: file.originalname,
         fileUrl,
         url: fileUrl,
+        relativeUrl: `/uploads/${file.filename}`,
         fileType: file.mimetype,
         size: file.size,
         ...(fullAttachment ? fullAttachment.toJSON() : {}),

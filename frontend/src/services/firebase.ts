@@ -42,11 +42,12 @@ export const firebaseStorage = getStorage(firebaseApp);
 
 /**
  * Compresses an image file before generating a Data URL fallback.
- * Scales down to max 1280px and applies JPEG compression to guarantee
- * the resulting Data URL is small (~80KB - 160KB) and safely within
+/**
+ * Scales down images and applies JPEG compression to guarantee
+ * the resulting Data URL is small (~60KB - 160KB) and safely within
  * Cloud Firestore's 1MB document limit.
  */
-const compressImageToDataUrl = (file: File, maxDim = 1280, quality = 0.75): Promise<string> => {
+export const compressImageToDataUrl = (file: File, maxDim = 960, quality = 0.65): Promise<string> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onerror = reject;
@@ -73,9 +74,24 @@ const compressImageToDataUrl = (file: File, maxDim = 1280, quality = 0.75): Prom
           resolve(e.target?.result as string);
           return;
         }
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, width, height);
         ctx.drawImage(img, 0, 0, width, height);
-        const mimeType = file.type === 'image/png' && file.size < 400 * 1024 ? 'image/png' : 'image/jpeg';
-        const dataUrl = canvas.toDataURL(mimeType, quality);
+
+        let dataUrl = canvas.toDataURL('image/jpeg', quality);
+        // Double-check size safety: If data URL length > 450,000 characters, scale down further
+        if (dataUrl.length > 450000) {
+          const smallCanvas = document.createElement('canvas');
+          smallCanvas.width = Math.round(width * 0.7);
+          smallCanvas.height = Math.round(height * 0.7);
+          const sCtx = smallCanvas.getContext('2d');
+          if (sCtx) {
+            sCtx.fillStyle = '#FFFFFF';
+            sCtx.fillRect(0, 0, smallCanvas.width, smallCanvas.height);
+            sCtx.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+            dataUrl = smallCanvas.toDataURL('image/jpeg', 0.5);
+          }
+        }
         resolve(dataUrl);
       };
       img.src = e.target?.result as string;
@@ -85,8 +101,34 @@ const compressImageToDataUrl = (file: File, maxDim = 1280, quality = 0.75): Prom
 };
 
 /**
- * Uploads a chat attachment with fallback mechanisms.
- * Tries Firebase Storage first, then backend multipart upload, then DataURL with image compression.
+ * Resolves media and attachment URLs across localhost, LAN IPs, and production.
+ */
+export const resolveMediaUrl = (url?: string): string => {
+  if (!url) return '';
+  if (url.startsWith('data:') || url.startsWith('blob:')) return url;
+  if (url.startsWith('https://firebasestorage.googleapis.com')) return url;
+
+  // If URL has localhost:8080 or 127.0.0.1:8080 but accessed on mobile or LAN IP
+  if (url.includes('localhost:8080') || url.includes('127.0.0.1:8080')) {
+    if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+      return url.replace(/https?:\/\/(localhost|127\.0\.0\.1):8080/, `${window.location.protocol}//${window.location.hostname}:8080`);
+    }
+  }
+
+  // If relative path /uploads/...
+  if (url.startsWith('/uploads/')) {
+    const apiBase = getApiBaseUrl();
+    if (apiBase) return `${apiBase}${url}`;
+    if (typeof window !== 'undefined') return `${window.location.origin}${url}`;
+  }
+
+  return url;
+};
+
+/**
+ * Uploads a chat attachment with fast fallback mechanisms.
+ * Tries Firebase Storage first (3s timeout), then backend Node upload (4.5s timeout),
+ * and finally client-side canvas compression data URL so messages NEVER fail to send.
  */
 export const uploadChatAttachment = async (
   file: File,
@@ -96,19 +138,28 @@ export const uploadChatAttachment = async (
 ): Promise<{ name: string; url: string; size: number; type: string }> => {
   if (onProgress) onProgress(20);
 
-  // 1. Try Firebase Storage
+  const safeConvId = convId || 'general';
+  const isImg = file.type.startsWith('image/') || Boolean(file.name.match(/\.(png|jpe?g|webp|gif|svg|bmp)$/i));
+
+  // 1. Try Firebase Storage with a strict 3.5s timeout
   if (firebaseStorage) {
     try {
       const sanitizedName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = `chat_attachments/${orgId}/${convId}/${Date.now()}_${sanitizedName}`;
+      const filePath = `chat_attachments/${orgId}/${safeConvId}/${Date.now()}_${sanitizedName}`;
       const fileStorageRef = storageRef(firebaseStorage, filePath);
-      
-      if (onProgress) onProgress(45);
-      await uploadBytes(fileStorageRef, file, {
+
+      if (onProgress) onProgress(40);
+
+      const uploadPromise = uploadBytes(fileStorageRef, file, {
         contentType: file.type || 'application/octet-stream',
       });
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Firebase Storage timeout')), 3500)
+      );
+
+      await Promise.race([uploadPromise, timeoutPromise]);
       if (onProgress) onProgress(85);
-      
+
       const downloadUrl = await getDownloadURL(fileStorageRef);
       if (onProgress) onProgress(100);
       return {
@@ -118,16 +169,16 @@ export const uploadChatAttachment = async (
         type: file.type || 'application/octet-stream',
       };
     } catch (storageErr) {
-      console.warn('Firebase Storage upload notice, trying backend upload:', storageErr);
+      console.warn('Firebase Storage upload skipped/failed, falling back:', storageErr);
     }
   }
 
-  // 2. Try Backend Node upload (/api/attachments/upload)
+  // 2. Try Backend Node upload (/api/attachments/upload) with 4.5s timeout
   try {
     if (onProgress) onProgress(60);
     const formData = new FormData();
     formData.append('file', file);
-    
+
     let token = localStorage.getItem('token') || sessionStorage.getItem('token');
     if (!token && firebaseAuth.currentUser) {
       try {
@@ -136,7 +187,8 @@ export const uploadChatAttachment = async (
     }
     const apiBase = getApiBaseUrl();
     const uploadUrl = apiBase ? `${apiBase}/api/attachments/upload` : '/api/attachments/upload';
-    const response = await fetch(uploadUrl, {
+
+    const fetchPromise = fetch(uploadUrl, {
       method: 'POST',
       headers: {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -144,13 +196,20 @@ export const uploadChatAttachment = async (
       },
       body: formData,
     });
+    const fetchTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('Backend upload timeout')), 4500)
+    );
 
-    if (response.ok) {
+    const response = (await Promise.race([fetchPromise, fetchTimeout])) as Response;
+
+    if (response && response.ok) {
       const data = await response.json();
       if (onProgress) onProgress(100);
+      const chosenUrl = data.relativeUrl || data.fileUrl || data.url;
+      const resolved = resolveMediaUrl(chosenUrl);
       return {
         name: file.name,
-        url: data.fileUrl || data.url,
+        url: resolved,
         size: file.size,
         type: file.type || 'application/octet-stream',
       };
@@ -160,9 +219,9 @@ export const uploadChatAttachment = async (
   }
 
   // 3. Resilient Base64 Data URL fallback (auto-compressing images to stay strictly below Firestore's 1MB limit)
-  const isImg = file.type.startsWith('image/') || Boolean(file.name.match(/\.(png|jpe?g|webp|gif|svg|bmp)$/i));
   if (isImg) {
     try {
+      if (onProgress) onProgress(80);
       const compressedDataUrl = await compressImageToDataUrl(file);
       if (onProgress) onProgress(100);
       return {
@@ -188,6 +247,7 @@ export const uploadChatAttachment = async (
       });
     };
     reader.onerror = () => {
+      if (onProgress) onProgress(100);
       resolve({
         name: file.name,
         url: URL.createObjectURL(file),

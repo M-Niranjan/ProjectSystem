@@ -70,7 +70,8 @@ import {
   fetchFirestoreProjects,
   fetchFirestoreUserDoc,
   upsertFirestoreUserDoc,
-  fetchFirestoreUsersByOrg
+  fetchFirestoreUsersByOrg,
+  resolveMediaUrl
 } from '../services/firebase';
 import {
   collection,
@@ -877,7 +878,15 @@ export default function Messages() {
     }
 
     try {
-      const orgFilter = Array.from(new Set([orgId, 'org_default', 'default-org'].filter(Boolean)));
+      const orgFilter = Array.from(new Set([
+        orgId,
+        activeOrganization?.organizationId,
+        activeOrganization?.id,
+        (user as any)?.organizationId,
+        'org_default',
+        'default-org'
+      ].filter(Boolean) as string[]));
+
       const qConversations = query(
         collection(firebaseDb, 'conversations'),
         where('organizationId', 'in', orgFilter)
@@ -944,8 +953,15 @@ export default function Messages() {
               unreadForMe = 1;
             }
 
-            // If user currently has this exact conversation open, unread count is 0
-            if (selectedConversationId && selectedConversationId === docSnap.id) {
+            // If user currently has this exact conversation open, unread count is strictly 0
+            const isOpen =
+              (selectedConversationId && selectedConversationId === docSnap.id) ||
+              (selectedUserId && (
+                String(data.targetId) === String(selectedUserId) ||
+                (Array.isArray(data.participants) && data.participants.includes(String(selectedUserId)))
+              ));
+
+            if (isOpen) {
               unreadForMe = 0;
             }
 
@@ -972,8 +988,11 @@ export default function Messages() {
             if (data.targetId && !myIds.includes(String(data.targetId))) {
               newUnreads[String(data.targetId)] = unreadForMe;
             }
+            if (!isMe && lastSender) {
+              newUnreads[lastSender] = unreadForMe;
+            }
 
-            newMetaMap[docSnap.id] = {
+            const metaObj = {
               lastMessageText: data.lastMessageText || data.lastMessage || '',
               lastMessageAt: lastAt,
               lastSenderId: data.lastSenderId,
@@ -982,6 +1001,22 @@ export default function Messages() {
               lastMessageStatus: data.lastMessageStatus || (data.lastMessageIsRead ? 'read' : 'sent'),
               unreadCount: unreadForMe
             };
+
+            newMetaMap[docSnap.id] = metaObj;
+            if (Array.isArray(data.participants)) {
+              data.participants.forEach((p: any) => {
+                const pid = String(p || '');
+                if (!myIds.includes(pid)) {
+                  newMetaMap[pid] = metaObj;
+                }
+              });
+            }
+            if (data.targetId && !myIds.includes(String(data.targetId))) {
+              newMetaMap[String(data.targetId)] = metaObj;
+            }
+            if (!isMe && lastSender) {
+              newMetaMap[lastSender] = metaObj;
+            }
           });
 
           setConvMetaMap((prev) => {
@@ -1189,10 +1224,23 @@ export default function Messages() {
 
     setMobileView('chat');
 
-    // Clear unread count for this user in Firestore conversation doc (Requirement 9)
+    // Clear unread count for this user immediately in local state and Firestore (Requirement 9)
     setUnreadMap((prev) => {
       const next = { ...prev };
-      delete next[convId];
+      next[convId] = 0;
+      next[String(targetId)] = 0;
+      return next;
+    });
+
+    setConvMetaMap((prev) => {
+      if (!prev[convId] && !prev[String(targetId)]) return prev;
+      const next = { ...prev };
+      if (next[convId]) {
+        next[convId] = { ...next[convId], unreadCount: 0, lastMessageIsRead: true };
+      }
+      if (next[String(targetId)]) {
+        next[String(targetId)] = { ...next[String(targetId)], unreadCount: 0, lastMessageIsRead: true };
+      }
       return next;
     });
 
@@ -1209,6 +1257,7 @@ export default function Messages() {
 
         const clearUpdates: Record<string, any> = {
           lastMessageIsRead: true,
+          lastMessageStatus: 'read'
         };
         myIds.forEach((id) => {
           clearUpdates[`unreadCounts.${id}`] = 0;
@@ -1496,7 +1545,22 @@ export default function Messages() {
     const nowIso = new Date().toISOString();
 
     const targetUserId = selectedConversationType === 'dm' ? String(selectedUserId) : null;
-    const participants = selectedConversationType === 'dm' ? [String(currentUid), String(selectedUserId)].sort() : [];
+    const participants = selectedConversationType === 'dm'
+      ? Array.from(new Set([
+          String(currentUid),
+          String(user?.id || ''),
+          String(user?.uid || ''),
+          String((user as any)?.firebaseUid || ''),
+          String(user?.email || '').toLowerCase(),
+          String(selectedUserId || ''),
+          String(targetUserId || ''),
+          String(activeContactObj?.id || ''),
+          String(activeContactObj?.uid || ''),
+          String((activeContactObj as any)?.firebaseUid || ''),
+          String((activeContactObj as any)?.sqlId || ''),
+          String(activeContactObj?.email || '').toLowerCase()
+        ].filter(Boolean)))
+      : [];
 
     const isImageAttachment = Boolean(
       fileAttachment && (
@@ -1746,6 +1810,15 @@ export default function Messages() {
         try {
           await updateDoc(doc(firebaseDb, 'conversations', selectedConversationId), unreadUpdates);
         } catch (e) {}
+
+        // Background sync to backend SQLite API if numeric SQL ID exists
+        const sqlTargetId = (activeContactObj as any)?.sqlId || (typeof targetUserId === 'string' && /^\d+$/.test(targetUserId) ? Number(targetUserId) : undefined);
+        if (selectedConversationType === 'dm' && sqlTargetId) {
+          api.post('/api/messages', {
+            content: content || (fileAttachment ? `Attachment: ${fileAttachment.name}` : ''),
+            recipientId: sqlTargetId,
+          }).catch(() => {});
+        }
 
         // AI Assistant Response Automation (Requirement 1)
         if (selectedConversationType === 'ai') {
@@ -2346,7 +2419,7 @@ export default function Messages() {
       lastTime: aiLastTime,
       formattedTime: formatRelativeTime(aiMeta?.lastMessageAt),
       previewText: aiMeta?.lastMessageText || 'Ask about sprint tasks, documents, or team updates',
-      unreadCount: unreadMap[aiConvId] || 0,
+      unreadCount: (selectedConversationId === aiConvId || selectedUserId === AI_ASSISTANT_ID) ? 0 : (unreadMap[aiConvId] ?? 0),
       isLastMe: String(aiMeta?.lastSenderId) === String(currentUid),
       isLastRead: true,
       lastMessageStatus: 'read'
@@ -2355,8 +2428,10 @@ export default function Messages() {
     // 2. Channels
     channels.forEach((ch) => {
       const convId = getConversationId('channel', orgId, ch.id, currentUid);
-      const meta = convMetaMap[convId];
+      const meta = convMetaMap[convId] || convMetaMap[ch.id];
       const lastTime = meta?.lastMessageAt ? new Date(meta.lastMessageAt).getTime() : 1000;
+      const isCurrentlyOpen = selectedConversationId === convId || String(selectedChannelId) === String(ch.id);
+      const rawUnread = isCurrentlyOpen ? 0 : (unreadMap[convId] ?? unreadMap[ch.id] ?? 0);
       list.push({
         convId,
         type: 'channel',
@@ -2368,7 +2443,7 @@ export default function Messages() {
         lastTime,
         formattedTime: formatRelativeTime(meta?.lastMessageAt),
         previewText: meta?.lastMessageText || ch.description || 'Public channel',
-        unreadCount: unreadMap[convId] || 0,
+        unreadCount: rawUnread,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
         isLastRead: Boolean(meta?.lastMessageIsRead),
         lastMessageStatus: resolvePreviewStatus(meta)
@@ -2378,8 +2453,10 @@ export default function Messages() {
     // 3. Teams (Requirement 28: Team Chat)
     teams.forEach((t) => {
       const convId = getConversationId('team', orgId, t.id, currentUid);
-      const meta = convMetaMap[convId];
+      const meta = convMetaMap[convId] || convMetaMap[t.id];
       const lastTime = meta?.lastMessageAt ? new Date(meta.lastMessageAt).getTime() : 1000;
+      const isCurrentlyOpen = selectedConversationId === convId || String(selectedTeamId) === String(t.id);
+      const rawUnread = isCurrentlyOpen ? 0 : (unreadMap[convId] ?? unreadMap[t.id] ?? 0);
       list.push({
         convId,
         type: 'team',
@@ -2391,7 +2468,7 @@ export default function Messages() {
         lastTime,
         formattedTime: formatRelativeTime(meta?.lastMessageAt),
         previewText: meta?.lastMessageText || t.description || 'Team channel',
-        unreadCount: unreadMap[convId] || 0,
+        unreadCount: rawUnread,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
         isLastRead: Boolean(meta?.lastMessageIsRead),
         lastMessageStatus: resolvePreviewStatus(meta)
@@ -2402,8 +2479,10 @@ export default function Messages() {
     contacts.filter((c) => c.id !== AI_ASSISTANT_ID).forEach((c) => {
       const contactUid = String(c.uid || c.id);
       const convId = getConversationId('dm', orgId, contactUid, currentUid);
-      const meta = convMetaMap[convId];
+      const meta = convMetaMap[convId] || convMetaMap[contactUid] || convMetaMap[String(c.id)] || convMetaMap[String(c.uid)] || convMetaMap[String((c as any).firebaseUid || '')] || convMetaMap[String(c.email || '').toLowerCase()];
       const lastTime = meta?.lastMessageAt ? new Date(meta.lastMessageAt).getTime() : 1000;
+      const isCurrentlyOpen = (selectedConversationId && selectedConversationId === convId) || (selectedUserId && (String(selectedUserId) === contactUid || String(selectedUserId) === String(c.id)));
+      const rawUnread = isCurrentlyOpen ? 0 : (unreadMap[convId] ?? unreadMap[contactUid] ?? unreadMap[String(c.id)] ?? unreadMap[String(c.uid)] ?? unreadMap[String((c as any).firebaseUid || '')] ?? unreadMap[String(c.email || '').toLowerCase()] ?? 0);
       list.push({
         convId,
         type: 'dm',
@@ -2418,7 +2497,7 @@ export default function Messages() {
         lastTime,
         formattedTime: formatRelativeTime(meta?.lastMessageAt),
         previewText: meta?.lastMessageText || formatRoleName(c.role, 'title') || c.designation || 'Workspace Member',
-        unreadCount: unreadMap[convId] || unreadMap[contactUid] || unreadMap[String(c.id)] || unreadMap[String(c.uid)] || unreadMap[String((c as any).firebaseUid || '')] || unreadMap[String(c.email || '').toLowerCase()] || 0,
+        unreadCount: rawUnread,
         isLastMe: String(meta?.lastSenderId) === String(currentUid),
         isLastRead: Boolean(meta?.lastMessageIsRead),
         lastMessageStatus: resolvePreviewStatus(meta)
@@ -2426,7 +2505,7 @@ export default function Messages() {
     });
 
     return list;
-  }, [channels, teams, contacts, convMetaMap, unreadMap, orgId, currentUid]);
+  }, [channels, teams, contacts, convMetaMap, unreadMap, orgId, currentUid, selectedConversationId, selectedUserId, selectedChannelId, selectedTeamId]);
 
   // Sort by latest conversation activity (Requirement 3: Most recent chat moves to top)
   const unifiedSortedList = useMemo(() => {
@@ -3057,11 +3136,11 @@ export default function Messages() {
                         )}
                         <span className="truncate">{item.previewText}</span>
                       </p>
-                      {item.unreadCount > 0 ? (
+                      {!isSelected && item.unreadCount > 0 ? (
                         <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse">
                           {item.unreadCount > 9 ? '9+' : item.unreadCount}
                         </span>
-                      ) : (!item.isLastRead && !item.isLastMe && item.previewText) ? (
+                      ) : (!isSelected && !item.isLastRead && !item.isLastMe && item.previewText) ? (
                         <span className="ml-2 relative flex h-2 w-2 shrink-0" title="Unread message">
                           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
                           <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
@@ -3628,9 +3707,9 @@ export default function Messages() {
                               {isImage && msg.fileUrl && (
                                 <div className="mt-2 rounded-lg overflow-hidden border border-white/10 max-w-xs">
                                   <img
-                                    src={msg.fileUrl}
+                                    src={resolveMediaUrl(msg.fileUrl)}
                                     alt={msg.fileName || 'Attachment'}
-                                    onClick={() => setActiveImageLightbox({ isOpen: true, url: msg.fileUrl || '', title: msg.fileName || 'Image Attachment' })}
+                                    onClick={() => setActiveImageLightbox({ isOpen: true, url: resolveMediaUrl(msg.fileUrl), title: msg.fileName || 'Image Attachment' })}
                                     className="w-full max-h-60 object-cover cursor-pointer hover:scale-102 transition-transform"
                                   />
                                 </div>
@@ -3643,7 +3722,7 @@ export default function Messages() {
                                     ref={(el) => {
                                       if (el) audioElementsRef.current[String(msg.id)] = el;
                                     }}
-                                    src={msg.fileUrl}
+                                    src={resolveMediaUrl(msg.fileUrl)}
                                     onEnded={() => setPlayingAudioId(null)}
                                     className="hidden"
                                   />
@@ -3701,7 +3780,7 @@ export default function Messages() {
                                       onClick={() => {
                                         setSelectedPdfToView({
                                           isOpen: true,
-                                          url: msg.fileUrl || '#',
+                                          url: resolveMediaUrl(msg.fileUrl) || '#',
                                           fileName: msg.fileName || 'Document.pdf',
                                           fileSize: typeof msg.fileSize === 'number' ? `${(msg.fileSize / (1024 * 1024)).toFixed(1)} MB` : (msg.fileSize || '1.8 MB'),
                                           uploadedBy: msg.sender.name || 'Workspace Member',
@@ -3719,8 +3798,10 @@ export default function Messages() {
                                     </button>
                                     {msg.fileUrl && msg.fileUrl !== '#' && (
                                       <a
-                                        href={msg.fileUrl}
+                                        href={resolveMediaUrl(msg.fileUrl)}
                                         download={msg.fileName}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
                                         className="p-1.5 rounded-lg bg-[#202c33] hover:bg-[#2a3942] text-[#d1d7db] text-xs font-bold flex items-center justify-center transition-colors"
                                         title="Download Document"
                                       >
