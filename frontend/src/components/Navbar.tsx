@@ -37,6 +37,7 @@ import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useNotificationStore } from '../store/useNotificationStore';
 import { useCommunicationStore } from '../store/useCommunicationStore';
+import { ChatNotificationBadge } from './communication/ChatNotificationBadge';
 import { AppNotification } from '../services/notificationService';
 import api from '../services/api';
 import { requestMobilePushPermission } from '../services/mobilePushService';
@@ -666,6 +667,28 @@ export default function Navbar() {
               ))}
             </div>
           )}
+        </div>
+
+        {/* Dedicated Real-Time Chat Notification Button */}
+        <div className="relative flex-shrink-0">
+          <button
+            onClick={() => {
+              setView('communication');
+              navigate('/messages');
+            }}
+            className={`relative w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-95 cursor-pointer flex-shrink-0 shadow-xs ${
+              location.pathname === '/messages'
+                ? 'bg-blue-500/20 border border-blue-500/50 text-blue-600 dark:text-blue-400 ring-2 ring-blue-500/20'
+                : 'bg-slate-100/90 dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09] hover:bg-slate-200/70 dark:hover:bg-white/[0.12] text-slate-700 dark:text-slate-200'
+            }`}
+            title={totalChatUnreads > 0 ? `Chat (${totalChatUnreads} unread messages)` : "Open Chat"}
+            aria-label="Open Chat"
+          >
+            <MessageSquare className="w-4 h-4 stroke-[2.2]" />
+            <div className="absolute -top-1 -right-1 pointer-events-none">
+              <ChatNotificationBadge count={totalChatUnreads} hasUnread={totalChatUnreads > 0} max={9} size="xs" />
+            </div>
+          </button>
         </div>
 
         {/* Production Notification Center Bell & Dropdown */}

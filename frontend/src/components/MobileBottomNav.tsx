@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useCommunicationStore } from '../store/useCommunicationStore';
+import { ChatNotificationBadge } from './communication/ChatNotificationBadge';
 import { getDashboardPathForRole } from '../services/authRoles';
 
 export default function MobileBottomNav() {
@@ -281,11 +282,14 @@ export default function MobileBottomNav() {
                   <path d="M3 21l1.9-5.7a8.5 8.5 0 1 1 3.8 3.8z" />
                 </svg>
 
-                {totalUnreadMessages > 0 && (
-                  <span className="absolute -top-1 -right-2 min-w-[16px] h-4 px-1 bg-[#ef4444] text-white text-[10px] font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#111b21] shadow-sm animate-pulse">
-                    {totalUnreadMessages > 99 ? '99+' : totalUnreadMessages}
-                  </span>
-                )}
+                <div className="absolute -top-1.5 -right-2.5 pointer-events-none">
+                  <ChatNotificationBadge
+                    count={totalUnreadMessages}
+                    hasUnread={totalUnreadMessages > 0}
+                    max={9}
+                    size="xs"
+                  />
+                </div>
               </div>
               <span
                 className={`text-[11px] mt-1 tracking-tight transition-colors ${

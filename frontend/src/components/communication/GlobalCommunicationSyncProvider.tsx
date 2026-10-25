@@ -1,7 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { useAuthStore } from '../../store/useAuthStore';
 import { useCommunicationStore } from '../../store/useCommunicationStore';
-import { firebaseDb } from '../../services/firebase';
+import { firebaseDb, firebaseAuth } from '../../services/firebase';
+import { playIncomingChatChime } from '../../utils/chatSound';
 import {
   collection,
   query,
@@ -23,12 +24,12 @@ import {
  *    - Detects tab close, pagehide, beforeunload, visibilitychange, and offline
  *    - Automatically marks offline upon tab close or network disconnect
  * 2. Real-Time Delivery Acknowledgment (✓ -> ✓✓):
- *    - Listens for messages sent to currentUid that are currently in status 'sent'
- *    - When recipient's active client receives them:
- *      - If recipient is currently inside that conversation -> marks 'read' with readAt
- *      - Otherwise -> marks 'delivered' with deliveredAt
- *    - Runs across the entire application (Dashboard, Projects, Messages, etc.)
- *    - Completely independent of online presence and timer simulations!
+ *    - Listens for messages sent to current user across all user identifiers
+ *    - Plays soft chime when incoming message arrives while recipient is elsewhere
+ *    - Acknowledges delivery or marks read if conversation is open
+ * 3. App-Wide Real-Time Unread Counters:
+ *    - Maintains unread badge counts across all conversations and logged-in user identities
+ *    - Updates instantly without page refresh for Sidebar, Header Navbar, and Mobile Dock
  */
 export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
@@ -36,13 +37,23 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
   const { user, token, activeOrganization } = useAuthStore();
   const currentOpenConversationId = useCommunicationStore((s) => s.currentOpenConversationId);
 
-  const currentUid = user ? String((user as any).firebaseUid || user.id) : null;
+  const currentUid = firebaseAuth.currentUser?.uid || user?.uid || (user ? String((user as any).firebaseUid || user.id) : null);
   const orgId = String(
-    (user as any)?.organizationId ||
     activeOrganization?.organizationId ||
     activeOrganization?.id ||
-    ''
+    (user as any)?.organizationId ||
+    'org_default'
   ).trim();
+
+  // All known identifiers for current user (Firebase UID, SQL ID, email, sanitized email)
+  const myIds = Array.from(new Set([
+    String(firebaseAuth.currentUser?.uid || ''),
+    String(user?.uid || ''),
+    String((user as any)?.firebaseUid || ''),
+    String(user?.id || ''),
+    String(user?.email || '').toLowerCase(),
+    String(user?.email || '').toLowerCase().replace(/\./g, '_'),
+  ].filter(Boolean)));
 
   // Ref to hold delivery listener unsubscribe
   const deliveryUnsubRef = useRef<(() => void) | null>(null);
@@ -104,16 +115,12 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
       if (document.visibilityState === 'visible') {
         markOnline();
       } else {
-        // Record lastSeen when tab becomes hidden
         markOffline();
       }
     };
 
-    // Network status handlers
     const handleOnline = () => markOnline();
     const handleOffline = () => markOffline();
-
-    // Unload & pagehide handlers
     const handleBeforeUnload = () => markOffline();
     const handlePageHide = () => markOffline();
 
@@ -134,9 +141,9 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
     };
   }, [currentUid, orgId, token, user?.name, user?.email, user?.role, user?.profilePhoto]);
 
-  // 2. REAL-TIME DELIVERY ACKNOWLEDGMENT (✓ -> ✓✓)
+  // 2. REAL-TIME DELIVERY ACKNOWLEDGMENT (✓ -> ✓✓) & INCOMING CHIME
   useEffect(() => {
-    if (!firebaseDb || !currentUid || !token || !orgId) {
+    if (!firebaseDb || myIds.length === 0 || !token) {
       if (deliveryUnsubRef.current) {
         deliveryUnsubRef.current();
         deliveryUnsubRef.current = null;
@@ -145,11 +152,11 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
     }
 
     try {
-      // Query for incoming messages destined for this user that are still marked as 'sent'
+      // Query for incoming messages destined for this user across all their UIDs/IDs
+      const targetQueryIds = myIds.slice(0, 10);
       const qIncoming = query(
         collection(firebaseDb, 'messages'),
-        where('organizationId', '==', orgId),
-        where('receiverId', '==', currentUid),
+        where('receiverId', 'in', targetQueryIds),
         where('status', '==', 'sent')
       );
 
@@ -158,12 +165,14 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
         (snapshot) => {
           if (snapshot.empty) return;
 
+          let shouldPlayChime = false;
+
           snapshot.docs.forEach((docSnap) => {
             const data = docSnap.data();
             const senderId = String(data.senderId || '');
 
-            // Don't deliver own messages
-            if (senderId === currentUid) return;
+            // Don't deliver or chime own messages
+            if (myIds.includes(senderId)) return;
 
             const convId = data.conversationId;
             const isCurrentlyViewingConv =
@@ -175,22 +184,27 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
                 status: 'read',
                 isRead: true,
                 readAt: serverTimestamp(),
-                readBy: arrayUnion(currentUid),
+                readBy: arrayUnion(String(currentUid)),
               }).catch(() => {});
 
               if (convId) {
-                updateDoc(doc(firebaseDb, 'conversations', convId), {
+                const clearPayload: Record<string, any> = {
                   lastMessageIsRead: true,
                   lastMessageStatus: 'read',
-                  [`unreadCounts.${currentUid}`]: 0,
-                }).catch(() => {});
+                };
+                myIds.forEach(id => {
+                  clearPayload[`unreadCounts.${id}`] = 0;
+                  clearPayload[`unreadCounts.${id.replace(/\./g, '_')}`] = 0;
+                });
+                updateDoc(doc(firebaseDb, 'conversations', convId), clearPayload).catch(() => {});
               }
             } else {
-              // Recipient is elsewhere in app -> Acknowledge DELIVERY!
+              // Recipient is elsewhere in app -> Acknowledge DELIVERY and trigger soft chime
+              shouldPlayChime = true;
               updateDoc(doc(firebaseDb, 'messages', docSnap.id), {
                 status: 'delivered',
                 deliveredAt: serverTimestamp(),
-                deliveredTo: arrayUnion(currentUid),
+                deliveredTo: arrayUnion(String(currentUid)),
               }).catch(() => {});
 
               if (convId) {
@@ -200,6 +214,10 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
               }
             }
           });
+
+          if (shouldPlayChime) {
+            playIncomingChatChime();
+          }
         },
         (err) => {
           console.warn('Delivery acknowledgment subscription notice:', err.message);
@@ -217,22 +235,21 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
         deliveryUnsubRef.current = null;
       }
     };
-  }, [currentUid, orgId, token, currentOpenConversationId]);
+  }, [currentUid, myIds.join(','), token, currentOpenConversationId]);
 
   // 3. REAL-TIME APP-WIDE UNREAD CONVERSATION COUNTER
-  // Runs everywhere (Dashboard, Tasks, Settings, Profile) so footer dock and header bell update instantly
+  // Runs everywhere (Dashboard, Tasks, Settings, Profile) so sidebar, footer dock, and header navbar update instantly
   useEffect(() => {
-    if (!firebaseDb || !currentUid || !token) return;
+    if (!firebaseDb || myIds.length === 0 || !token) return;
 
-    const myIds = Array.from(new Set([
-      String(currentUid || ''),
-      String(user?.id || ''),
-      String(user?.uid || ''),
-      String((user as any)?.firebaseUid || ''),
-      String(user?.email || '').toLowerCase(),
-    ].filter(Boolean)));
-
-    const orgFilter = Array.from(new Set([orgId, 'org_default', 'default-org'].filter(Boolean)));
+    const orgFilter = Array.from(new Set([
+      orgId,
+      activeOrganization?.organizationId,
+      activeOrganization?.id,
+      (user as any)?.organizationId,
+      'org_default',
+      'default-org'
+    ].filter(Boolean) as string[]));
 
     try {
       const qConversations = query(
@@ -250,15 +267,32 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
             let unreadForMe = 0;
 
             for (const id of myIds) {
+              const safeId = id.replace(/\./g, '_');
               // 1. Nested map check
-              if (data.unreadCounts && typeof data.unreadCounts === 'object' && typeof data.unreadCounts[id] === 'number') {
-                unreadForMe = Math.max(unreadForMe, data.unreadCounts[id]);
+              if (data.unreadCounts && typeof data.unreadCounts === 'object') {
+                if (typeof data.unreadCounts[id] === 'number') {
+                  unreadForMe = Math.max(unreadForMe, data.unreadCounts[id]);
+                }
+                if (typeof data.unreadCounts[safeId] === 'number') {
+                  unreadForMe = Math.max(unreadForMe, data.unreadCounts[safeId]);
+                }
               }
               // 2. Flat dot-notation key check
               const flatKey = `unreadCounts.${id}`;
               if (typeof data[flatKey] === 'number') {
                 unreadForMe = Math.max(unreadForMe, data[flatKey]);
               }
+              const safeFlatKey = `unreadCounts.${safeId}`;
+              if (typeof data[safeFlatKey] === 'number') {
+                unreadForMe = Math.max(unreadForMe, data[safeFlatKey]);
+              }
+            }
+
+            // 3. Unread dot fallback if unread boolean is set but counter missing
+            const lastSender = String(data.lastSenderId || '');
+            const isMe = myIds.includes(lastSender);
+            if (!isMe && data.lastMessageIsRead === false && unreadForMe === 0) {
+              unreadForMe = 1;
             }
 
             // If user currently has this exact conversation open, unread count is 0
@@ -278,7 +312,7 @@ export const GlobalCommunicationSyncProvider: React.FC<{ children: React.ReactNo
 
       return () => unsubscribe();
     } catch (e) {}
-  }, [currentUid, orgId, token, currentOpenConversationId, user?.id, user?.uid, (user as any)?.firebaseUid, user?.email]);
+  }, [currentUid, myIds.join(','), orgId, token, currentOpenConversationId]);
 
   return <>{children}</>;
 };

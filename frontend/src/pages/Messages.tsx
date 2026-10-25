@@ -202,7 +202,7 @@ export default function Messages() {
 
   // Organization & Current User (Firebase Auth UID as Primary Identity - Requirement 1)
   const orgId = activeOrganizationId || activeOrganization?.organizationId || 'default-org';
-  const currentUid = firebaseAuth.currentUser?.uid || user?.uid || (typeof user?.id === 'string' && isNaN(Number(user?.id)) ? user.id : String(user?.id || 'unknown-user'));
+  const currentUid = firebaseAuth.currentUser?.uid || user?.uid || (user ? String((user as any).firebaseUid || user.id) : 'unknown-user');
   const userRoleNorm = normalizeRole(user?.role);
 
   // Conversation Selection State
@@ -606,22 +606,39 @@ export default function Messages() {
         const res = await api.get(`/api/organizations/${orgId}/members`);
         if (Array.isArray(res.data) && res.data.length > 0) {
           res.data.forEach((m: any) => {
-            const memberUid = String(m.uid || m.userId || (typeof m.id === 'string' && isNaN(Number(m.id)) ? m.id : ''));
-            if (memberUid && memberUid !== String(currentUid) && !seenIds.has(memberUid)) {
+            const memberUid = String(m.uid || m.firebaseUid || m.userId || m.id || '');
+            const memberEmail = String(m.email || m.userEmail || '').toLowerCase();
+
+            // Check if already in memberList by email or ID
+            const existingIdx = memberList.findIndex(
+              (item) => (memberEmail && item.email?.toLowerCase() === memberEmail) || (memberUid && (item.id === memberUid || item.uid === memberUid))
+            );
+
+            if (existingIdx !== -1) {
+              (memberList[existingIdx] as any).sqlId = m.id ? Number(m.id) : undefined;
+              if (!memberList[existingIdx].email && memberEmail) {
+                memberList[existingIdx].email = memberEmail;
+              }
+              if (m.name && (!memberList[existingIdx].name || memberList[existingIdx].name === 'Member')) {
+                memberList[existingIdx].name = m.name;
+              }
+            } else if (memberUid && memberUid !== String(currentUid) && !seenIds.has(memberUid)) {
               seenIds.add(memberUid);
+              if (memberEmail) seenIds.add(memberEmail);
               const isOnline = Boolean(m.isOnline);
               memberList.push({
                 id: memberUid,
                 uid: memberUid,
-                name: m.name || m.userName || (m.email ? m.email.split('@')[0] : 'Member'),
-                email: m.email || m.userEmail || '',
+                sqlId: m.id ? Number(m.id) : undefined,
+                name: m.name || m.userName || (memberEmail ? memberEmail.split('@')[0] : 'Member'),
+                email: memberEmail,
                 role: m.role || m.orgRole || 'ROLE_EMPLOYEE',
                 designation: m.designation || 'Team Member',
                 department: m.department || 'Engineering',
                 profilePhoto: m.profilePhoto,
                 isOnline,
                 status: isOnline ? 'online' : 'offline'
-              });
+              } as any);
             }
           });
         }
@@ -890,24 +907,46 @@ export default function Messages() {
               String(user?.id || ''),
               String(user?.uid || ''),
               String((user as any)?.firebaseUid || ''),
-              String(user?.email || '').toLowerCase()
+              String(user?.email || '').toLowerCase(),
+              String(user?.email || '').toLowerCase().replace(/\./g, '_'),
             ].filter(Boolean)));
 
             let unreadForMe = 0;
             // 1. Nested map check
             if (data.unreadCounts && typeof data.unreadCounts === 'object') {
               for (const id of myIds) {
+                const safeId = id.replace(/\./g, '_');
                 if (typeof data.unreadCounts[id] === 'number') {
                   unreadForMe = Math.max(unreadForMe, data.unreadCounts[id]);
+                }
+                if (typeof data.unreadCounts[safeId] === 'number') {
+                  unreadForMe = Math.max(unreadForMe, data.unreadCounts[safeId]);
                 }
               }
             }
             // 2. Flat dot-notation check
             for (const id of myIds) {
+              const safeId = id.replace(/\./g, '_');
               const flatKey = `unreadCounts.${id}`;
               if (typeof data[flatKey] === 'number') {
                 unreadForMe = Math.max(unreadForMe, data[flatKey]);
               }
+              const safeFlatKey = `unreadCounts.${safeId}`;
+              if (typeof data[safeFlatKey] === 'number') {
+                unreadForMe = Math.max(unreadForMe, data[safeFlatKey]);
+              }
+            }
+
+            // 3. Dot fallback if last message was sent by someone else and not marked read
+            const lastSender = String(data.lastSenderId || '');
+            const isMe = myIds.includes(lastSender);
+            if (!isMe && data.lastMessageIsRead === false && unreadForMe === 0) {
+              unreadForMe = 1;
+            }
+
+            // If user currently has this exact conversation open, unread count is 0
+            if (selectedConversationId && selectedConversationId === docSnap.id) {
+              unreadForMe = 0;
             }
 
             // Key by conversation ID
@@ -1164,16 +1203,21 @@ export default function Messages() {
           String(user?.id || ''),
           String(user?.uid || ''),
           String((user as any)?.firebaseUid || ''),
-          String(user?.email || '').toLowerCase()
+          String(user?.email || '').toLowerCase(),
+          String(user?.email || '').toLowerCase().replace(/\./g, '_'),
         ].filter(Boolean)));
 
-        const clearUpdates: Record<string, any> = {};
+        const clearUpdates: Record<string, any> = {
+          lastMessageIsRead: true,
+        };
         myIds.forEach((id) => {
           clearUpdates[`unreadCounts.${id}`] = 0;
+          clearUpdates[`unreadCounts.${id.replace(/\./g, '_')}`] = 0;
         });
 
         const convRef = doc(firebaseDb, 'conversations', convId);
         updateDoc(convRef, clearUpdates).catch(() => {});
+        useCommunicationStore.getState().clearUnread(convId);
       } catch (e) {}
     }
   };
@@ -1628,17 +1672,48 @@ export default function Messages() {
           });
         }
 
-        const targetIds = Array.from(new Set([
-          String(targetUserId || ''),
-          String(selectedUserId || ''),
-          String(activeContactObj?.id || ''),
-          String(activeContactObj?.uid || ''),
-          String((activeContactObj as any)?.firebaseUid || '')
-        ].filter(Boolean)));
+        const targetIds: string[] = [];
+        if (selectedConversationType === 'dm') {
+          [
+            String(targetUserId || ''),
+            String(selectedUserId || ''),
+            String(activeContactObj?.id || ''),
+            String(activeContactObj?.uid || ''),
+            String((activeContactObj as any)?.firebaseUid || ''),
+            String((activeContactObj as any)?.sqlId || ''),
+            String(activeContactObj?.email || '').toLowerCase(),
+          ].forEach((id) => {
+            if (id && id !== String(currentUid)) {
+              targetIds.push(id);
+              if (id.includes('.')) targetIds.push(id.replace(/\./g, '_'));
+            }
+          });
+        } else if (selectedConversationType === 'channel' || selectedConversationType === 'team') {
+          contacts.forEach((c) => {
+            if (c.id !== AI_ASSISTANT_ID) {
+              const cid = String(c.id || '');
+              const cuid = String(c.uid || '');
+              if (cid && cid !== String(currentUid)) targetIds.push(cid);
+              if (cuid && cuid !== String(currentUid)) targetIds.push(cuid);
+              if (c.email) {
+                targetIds.push(c.email.toLowerCase());
+                targetIds.push(c.email.toLowerCase().replace(/\./g, '_'));
+              }
+            }
+          });
+        }
 
+        const distinctTargetIds = Array.from(new Set(targetIds.filter(Boolean)));
+        const unreadCountsMap: Record<string, any> = {};
         const unreadUpdates: Record<string, any> = {};
-        targetIds.forEach((tid) => {
-          unreadUpdates[`unreadCounts.${tid}`] = increment(1);
+        distinctTargetIds.forEach((tid) => {
+          const safeTid = tid.replace(/\./g, '_');
+          unreadCountsMap[safeTid] = increment(1);
+          unreadUpdates[`unreadCounts.${safeTid}`] = increment(1);
+          if (safeTid !== tid) {
+            unreadCountsMap[tid] = increment(1);
+            unreadUpdates[`unreadCounts.${tid}`] = increment(1);
+          }
         });
 
         // Update conversation metadata document with participants, timestamp, status & unread counters
@@ -1660,6 +1735,7 @@ export default function Messages() {
             lastSenderName: user?.name || 'You',
             lastMessageIsRead: selectedConversationType === 'ai',
             lastMessageStatus: 'sent',
+            unreadCounts: unreadCountsMap,
             ...unreadUpdates,
             updatedAt: serverTimestamp()
           }, { merge: true });
@@ -2446,8 +2522,8 @@ export default function Messages() {
           >
             <MessageSquare className="w-5 h-5" />
             {dmUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
-                {dmUnreadCount}
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+                {dmUnreadCount > 9 ? '9+' : dmUnreadCount}
               </span>
             )}
           </button>
@@ -2467,8 +2543,8 @@ export default function Messages() {
           >
             <Users className="w-5 h-5" />
             {teamUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
-                {teamUnreadCount}
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+                {teamUnreadCount > 9 ? '9+' : teamUnreadCount}
               </span>
             )}
           </button>
@@ -2488,8 +2564,8 @@ export default function Messages() {
           >
             <Hash className="w-5 h-5" />
             {channelUnreadCount > 0 && (
-              <span className="absolute -top-1 -right-1 px-1.5 py-0.2 bg-blue-600 text-white text-[9px] font-black rounded-full shadow-xs">
-                {channelUnreadCount}
+              <span className="absolute -top-1 -right-1 min-w-[17px] h-[17px] px-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white text-[9px] font-black rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)] flex items-center justify-center animate-pulse">
+                {channelUnreadCount > 9 ? '9+' : channelUnreadCount}
               </span>
             )}
           </button>
@@ -2981,11 +3057,16 @@ export default function Messages() {
                         )}
                         <span className="truncate">{item.previewText}</span>
                       </p>
-                      {item.unreadCount > 0 && (
-                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-emerald-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse">
-                          {item.unreadCount}
+                      {item.unreadCount > 0 ? (
+                        <span className="ml-2 min-w-[20px] h-5 px-1.5 bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-black rounded-full flex items-center justify-center shrink-0 shadow-sm animate-pulse">
+                          {item.unreadCount > 9 ? '9+' : item.unreadCount}
                         </span>
-                      )}
+                      ) : (!item.isLastRead && !item.isLastMe && item.previewText) ? (
+                        <span className="ml-2 relative flex h-2 w-2 shrink-0" title="Unread message">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500 shadow-[0_0_6px_rgba(6,182,212,0.8)]" />
+                        </span>
+                      ) : null}
                     </div>
                   </div>
                 </button>

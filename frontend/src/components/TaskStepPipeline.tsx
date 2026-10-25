@@ -1,3 +1,4 @@
+
 import { getAvatarByName } from '../services/avatar';
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
@@ -130,8 +131,7 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
 
       if (action === 'APPROVE') {
         showToast(
-          `Step ${verifyingStep.stepNumber} APPROVED! ${
-            res.unlockedStep ? `Step ${res.unlockedStep.stepNumber} is now UNLOCKED.` : 'All steps complete!'
+          `Step ${verifyingStep.stepNumber} APPROVED! ${res.unlockedStep ? `Step ${res.unlockedStep.stepNumber} is now UNLOCKED.` : 'All steps complete!'
           }`,
           'success'
         );
@@ -214,35 +214,33 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
           return (
             <div
               key={step.id}
-              className={`glass-panel p-4.5 rounded-2xl border transition-all space-y-3 ${
-                isApproved
+              className={`glass-panel p-4.5 rounded-2xl border transition-all space-y-3 ${isApproved
                   ? 'border-emerald-500/40 bg-emerald-500/5'
                   : isPending
-                  ? 'border-amber-500/40 bg-amber-500/5'
-                  : isChanges
-                  ? 'border-amber-500/50 bg-amber-500/10'
-                  : isRejected
-                  ? 'border-rose-500/50 bg-rose-500/10'
-                  : isInProgress
-                  ? 'border-blue-500/40 bg-blue-500/5 shadow-md shadow-blue-500/5'
-                  : 'border-slate-200/30 dark:border-white/5 opacity-60 bg-slate-500/5'
-              }`}
+                    ? 'border-amber-500/40 bg-amber-500/5'
+                    : isChanges
+                      ? 'border-amber-500/50 bg-amber-500/10'
+                      : isRejected
+                        ? 'border-rose-500/50 bg-rose-500/10'
+                        : isInProgress
+                          ? 'border-blue-500/40 bg-blue-500/5 shadow-md shadow-blue-500/5'
+                          : 'border-slate-200/30 dark:border-white/5 opacity-60 bg-slate-500/5'
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-start gap-3">
                   {/* Status Badge Icon */}
                   <div
-                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                      isApproved
+                    className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${isApproved
                         ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
                         : isPending
-                        ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse'
-                        : isChanges || isRejected
-                        ? 'bg-rose-500 text-white'
-                        : isInProgress
-                        ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                        : 'bg-slate-300 dark:bg-slate-800 text-slate-500'
-                    }`}
+                          ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 animate-pulse'
+                          : isChanges || isRejected
+                            ? 'bg-rose-500 text-white'
+                            : isInProgress
+                              ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                              : 'bg-slate-300 dark:bg-slate-800 text-slate-500'
+                      }`}
                   >
                     {isApproved ? '✓' : isLocked ? <Lock className="w-4 h-4" /> : step.stepNumber}
                   </div>
@@ -251,19 +249,18 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
                     <div className="flex flex-wrap items-center gap-2">
                       <h4 className="text-xs font-black text-slate-900 dark:text-white">{step.title}</h4>
                       <span
-                        className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase ${
-                          isApproved
+                        className={`text-[9px] font-black px-2 py-0.5 rounded border uppercase ${isApproved
                             ? 'bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border-emerald-500/30'
                             : isPending
-                            ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
-                            : isChanges
-                            ? 'bg-amber-500/25 text-amber-600 dark:text-amber-300 border-amber-500/40'
-                            : isRejected
-                            ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30'
-                            : isInProgress
-                            ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30'
-                            : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
-                        }`}
+                              ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30'
+                              : isChanges
+                                ? 'bg-amber-500/25 text-amber-600 dark:text-amber-300 border-amber-500/40'
+                                : isRejected
+                                  ? 'bg-rose-500/20 text-rose-600 dark:text-rose-400 border-rose-500/30'
+                                  : isInProgress
+                                    ? 'bg-blue-500/20 text-blue-600 dark:text-blue-400 border-blue-500/30'
+                                    : 'bg-slate-500/10 text-slate-400 border-slate-500/20'
+                          }`}
                       >
                         {step.status.replace('_', ' ')}
                       </span>
@@ -469,7 +466,7 @@ export default function TaskStepPipeline({ taskId, taskTitle, onProgressUpdate }
               <div className="p-3 bg-white/5 border border-slate-200/50 dark:border-white/5 rounded-2xl text-xs space-y-2">
                 <p className="font-black text-blue-500">Submitted Proof by {verifyingStep.evidence.submittedBy.name}:</p>
                 <p className="font-semibold text-slate-700 dark:text-slate-300">{verifyingStep.evidence.description}</p>
-                
+
                 <div className="pt-1">
                   <TaskPdfUploader
                     taskId={taskId}

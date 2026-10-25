@@ -31,6 +31,8 @@ import {
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useUIStore } from '../store/useUIStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { useCommunicationStore } from '../store/useCommunicationStore';
+import { ChatNotificationBadge } from './communication/ChatNotificationBadge';
 import { useScrollLock } from '../hooks/useScrollLock';
 
 interface SidebarItem {
@@ -202,6 +204,10 @@ export default function Sidebar() {
   const location = useLocation();
   const { user } = useAuthStore();
   const { sidebarExpanded, toggleSidebar, activeView, setView } = useUIStore();
+  const { unreadCounts } = useCommunicationStore();
+  const totalChatUnreads = React.useMemo(() => {
+    return Object.values(unreadCounts || {}).reduce((sum, count) => sum + (count || 0), 0);
+  }, [unreadCounts]);
   const [isMobileOrTablet, setIsMobileOrTablet] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
 
   useEffect(() => {
@@ -419,19 +425,34 @@ export default function Sidebar() {
                     <span className="absolute left-0 top-1.5 bottom-1.5 w-1 rounded-r-full bg-gradient-to-b from-cyan-400 via-indigo-500 to-purple-500 shadow-[0_0_8px_rgba(99,102,241,0.8)]" />
                   )}
 
-                  <div className="flex-shrink-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
+                  <div className="relative flex-shrink-0 flex items-center justify-center transition-transform duration-200 group-hover:scale-110">
                     <Icon className={`w-4.5 h-4.5 transition-all duration-200 ${glowConfig.icon}`} />
+                    {!isExpandedOrDrawer && item.view === 'messages' && (
+                      <div className="absolute -top-1.5 -right-2 pointer-events-none">
+                        <ChatNotificationBadge count={totalChatUnreads} hasUnread={totalChatUnreads > 0} max={9} size="xs" />
+                      </div>
+                    )}
                   </div>
 
                   {isExpandedOrDrawer && (
-                    <span className="truncate tracking-tight font-medium">
-                      {item.name}
-                    </span>
+                    <div className="flex-1 min-w-0 flex items-center justify-between gap-1.5 overflow-hidden">
+                      <span className="truncate tracking-tight font-medium">
+                        {item.name}
+                      </span>
+                      {item.view === 'messages' && (
+                        <ChatNotificationBadge count={totalChatUnreads} hasUnread={totalChatUnreads > 0} max={9} size="xs" />
+                      )}
+                    </div>
                   )}
 
                   {!isExpandedOrDrawer && !isMobileOrTablet && (
-                    <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs font-medium rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50">
-                      {item.name}
+                    <div className="absolute left-16 px-3 py-1.5 bg-zinc-900 text-zinc-100 text-xs font-medium rounded-md shadow-lg border border-zinc-800 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 whitespace-nowrap z-50 flex items-center gap-2">
+                      <span>{item.name}</span>
+                      {item.view === 'messages' && totalChatUnreads > 0 && (
+                        <span className="px-1.5 py-0.2 bg-blue-600 text-white rounded-full text-[9px] font-black">
+                          {totalChatUnreads > 9 ? '9+' : totalChatUnreads}
+                        </span>
+                      )}
                     </div>
                   )}
                 </button>
